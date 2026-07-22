@@ -10,37 +10,33 @@ type NavItem = { href: string; label: string; icon: string; roles: string[] };
 type NavGroup = { group: string; items: NavItem[] };
 
 const NAV: NavGroup[] = [
-  { group: "Work", items: [
-    { href: "/crm/today", label: "Today", icon: "☀️", roles: ["owner", "manager", "crew"] },
-    { href: "/crm/jobs", label: "Jobs & Dispatch", icon: "🗓️", roles: ["owner", "manager"] },
-    { href: "/crm/routes", label: "Routes", icon: "🧭", roles: ["owner", "manager", "crew"] },
-  ]},
-  { group: "Grow", items: [
-    { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
+  { group: "", items: [
+    { href: "/crm", label: "Home", icon: "🏠", roles: ["owner", "manager"] },
+    { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
+    { href: "/crm/calendar", label: "Calendar", icon: "🗓️", roles: ["owner", "manager", "crew"] },
     { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
-    { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager"] },
-    { href: "/crm/wayne", label: "Wayne", icon: "🤖", roles: ["owner", "manager"] },
+    { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager", "crew"] },
     { href: "/crm/customers", label: "Customers", icon: "👥", roles: ["owner", "manager"] },
   ]},
-  { group: "Run", items: [
+  { group: "More", items: [
     { href: "/crm/money", label: "Money", icon: "💵", roles: ["owner"] },
-    { href: "/crm/marketing", label: "Marketing", icon: "📈", roles: ["owner", "manager"] },
-    { href: "/crm/automations", label: "Automations", icon: "⚙️", roles: ["owner", "manager"] },
-    { href: "/crm/test", label: "Flow Tester", icon: "🧪", roles: ["owner"] },
+    { href: "/crm/wayne", label: "Wayne", icon: "🤖", roles: ["owner", "manager"] },
     { href: "/crm/settings", label: "Settings", icon: "🛠️", roles: ["owner"] },
   ]},
 ];
 
 // mobile bottom tabs — the four crews reach for outdoors
 const MOBILE_TABS: NavItem[] = [
-  { href: "/crm/today", label: "Today", icon: "☀️", roles: ["owner", "manager", "crew"] },
-  { href: "/crm/jobs", label: "Jobs", icon: "🗓️", roles: ["owner", "manager"] },
-  { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager"] },
-    { href: "/crm/wayne", label: "Wayne", icon: "🤖", roles: ["owner", "manager"] },
+  { href: "/crm", label: "Home", icon: "🏠", roles: ["owner", "manager"] },
+  { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
+  { href: "/crm/calendar", label: "Calendar", icon: "🗓️", roles: ["owner", "manager", "crew"] },
+  { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
+  { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager", "crew"] },
 ];
 
 
 const ICON_PATHS: Record<string, string> = {
+  "🏠": "M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10",
   "☀️": "M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4L7 17M17 7l1.4-1.4M12 8a4 4 0 100 8 4 4 0 000-8z",
   "🗓️": "M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z",
   "🧭": "M12 3a9 9 0 100 18 9 9 0 000-18zM15 9l-2 5-4 2 2-5 4-2z",
