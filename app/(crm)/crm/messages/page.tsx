@@ -19,7 +19,7 @@ export default async function Messages({ searchParams }: { searchParams: { threa
   const activeThread = (threads ?? []).find((t) => t.id === active);
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""}>
+    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 text-2xl font-bold">Messages</h1>
       <MessagesPanel threads={(threads ?? []) as any} activeThread={(activeThread ?? null) as any} messages={(messages ?? []) as any} templates={(templates ?? []) as any} />
     </Shell>

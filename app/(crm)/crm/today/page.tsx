@@ -19,7 +19,7 @@ export default async function Today() {
   const { data: jobs } = await q;
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""}>
+    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 text-2xl font-bold">Today — {today}</h1>
       <TodayStops jobs={(jobs ?? []) as any} />
     </Shell>

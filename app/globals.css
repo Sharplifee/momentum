@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg: #fbfcfd;
+  --bg-alt: #f3f7f9;
+  --card: 255 255 255;
+  --card-alpha: 0.82;
+  --border: #e3ebef;
+  --ink: #1c2e44;
+  --body: #5c7280;
+}
+.dark {
+  --bg: #14202f;
+  --bg-alt: #1c2e44;
+  --card: 28 46 68;
+  --card-alpha: 0.7;
+  --border: #2b3f57;
+  --ink: #eaf1f5;
+  --body: #a9bcc7;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(150,178,190,0.14), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(74,143,181,0.10), transparent 55%),
+    var(--bg);
+  color: var(--body);
+}
+
+/* Brand card language: frosted, soft-bordered, gently shadowed */
+.mo-card {
+  background: rgba(var(--card) / var(--card-alpha));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(28,46,68,0.04), 0 4px 16px rgba(28,46,68,0.06);
+  backdrop-filter: blur(8px);
+}
+.mo-h1 { font-family: var(--font-display), "DM Sans", system-ui, sans-serif; color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
+.mo-primary { background: #4a8fb5; color: #fff; }
+.mo-primary:hover { background: #2f6c8e; }
+
+/* loading skeleton shimmer */
+@keyframes mo-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.mo-skeleton {
+  background: linear-gradient(90deg, rgba(150,178,190,0.10) 25%, rgba(150,178,190,0.22) 37%, rgba(150,178,190,0.10) 63%);
+  background-size: 800px 100%;
+  animation: mo-shimmer 1.4s infinite linear;
+  border-radius: 10px;
+}

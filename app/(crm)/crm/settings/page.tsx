@@ -14,7 +14,7 @@ export default async function Settings() {
     db.from("crews").select("*").order("id"),
   ]);
   return (
-    <Shell role={role} name={profile.full_name ?? ""}>
+    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 text-2xl font-bold">Settings</h1>
       <SettingsPanel services={services ?? []} zones={zones ?? []} config={config ?? []} templates={templates ?? []} crews={crews ?? []} />
     </Shell>

@@ -31,7 +31,7 @@ export default async function Jobs({ searchParams }: { searchParams: { week?: st
   });
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""}>
+    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 text-2xl font-bold">Jobs & Dispatch</h1>
       <JobsBoard jobs={withMargin as any} crews={crews ?? []} zones={zones ?? []} weekStart={start} pushZones={searchParams.push_zones ?? null} />
     </Shell>

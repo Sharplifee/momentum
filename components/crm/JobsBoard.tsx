@@ -27,27 +27,27 @@ export function JobsBoard({ jobs, crews, zones, weekStart, pushZones }: { jobs: 
   return (
     <div>
       {pushZones && (
-        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-700 dark:bg-amber-950">
-          Rain risk in zone(s) {pushZones}. <button onClick={pushDay} disabled={busy === "push"} className="ml-2 rounded-lg bg-amber-600 px-3 py-1 font-semibold text-white">{busy === "push" ? "Pushing…" : "Push these jobs +1 day"}</button>
+        <div className="mb-4 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm dark:border-gold/40">
+          Rain risk in zone(s) {pushZones}. <button onClick={pushDay} disabled={busy === "push"} className="ml-2 rounded-lg bg-gold px-3 py-1 font-semibold text-white">{busy === "push" ? "Pushing…" : "Push these jobs +1 day"}</button>
         </div>
       )}
       <div className="grid gap-3 md:grid-cols-7">
         {days.map((d) => (
-          <div key={d} className="rounded-xl bg-white p-2 shadow-sm dark:bg-stone-900">
-            <div className="mb-2 text-center text-xs font-semibold text-stone-500">{new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric" })}</div>
+          <div key={d} className="mo-card p-2">
+            <div className="mb-2 text-center text-xs font-semibold text-slate">{new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric" })}</div>
             {jobs.filter((j) => j.scheduled_date === d).map((j) => (
-              <div key={j.id} className={`mb-2 rounded-lg border p-2 text-xs ${j.weather_flag ? "border-amber-400 bg-amber-50 dark:bg-amber-950" : "border-stone-200 dark:border-stone-700"}`}>
+              <div key={j.id} className={`mb-2 rounded-lg border p-2 text-xs ${j.weather_flag ? "border-gold/50 bg-gold/10" : "border-[color:var(--border)]"}`}>
                 <div className="font-medium">{j.customers?.full_name ?? j.properties?.address ?? "job"}</div>
-                <div className="text-stone-500">{j.services?.name} · {j.status}{j.weather_flag ? " ☔" : ""}{j.margin != null ? ` · margin $${j.margin.toFixed(0)}` : ""}</div>
+                <div className="text-slate">{j.services?.name} · {j.status}{j.weather_flag ? " ☔" : ""}{j.margin != null ? ` · margin $${j.margin.toFixed(0)}` : ""}</div>
                 <select value={j.crew_id ?? ""} disabled={busy === j.id}
                   onChange={(e) => patchJob(j.id, { crew_id: Number(e.target.value) })}
-                  className="mt-1 w-full rounded border border-stone-200 text-xs dark:border-stone-700 dark:bg-stone-800">
+                  className="mt-1 w-full rounded border border-[color:var(--border)] text-xs dark:border-[color:var(--border)] dark:bg-white/10">
                   <option value="">unassigned</option>
                   {crews.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 <input type="date" defaultValue={j.scheduled_date} disabled={busy === j.id}
                   onBlur={(e) => e.target.value !== j.scheduled_date && patchJob(j.id, { scheduled_date: e.target.value })}
-                  className="mt-1 w-full rounded border border-stone-200 text-xs dark:border-stone-700 dark:bg-stone-800" />
+                  className="mt-1 w-full rounded border border-[color:var(--border)] text-xs dark:border-[color:var(--border)] dark:bg-white/10" />
               </div>
             ))}
           </div>

@@ -32,26 +32,26 @@ export default async function Routes({ searchParams }: { searchParams: { date?: 
     .neq("status", "cancelled");
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""}>
+    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 text-2xl font-bold">Routes — {date}</h1>
-      <form className="mb-4"><input type="date" name="date" defaultValue={date} className="rounded-lg border border-stone-300 p-2 text-sm dark:border-stone-700 dark:bg-stone-800" /> <button className="rounded-lg bg-moss px-3 py-2 text-sm text-white">Go</button></form>
+      <form className="mb-4"><input type="date" name="date" defaultValue={date} className="rounded-lg border border-[color:var(--border)] p-2 text-sm dark:border-[color:var(--border)] dark:bg-white/10" /> <button className="rounded-lg bg-teal px-3 py-2 text-sm text-white">Go</button></form>
       <div className="grid gap-4 md:grid-cols-2">
         {(crews ?? []).map((crew) => {
           const stops = orderStops((jobs ?? []).filter((j) => j.crew_id === crew.id));
           return (
-            <div key={crew.id} className="rounded-xl bg-white p-4 shadow-sm dark:bg-stone-900">
+            <div key={crew.id} className="mo-card p-4">
               <h2 className="mb-2 font-semibold">{crew.name} ({stops.length} stops)</h2>
               <ol className="space-y-1 text-sm">
                 {stops.map((s: any, i: number) => (
-                  <li key={s.id}>{i + 1}. {s.properties?.address}, {s.properties?.city} — {s.services?.name} ({s.customers?.full_name ?? "?"}){!s.properties?.lat && <span className="text-xs text-stone-400"> · ungeocoded</span>}</li>
+                  <li key={s.id}>{i + 1}. {s.properties?.address}, {s.properties?.city} — {s.services?.name} ({s.customers?.full_name ?? "?"}){!s.properties?.lat && <span className="text-xs text-slate/70"> · ungeocoded</span>}</li>
                 ))}
-                {!stops.length && <li className="text-stone-400">No stops.</li>}
+                {!stops.length && <li className="text-slate/70">No stops.</li>}
               </ol>
             </div>
           );
         })}
       </div>
-      <p className="mt-4 text-xs text-stone-400">Ordering: nearest-neighbor over cached coordinates. Addresses geocode automatically overnight (Nominatim).</p>
+      <p className="mt-4 text-xs text-slate/70">Ordering: nearest-neighbor over cached coordinates. Addresses geocode automatically overnight (Nominatim).</p>
     </Shell>
   );
 }
