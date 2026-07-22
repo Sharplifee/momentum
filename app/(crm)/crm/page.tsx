@@ -103,9 +103,6 @@ export default async function Dashboard() {
       <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Dashboard</div>
       <PageHeader title={`Welcome back, ${(profile.full_name ?? "").split(" ")[0]}`} action={<Link href="/crm/leads" className="mo-primary rounded-xl px-4 py-2 text-sm font-medium shadow-card">View pipeline →</Link>} />
 
-              </div>
-      )}
-
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => <StatTile key={s.label} {...s} />)}
       </div>
