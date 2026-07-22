@@ -55,3 +55,12 @@ body {
   animation: mo-shimmer 1.4s infinite linear;
   border-radius: 10px;
 }
+
+/* keep autofilled inputs on-theme (iOS/Safari/Chrome paint gray-yellow otherwise) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  transition: background-color 600000s 0s;
+  caret-color: var(--ink);
+}
