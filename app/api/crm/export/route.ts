@@ -28,8 +28,17 @@ export async function GET(req: NextRequest) {
   } else if (entity === "jobs") {
     const { data } = await db.from("jobs").select("id, customer_id, scheduled_date, status, price, crew_id, zone_id, arrival_at, departure_at").limit(5000);
     rows = data ?? [];
+  } else if (entity === "invoices") {
+    const { data } = await db.from("invoices").select("id, number, customer_id, job_id, subtotal, tax, total, status, due_date, sent_at, created_at").limit(5000);
+    rows = data ?? [];
+  } else if (entity === "payments") {
+    const { data } = await db.from("payments").select("id, invoice_id, amount, method, stripe_id, note, paid_at").limit(5000);
+    rows = data ?? [];
+  } else if (entity === "expenses") {
+    const { data } = await db.from("expenses").select("id, category, amount, vendor, expense_date, job_id, created_at").limit(5000);
+    rows = data ?? [];
   } else {
-    return NextResponse.json({ error: "entity must be leads|customers|jobs" }, { status: 400 });
+    return NextResponse.json({ error: "entity must be leads|customers|jobs|invoices|payments|expenses" }, { status: 400 });
   }
 
   return new NextResponse(toCsv(rows), {

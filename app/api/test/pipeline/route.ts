@@ -205,6 +205,69 @@ export async function POST(req: NextRequest) {
     steps.push({ step: "unified_thread_channels", pass: false, detail: String(e) });
   }
 
+  // 13. PHASE 4 MONEY PIPELINE: completed job → invoice → checkout → signed webhook → paid → P&L
+  try {
+    const { signTestPayload } = await import("@/lib/stripe");
+    const { draftInvoiceForJob } = await import("@/lib/invoices");
+
+    // synthetic customer + completed job
+    const { data: mc } = await db.from("customers").insert({ full_name: "Money Tester", phone: "+15555550105", status: "active", source: "test" }).select("id").single();
+    const { data: mj } = await db.from("jobs").insert({
+      customer_id: mc!.id, service_id: 1, crew_id: 1, zone_id: 1,
+      scheduled_date: new Date().toISOString().slice(0, 10), status: "completed", price: 45,
+    }).select("id").single();
+
+    // invoice drafts with correct tax
+    const drafted = await draftInvoiceForJob(mj!.id);
+    const { data: inv } = await db.from("invoices").select("id, number, subtotal, tax, total, status").eq("id", drafted.invoice_id!).single();
+    const expectedTax = Math.round(45 * 0.0725 * 100) / 100;
+    steps.push({ step: "invoice_drafted_with_tax", pass: Boolean(inv) && Number(inv!.subtotal) === 45 && Math.abs(Number(inv!.tax) - expectedTax) < 0.01 && inv!.number != null, detail: inv });
+
+    // idempotence: second draft attempt skips
+    const again = await draftInvoiceForJob(mj!.id);
+    steps.push({ step: "invoice_draft_idempotent", pass: again.skipped === "already_invoiced", detail: again });
+
+    // checkout session (pending or live — shape identical)
+    const coRes = await fetch(`${base}/api/payments/checkout`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.CRON_SECRET}` },
+      body: JSON.stringify({ invoice_id: inv!.id }),
+    });
+    const co = await coRes.json();
+    steps.push({ step: "checkout_url_created", pass: coRes.ok && typeof co.url === "string", detail: co });
+
+    // simulated signed webhook → paid
+    const payload = JSON.stringify({ type: "checkout.session.completed", data: { object: { id: "cs_test_flow", payment_intent: "pi_test_flow", metadata: { invoice_id: inv!.id } } } });
+    const whRes = await fetch(`${base}/api/payments/webhook`, {
+      method: "POST", headers: { "Content-Type": "application/json", "stripe-signature": signTestPayload(payload) },
+      body: payload,
+    });
+    const { data: invAfter } = await db.from("invoices").select("status").eq("id", inv!.id).single();
+    const { data: payRow } = await db.from("payments").select("id, amount").eq("invoice_id", inv!.id).maybeSingle();
+    const { data: custAfter } = await db.from("customers").select("lifetime_value").eq("id", mc!.id).single();
+    steps.push({ step: "webhook_marks_paid", pass: whRes.ok && invAfter?.status === "paid" && Boolean(payRow) && Number(custAfter?.lifetime_value) === Number(inv!.total), detail: { status: invAfter?.status, ltv: custAfter?.lifetime_value } });
+
+    // bad signature rejected
+    const badRes = await fetch(`${base}/api/payments/webhook`, {
+      method: "POST", headers: { "Content-Type": "application/json", "stripe-signature": "t=1,v1=deadbeef" }, body: payload,
+    });
+    steps.push({ step: "webhook_bad_signature_401", pass: badRes.status === 401 });
+
+    // sequential number integrity: no dupes among non-null numbers
+    const { data: nums } = await db.from("invoices").select("number").not("number", "is", null);
+    const values = (nums ?? []).map((n) => n.number as number);
+    steps.push({ step: "invoice_numbers_unique", pass: new Set(values).size === values.length, detail: { count: values.length } });
+
+    // cleanup
+    await db.from("payments").delete().eq("invoice_id", inv!.id);
+    await db.from("invoices").delete().eq("id", inv!.id);
+    await db.from("job_events").delete().eq("job_id", mj!.id);
+    await db.from("jobs").delete().eq("id", mj!.id);
+    await db.from("meta_events").delete().like("event_id", "pay_%");
+    await db.from("customers").delete().eq("id", mc!.id);
+  } catch (e) {
+    steps.push({ step: "money_pipeline", pass: false, detail: String(e) });
+  }
+
   // cleanup: remove synthetic rows so repeated runs stay idempotent
   if (leadId) {
     await db.from("lead_events").delete().eq("lead_id", leadId);

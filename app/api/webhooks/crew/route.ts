@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
     await db.from("jobs").update({ arrival_at: now, status: "in_progress" }).eq("id", job_id);
   } else if (event === "departed") {
     await db.from("jobs").update({ departure_at: now, status: "completed" }).eq("id", job_id);
+    // A9 extension: completed job → auto-draft invoice
+    const { draftInvoiceForJob } = await import("@/lib/invoices");
+    await draftInvoiceForJob(job_id);
   } else {
     await db.from("jobs").update({ status: "exception" }).eq("id", job_id);
     await db.from("exceptions").insert({

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Job = { id: string; scheduled_date: string; status: string; price: number | null; crew_id: number | null; zone_id: number | null; weather_flag: boolean; window_start: string | null; properties: { address: string; city: string | null } | null; services: { name: string } | null; customers: { full_name: string } | null };
+type Job = { id: string; scheduled_date: string; status: string; price: number | null; crew_id: number | null; zone_id: number | null; weather_flag: boolean; window_start: string | null; properties: { address: string; city: string | null } | null; services: { name: string } | null; customers: { full_name: string } | null; margin?: number | null };
 
 export function JobsBoard({ jobs, crews, zones, weekStart, pushZones }: { jobs: Job[]; crews: { id: number; name: string }[]; zones: { id: number; name: string }[]; weekStart: string; pushZones: string | null }) {
   const router = useRouter();
@@ -38,7 +38,7 @@ export function JobsBoard({ jobs, crews, zones, weekStart, pushZones }: { jobs: 
             {jobs.filter((j) => j.scheduled_date === d).map((j) => (
               <div key={j.id} className={`mb-2 rounded-lg border p-2 text-xs ${j.weather_flag ? "border-amber-400 bg-amber-50 dark:bg-amber-950" : "border-stone-200 dark:border-stone-700"}`}>
                 <div className="font-medium">{j.customers?.full_name ?? j.properties?.address ?? "job"}</div>
-                <div className="text-stone-500">{j.services?.name} · {j.status}{j.weather_flag ? " ☔" : ""}</div>
+                <div className="text-stone-500">{j.services?.name} · {j.status}{j.weather_flag ? " ☔" : ""}{j.margin != null ? ` · margin $${j.margin.toFixed(0)}` : ""}</div>
                 <select value={j.crew_id ?? ""} disabled={busy === j.id}
                   onChange={(e) => patchJob(j.id, { crew_id: Number(e.target.value) })}
                   className="mt-1 w-full rounded border border-stone-200 text-xs dark:border-stone-700 dark:bg-stone-800">
