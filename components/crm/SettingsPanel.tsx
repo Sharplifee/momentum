@@ -24,13 +24,11 @@ export function SettingsPanel({ services, zones, config, templates, crews }: any
     <div className="space-y-6">
       {msg && <p className="text-sm text-slate">{msg}</p>}
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">Services & prices</h2>
+        <h2 className="mb-2 font-semibold">Services</h2>
+        <p className="mb-2 text-xs text-[color:var(--body)]">No listed pricing — every job is quoted per client at the visit.</p>
         {services.map((s: any) => (
           <div key={s.id} className="flex items-center gap-2 border-b border-[color:var(--border)] py-2 text-sm last:border-0">
             <span className="flex-1">{s.name} <span className="text-slate/70">({s.slug})</span></span>
-            <input type="number" step="0.01" defaultValue={s.base_price ?? ""} placeholder="quoted"
-              onBlur={(e) => e.target.value !== String(s.base_price ?? "") && save("service_price", { id: s.id, base_price: e.target.value ? Number(e.target.value) : null })}
-              className="w-24 rounded border border-[color:var(--border)] p-1 dark:border-[color:var(--border)] dark:bg-white/10" />
             <label className="flex items-center gap-1 text-xs"><input type="checkbox" defaultChecked={s.active} onChange={(e) => save("service_active", { id: s.id, active: e.target.checked })} /> active</label>
           </div>
         ))}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type Job = {
+  kind?: string;
   id: string;
   scheduled_date: string;
   status: string;
@@ -31,7 +32,7 @@ function ymd(d: Date) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Denver" });
 }
 
-export function MonthCalendar({ month, jobs, crews, todayIso }: { month: string; jobs: Job[]; crews: Crew[]; todayIso: string }) {
+export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/schedule?" }: { month: string; jobs: Job[]; crews: Crew[]; todayIso: string; basePath?: string }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -85,11 +86,11 @@ export function MonthCalendar({ month, jobs, crews, todayIso }: { month: string;
       <div className="mo-card flex-1 p-4">
         <div className="mb-3 flex items-center justify-between px-1">
           <div className="flex items-center gap-1">
-            <Link href={`/crm/calendar?m=${prev}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-black/[0.05]">‹</Link>
-            <Link href={`/crm/calendar?m=${next}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-black/[0.05]">›</Link>
+            <Link href={`${basePath}m=${prev}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-black/[0.05]">‹</Link>
+            <Link href={`${basePath}m=${next}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-black/[0.05]">›</Link>
           </div>
           <h2 className="text-[17px] font-semibold text-[color:var(--ink)]">{monthLabel}</h2>
-          <Link href={`/crm/calendar`} onClick={() => setSelected(todayIso)} className="rounded-full px-3 py-1 text-sm font-medium text-teal transition hover:bg-teal/10">Today</Link>
+          <Link href={`${basePath}m=${todayIso.slice(0,7)}`} onClick={() => setSelected(todayIso)} className="rounded-full px-3 py-1 text-sm font-medium text-teal transition hover:bg-teal/10">Today</Link>
         </div>
 
         <div className="grid grid-cols-7 border-b border-[color:var(--border)] pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[color:var(--body)]/70">
@@ -115,7 +116,7 @@ export function MonthCalendar({ month, jobs, crews, todayIso }: { month: string;
                 <div className="flex flex-col gap-0.5">
                   {list.slice(0, 3).map((j) => (
                     <span key={j.id} className="flex items-center gap-1 truncate rounded-md bg-white/[0.06] px-1 py-0.5 text-[11px] leading-tight text-[color:var(--ink)]">
-                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${CREW_DOT[j.crew_id ?? 0] ?? "bg-slate-400"}`} />
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${j.kind === "quote" ? "bg-gold" : (CREW_DOT[j.crew_id ?? 0] ?? "bg-slate-400")}`} />
                       <span className="truncate">{j.customer}</span>
                     </span>
                   ))}

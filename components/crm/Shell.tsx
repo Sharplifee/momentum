@@ -11,26 +11,24 @@ type NavGroup = { group: string; items: NavItem[] };
 
 const NAV: NavGroup[] = [
   { group: "", items: [
-    { href: "/crm", label: "Home", icon: "🏠", roles: ["owner", "manager"] },
+    { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
     { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
-    { href: "/crm/calendar", label: "Calendar", icon: "🗓️", roles: ["owner", "manager", "crew"] },
+    { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
     { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
     { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager", "crew"] },
     { href: "/crm/customers", label: "Customers", icon: "👥", roles: ["owner", "manager"] },
+    { href: "/crm/accounting", label: "Accounting", icon: "💵", roles: ["owner"] },
   ]},
   { group: "More", items: [
-    { href: "/crm/money", label: "Money", icon: "💵", roles: ["owner"] },
-    { href: "/crm/wayne", label: "Wayne", icon: "🤖", roles: ["owner", "manager"] },
     { href: "/crm/settings", label: "Settings", icon: "🛠️", roles: ["owner"] },
   ]},
 ];
 
 // mobile bottom tabs — the four crews reach for outdoors
 const MOBILE_TABS: NavItem[] = [
-  { href: "/crm", label: "Home", icon: "🏠", roles: ["owner", "manager"] },
+  { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
   { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
-  { href: "/crm/calendar", label: "Calendar", icon: "🗓️", roles: ["owner", "manager", "crew"] },
-  { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
+  { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
   { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager", "crew"] },
 ];
 
@@ -103,12 +101,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
               </div>
             );
           })}
-          <div className="mt-6 rounded-2xl bg-gradient-to-br from-teal/25 via-teal/10 to-transparent p-4 ring-1 ring-teal/25">
-            <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-navy"><span>✦</span> Ask Wayne</div>
-            <p className="mb-2 text-[11px] leading-relaxed text-slate">Instant answers and automated follow-ups from your AI teammate.</p>
-            <Link href="/crm/wayne" className="mo-primary block rounded-xl px-3 py-1.5 text-center text-xs font-semibold">Open Wayne</Link>
-          </div>
-        </aside>
+                  </aside>
 
         {/* mobile drawer */}
         {drawer && (
@@ -130,11 +123,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                   </div>
                 );
               })}
-              <div className="mt-6 rounded-2xl bg-gradient-to-br from-teal/25 via-teal/10 to-transparent p-4 ring-1 ring-teal/25">
-            <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-navy"><span>✦</span> Ask Wayne</div>
-            <p className="mb-2 text-[11px] leading-relaxed text-slate">Instant answers and automated follow-ups from your AI teammate.</p>
-            <Link href="/crm/wayne" className="mo-primary block rounded-xl px-3 py-1.5 text-center text-xs font-semibold">Open Wayne</Link>
-          </div>
+              
         </aside>
           </div>
         )}

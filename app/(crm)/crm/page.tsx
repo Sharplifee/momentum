@@ -58,7 +58,10 @@ function humanize(row: { trigger?: string; type?: string; detail?: any; actor?: 
 export default async function Dashboard() {
   const { profile, role, db } = await requireStaff(["owner", "manager"]);
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [newL, contacted, quoted, won, wonJobs, resp, activity, checklist] = await Promise.all([
+  const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
+  const weekEnd = new Date(new Date(todayIso + "T12:00:00").getTime() + 7 * 86400_000).toLocaleDateString("en-CA");
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86400_000).toISOString();
+  const [newL, contacted, quoted, won, wonJobs, resp, activity, checklist, weekJobs, custCount, leadSeries] = await Promise.all([
     db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "new").neq("source", "test"),
     db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "contacted").neq("source", "test"),
     db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "quote_sent").neq("source", "test"),
@@ -67,7 +70,18 @@ export default async function Dashboard() {
     db.from("leads").select("response_time_seconds").not("response_time_seconds", "is", null).gte("created_at", weekAgo),
     db.from("lead_events").select("type, detail, actor, created_at, lead_id").order("created_at", { ascending: false }).limit(12),
     db.from("system_config").select("value").eq("key", "launch_checklist").single(),
+    db.from("jobs").select("id, scheduled_date, agreement_id, status, customers(full_name), crew_id").gte("scheduled_date", todayIso).lt("scheduled_date", weekEnd).neq("status", "canceled").order("scheduled_date"),
+    db.from("customers").select("id", { count: "exact", head: true }).neq("status", "opted_out"),
+    db.from("leads").select("created_at").gte("created_at", twoWeeksAgo).neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%"),
   ]);
+  const svcJobs = (weekJobs.data ?? []).filter((j: any) => j.agreement_id);
+  const quoteVisits = (weekJobs.data ?? []).filter((j: any) => !j.agreement_id);
+  // leads per day, last 14 days
+  const dayCounts: number[] = Array.from({ length: 14 }, () => 0);
+  for (const l of leadSeries.data ?? []) {
+    const idx = 13 - Math.floor((Date.now() - new Date(l.created_at).getTime()) / 86400_000);
+    if (idx >= 0 && idx < 14) dayCounts[idx]++;
+  }
 
   const revenue = (wonJobs.data ?? []).reduce((s, j) => s + Number(j.price ?? 0), 0);
   const rts = (resp.data ?? []).map((l) => l.response_time_seconds as number);
@@ -79,10 +93,10 @@ export default async function Dashboard() {
   const maxStage = Math.max(1, ...Object.values(byStage));
 
   const stats = [
-    { label: "New Leads", value: newL.count ?? 0, sub: "this week", href: "/crm/leads?stage=new", icon: "◎", seed: 3 },
-    { label: "Contacted", value: contacted.count ?? 0, sub: "in motion", href: "/crm/leads?stage=contacted", icon: "☏", seed: 7 },
-    { label: "Quoted", value: quoted.count ?? 0, sub: "awaiting reply", href: "/crm/leads?stage=quote_sent", icon: "▤", seed: 11 },
-    { label: "Revenue (7d)", value: `$${revenue.toFixed(0)}`, sub: "+ live", href: "/crm/money", icon: "◈", seed: 5 },
+    { label: "Incoming Leads", value: newL.count ?? 0, sub: "awaiting first touch", href: "/crm/leads?stage=new", icon: "◎", seed: 3 },
+    { label: "Quote Visits (7d)", value: quoteVisits.length, sub: "sales calendar", href: "/crm/schedule?lane=quotes", icon: "▤", seed: 11 },
+    { label: "Service Visits (7d)", value: svcJobs.length, sub: "client calendar", href: "/crm/schedule?lane=service", icon: "✓", seed: 7 },
+    { label: "Total Clients", value: custCount.count ?? 0, sub: "accounts", href: "/crm/customers", icon: "◈", seed: 5 },
   ];
 
   return (
@@ -102,18 +116,53 @@ export default async function Dashboard() {
 
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-2">
-          <h2 className="mo-h1 mb-3 text-base">Pipeline</h2>
-          <div className="space-y-2.5">
-            {(["new", "contacted", "quote_sent", "closed_won"] as const).map((st) => (
-              <Link key={st} href={`/crm/leads?stage=${st}`} className="block">
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-slate">{STAGE_LABEL[st]}</span><span className="font-medium text-navy dark:text-ice">{byStage[st]}</span>
+          <h2 className="mo-h1 mb-3 text-base">Pipeline distribution</h2>
+          {(() => {
+            const segs = [
+              { k: "New", v: byStage.new, c: "#8b7cf6" },
+              { k: "Contacted", v: byStage.contacted, c: "#a5b0f0" },
+              { k: "Quoted", v: byStage.quote_sent, c: "#e5b95e" },
+              { k: "Won", v: byStage.closed_won, c: "#4ade80" },
+            ];
+            const total = Math.max(1, segs.reduce((s2, x) => s2 + x.v, 0));
+            let acc = 0;
+            const C = 2 * Math.PI * 40;
+            return (
+              <div className="flex items-center gap-5">
+                <svg viewBox="0 0 100 100" className="h-36 w-36 shrink-0 -rotate-90">
+                  {segs.map((sg) => {
+                    const len = (sg.v / total) * C;
+                    const el = <circle key={sg.k} cx="50" cy="50" r="40" fill="none" stroke={sg.c} strokeWidth="12" strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-acc} strokeLinecap="butt" />;
+                    acc += len; return el;
+                  })}
+                  <circle cx="50" cy="50" r="28" fill="rgb(21 26 44)" />
+                  <text x="50" y="54" textAnchor="middle" className="rotate-90" transform="rotate(90 50 50)" fill="#e9ecf8" fontSize="16" fontWeight="700">{total}</text>
+                </svg>
+                <div className="space-y-2 text-sm">
+                  {segs.map((sg) => (
+                    <Link key={sg.k} href={`/crm/leads?stage=${sg.k === "New" ? "new" : sg.k === "Contacted" ? "contacted" : sg.k === "Quoted" ? "quote_sent" : "closed_won"}`} className="flex items-center gap-2 text-[color:var(--body)] transition hover:text-[color:var(--ink)]">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: sg.c }} />{sg.k}
+                      <span className="ml-auto pl-4 font-semibold text-[color:var(--ink)]">{sg.v}</span>
+                    </Link>
+                  ))}
                 </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-ice/15">
-                  <div className={`h-full rounded-full ${st === "closed_won" ? "bg-gold" : "bg-teal"}`} style={{ width: `${(byStage[st] / maxStage) * 100}%` }} />
-                </div>
-              </Link>
-            ))}
+              </div>
+            );
+          })()}
+          <div className="mt-4 border-t border-[color:var(--border)] pt-3">
+            <div className="mb-1 flex items-baseline justify-between"><span className="text-xs font-medium text-[color:var(--body)]">Leads — last 14 days</span><span className="text-xs text-teal">{dayCounts.reduce((a, b) => a + b, 0)} total</span></div>
+            {(() => {
+              const max = Math.max(1, ...dayCounts);
+              const pts = dayCounts.map((v, i) => `${(i * 100) / 13},${46 - (v / max) * 40}`);
+              const d = `M${pts.join(" L")}`;
+              return (
+                <svg viewBox="0 0 100 50" className="h-16 w-full" preserveAspectRatio="none">
+                  <defs><linearGradient id="area14" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b7cf6" stopOpacity="0.35" /><stop offset="100%" stopColor="#8b7cf6" stopOpacity="0" /></linearGradient></defs>
+                  <path d={`${d} L100,50 L0,50 Z`} fill="url(#area14)" />
+                  <path d={d} fill="none" stroke="#a99df8" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                </svg>
+              );
+            })()}
           </div>
         </Card>
 
