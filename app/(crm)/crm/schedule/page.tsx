@@ -61,6 +61,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const svcWeek = service.filter((j) => weekIsos.includes(j.scheduled_date));
   const qWeek = quotes.filter((j) => weekIsos.includes(j.scheduled_date));
   const todayJobs = shaped.filter((j) => j.scheduled_date === todayIso);
+  const svcPts = week.map((w) => service.filter((j) => j.scheduled_date === w.iso).length);
+  const qPts = week.map((w) => quotes.filter((j) => j.scheduled_date === w.iso).length);
   const capacity = (crews ?? []).reduce((s, c) => s + (c.max_daily_jobs ?? 12), 0) * 7 || 1;
   const util = Math.round((svcWeek.length / capacity) * 100);
 
@@ -74,8 +76,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         </p>
 
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <DeltaTile label="Service This Week" value={svcWeek.length} delta="client calendar" icon="✓" seed={7} />
-          <DeltaTile label="Quote Visits This Week" value={qWeek.length} delta="sales calendar" icon="▤" seed={11} />
+          <DeltaTile label="Service This Week" value={svcWeek.length} delta="client calendar" icon="✓" seed={7} points={svcPts} />
+          <DeltaTile label="Quote Visits This Week" value={qWeek.length} delta="sales calendar" icon="▤" seed={11} points={qPts} />
           <DeltaTile label="Today" value={todayJobs.length} delta={todayJobs.length ? "on the board" : "clear day"} icon="◎" seed={3} />
           <DeltaTile label="Crew Utilization" value={`${util}%`} delta="of weekly capacity" up={util < 85} icon="◈" seed={5} />
         </div>

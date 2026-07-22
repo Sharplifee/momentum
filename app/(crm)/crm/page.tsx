@@ -62,7 +62,7 @@ export default async function Dashboard() {
   const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
   const weekEnd = new Date(new Date(todayIso + "T12:00:00").getTime() + 7 * 86400_000).toLocaleDateString("en-CA");
   const twoWeeksAgo = new Date(Date.now() - 14 * 86400_000).toISOString();
-  const [newL, contacted, quoted, won, wonJobs, resp, activity, checklist, weekJobs, custCount, leadSeries, srcRows] = await Promise.all([
+  const [newL, contacted, quoted, won, wonJobs, resp, activity, checklist, weekJobs, custCount, leadSeries, srcRows, custSeries] = await Promise.all([
     db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "new").neq("source", "test"),
     db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "contacted").neq("source", "test"),
     db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "quote_sent").neq("source", "test"),
@@ -75,6 +75,7 @@ export default async function Dashboard() {
     db.from("customers").select("id", { count: "exact", head: true }).neq("status", "opted_out"),
     db.from("leads").select("created_at").gte("created_at", twoWeeksAgo).neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%"),
     db.from("leads").select("source").neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%"),
+    db.from("customers").select("created_at").gte("created_at", twoWeeksAgo),
   ]);
   const svcJobs = (weekJobs.data ?? []).filter((j: any) => j.agreement_id);
   const quoteVisits = (weekJobs.data ?? []).filter((j: any) => !j.agreement_id);
@@ -90,6 +91,18 @@ export default async function Dashboard() {
   const srcAgg: Record<string, number> = {};
   for (const r of (srcRows.data ?? []) as any[]) srcAgg[r.source ?? "direct"] = (srcAgg[r.source ?? "direct"] ?? 0) + 1;
   const SRC_COLORS = ["#8b7cf6", "#e5b95e", "#4ade80", "#a5b0f0", "#e0655a"];
+  const perDay = (rows: { scheduled_date?: string; created_at?: string }[], key: "scheduled_date" | "created_at", days = 14) => {
+    const out = Array.from({ length: days }, () => 0);
+    for (const r of rows) {
+      const t = new Date((r as any)[key] + (key === "scheduled_date" ? "T12:00:00" : "")).getTime();
+      const idx = days - 1 - Math.floor((Date.now() - t) / 86400_000);
+      if (idx >= 0 && idx < days) out[idx]++;
+    }
+    return out;
+  };
+  const qvPts = perDay(quoteVisits as any, "scheduled_date", 7);
+  const svPts = perDay(svcJobs as any, "scheduled_date", 7);
+  const custPts = perDay((custSeries.data ?? []) as any, "created_at", 14);
   const srcSegs = Object.entries(srcAgg).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v], i) => ({ k: k === "website" ? "Website" : k[0].toUpperCase() + k.slice(1), v, c: SRC_COLORS[i] }));
 
   const revenue = (wonJobs.data ?? []).reduce((s, j) => s + Number(j.price ?? 0), 0);
@@ -101,10 +114,10 @@ export default async function Dashboard() {
   const maxStage = Math.max(1, ...Object.values(byStage));
 
   const stats = [
-    { label: "Incoming Leads", value: newL.count ?? 0, delta: `${wkDelta >= 0 ? "+" : ""}${wkDelta}% vs last wk`, up: wkDelta >= 0, href: "/crm/leads?stage=new", icon: "◎", seed: 3 },
-    { label: "Quote Visits (7d)", value: quoteVisits.length, delta: "sales calendar", href: "/crm/schedule", icon: "▤", seed: 11 },
-    { label: "Service Visits (7d)", value: svcJobs.length, delta: "client calendar", href: "/crm/schedule", icon: "✓", seed: 7 },
-    { label: "Total Clients", value: custCount.count ?? 0, delta: "accounts", href: "/crm/customers", icon: "◈", seed: 5 },
+    { label: "Incoming Leads", value: newL.count ?? 0, delta: `${wkDelta >= 0 ? "+" : ""}${wkDelta}% vs last wk`, up: wkDelta >= 0, href: "/crm/leads?stage=new", icon: "◎", seed: 3, points: dayCounts },
+    { label: "Quote Visits (7d)", value: quoteVisits.length, delta: "sales calendar", href: "/crm/schedule", icon: "▤", seed: 11, points: qvPts },
+    { label: "Service Visits (7d)", value: svcJobs.length, delta: "client calendar", href: "/crm/schedule", icon: "✓", seed: 7, points: svPts },
+    { label: "Total Clients", value: custCount.count ?? 0, delta: "accounts", href: "/crm/customers", icon: "◈", seed: 5, points: custPts },
   ];
 
   return (

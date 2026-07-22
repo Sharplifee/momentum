@@ -74,7 +74,7 @@ export default async function WayneHQ({ searchParams }: { searchParams: { thread
 
       {/* ===== Top band ===== */}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <DeltaTile label="Messages (24h)" value={msgs24} delta="both directions" icon="✉" seed={4} />
+        <DeltaTile label="Messages (24h)" value={msgs24} delta="both directions" icon="✉" seed={4} points={dayCounts} />
         <DeltaTile label="Open Conversations" value={openConvos.length} delta="active < 72h" icon="◎" seed={9} />
         <DeltaTile label="Templates Armed" value={(templates ?? []).filter((t) => t.active !== false).length} delta="instant sends" icon="▤" seed={13} />
         <DeltaTile label="Needs a Human" value={escalated} delta={escalated ? "jump in below" : "all handled"} up={!escalated} icon="🙋" seed={6} />

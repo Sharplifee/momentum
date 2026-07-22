@@ -34,8 +34,8 @@ export function GlobalSearch() {
 
   return (
     <div className="relative" ref={ref}>
-      <div className="flex items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white/60 px-3 py-1.5 dark:bg-white/10">
-        <span className="text-slate">🔍</span>
+      <div className="flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/[0.06] px-3.5 py-2 transition focus-within:border-teal/60">
+        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-slate/70" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => hits.length && setOpen(true)}
           placeholder="Search leads, customers, jobs, messages…"
           className="w-full bg-transparent text-sm text-navy placeholder-slate/60 outline-none dark:text-ice" />

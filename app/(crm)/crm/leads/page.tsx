@@ -45,7 +45,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { q?: 
       <PageHeader title="Leads" action={<LinkButton href="/crm/leads?new=1">+ New lead</LinkButton>} />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <DeltaTile label="This Week" value={wk} delta={`${wkD >= 0 ? "+" : ""}${wkD}% vs last`} up={wkD >= 0} icon="◎" seed={3} />
+        <DeltaTile label="This Week" value={wk} delta={`${wkD >= 0 ? "+" : ""}${wkD}% vs last`} up={wkD >= 0} icon="◎" seed={3} points={dayCounts} />
         <DeltaTile label="Awaiting First Touch" value={counts["new"] ?? 0} delta="speed wins" href="/crm/leads?stage=new" icon="⚡" seed={7} />
         <DeltaTile label="Quotes Out" value={counts["quote_sent"] ?? 0} delta="in play" href="/crm/leads?stage=quote_sent" icon="▤" seed={11} />
         <DeltaTile label="Won" value={counts["closed_won"] ?? 0} delta="became clients" href="/crm/leads?stage=closed_won" icon="◈" seed={5} />

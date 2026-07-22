@@ -2,13 +2,19 @@ import Link from "next/link";
 
 /* ===== Momentum v6 chart kit — pure-SVG server components ===== */
 
-export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1 }: {
-  label: string; value: string | number; delta?: string; up?: boolean; icon: string; href?: string; seed?: number;
+export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1, points }: {
+  label: string; value: string | number; delta?: string; up?: boolean; icon: string; href?: string; seed?: number; points?: number[];
 }) {
-  const pts: number[] = [];
-  let v = 26 + (seed % 14);
-  for (let i = 0; i < 12; i++) { v += Math.sin((i + seed) * 1.6) * 7 + (up ? 1.4 : -1.2); pts.push(Math.max(5, Math.min(45, v))); }
-  const d = pts.map((y, i) => `${i === 0 ? "M" : "L"}${(i * 100) / 11},${50 - y}`).join(" ");
+  let d: string;
+  let hasData = false;
+  if (points && points.length > 1 && points.some((p) => p > 0)) {
+    hasData = true;
+    const max = Math.max(...points);
+    const n = points.length - 1;
+    d = points.map((v, i) => `${i === 0 ? "M" : "L"}${(i * 100) / n},${46 - (v / max) * 36}`).join(" ");
+  } else {
+    d = "M0,44 L100,44"; // honest flat baseline — no data yet
+  }
   const body = (
     <div className="mo-card aiv-glow flex flex-col gap-2 p-4 transition hover:shadow-glow">
       <div className="flex items-center gap-2.5">
@@ -21,8 +27,8 @@ export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1
       </div>
       <svg viewBox="0 0 100 50" className="h-9 w-full" preserveAspectRatio="none">
         <defs><linearGradient id={`dt${seed}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b7cf6" stopOpacity="0.35" /><stop offset="100%" stopColor="#8b7cf6" stopOpacity="0" /></linearGradient></defs>
-        <path d={`${d} L100,50 L0,50 Z`} fill={`url(#dt${seed})`} />
-        <path d={d} fill="none" stroke="#a99df8" strokeWidth="2" strokeLinecap="round" />
+        {hasData && <path d={`${d} L100,50 L0,50 Z`} fill={`url(#dt${seed})`} />}
+        <path d={d} fill="none" stroke={hasData ? "#a99df8" : "rgba(148,155,200,0.35)"} strokeWidth={hasData ? 2 : 1.2} strokeLinecap="round" strokeDasharray={hasData ? undefined : "3 3"} />
       </svg>
     </div>
   );
@@ -31,15 +37,20 @@ export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1
 
 export function FunnelChart({ stages }: { stages: { k: string; v: number; c: string; href?: string }[] }) {
   const max = Math.max(1, ...stages.map((s) => s.v));
+  const W = 200, layerH = 34, gap = 3, minW = 10;
+  const widths = stages.map((s) => Math.max(minW, (s.v / max) * (W - 12)));
   return (
     <div className="flex items-center gap-6">
-      <svg viewBox="0 0 200 150" className="h-40 w-48 shrink-0">
+      <svg viewBox={`0 0 ${W} ${stages.length * (layerH + gap)}`} className="h-40 w-48 shrink-0">
         {stages.map((s, i) => {
-          const topW = 180 - i * 38, botW = 180 - (i + 1) * 38;
-          const y = i * 36, x1 = (200 - topW) / 2, x2 = (200 - botW) / 2;
+          const topW = widths[i];
+          const botW = widths[i + 1] !== undefined ? Math.min(widths[i], Math.max(widths[i + 1], minW)) : Math.max(topW * 0.55, minW);
+          const y = i * (layerH + gap);
+          const x1 = (W - topW) / 2, x2 = (W - botW) / 2;
           return (
             <g key={s.k}>
-              <path d={`M${x1},${y} L${x1 + topW},${y} L${x2 + botW},${y + 32} L${x2},${y + 32} Z`} fill={s.c} opacity={0.92} rx="4" />
+              <path d={`M${x1},${y} L${x1 + topW},${y} L${x2 + botW},${y + layerH} L${x2},${y + layerH} Z`} fill={s.c} opacity={s.v === 0 ? 0.25 : 0.92} />
+              {s.v > 0 && topW > 34 && <text x={W / 2} y={y + layerH / 2 + 4} textAnchor="middle" fontSize="12" fontWeight="700" fill="#0b0e17">{s.v}</text>}
             </g>
           );
         })}
