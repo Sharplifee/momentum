@@ -107,14 +107,14 @@ export function MonthCalendar({ month, jobs, crews, todayIso }: { month: string;
               <button
                 key={i}
                 onClick={() => setSelected(iso)}
-                className={`relative flex min-h-[92px] flex-col items-stretch gap-1 border-b border-r border-[color:var(--border)]/60 p-1.5 text-left transition ${i % 7 === 0 ? "border-l" : ""} ${i < 7 ? "border-t" : ""} ${isSel ? "bg-teal/[0.07]" : "hover:bg-black/[0.02]"} ${inMonth ? "" : "opacity-40"}`}
+                className={`relative flex min-h-[92px] flex-col items-stretch gap-1 border-b border-r border-[color:var(--border)]/60 p-1.5 text-left transition ${i % 7 === 0 ? "border-l" : ""} ${i < 7 ? "border-t" : ""} ${isSel ? "bg-teal/[0.07]" : "hover:bg-white/[0.03]"} ${inMonth ? "" : "opacity-40"}`}
               >
                 <span className={`self-start rounded-full text-[13px] leading-none ${isToday ? "grid h-6 w-6 place-items-center bg-teal font-semibold text-white" : "px-1 pt-0.5 font-medium text-[color:var(--ink)]"}`}>
                   {d.getUTCDate()}
                 </span>
                 <div className="flex flex-col gap-0.5">
                   {list.slice(0, 3).map((j) => (
-                    <span key={j.id} className="flex items-center gap-1 truncate rounded-md bg-black/[0.04] px-1 py-0.5 text-[11px] leading-tight text-[color:var(--ink)]">
+                    <span key={j.id} className="flex items-center gap-1 truncate rounded-md bg-white/[0.06] px-1 py-0.5 text-[11px] leading-tight text-[color:var(--ink)]">
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${CREW_DOT[j.crew_id ?? 0] ?? "bg-slate-400"}`} />
                       <span className="truncate">{j.customer}</span>
                     </span>
@@ -147,7 +147,7 @@ export function MonthCalendar({ month, jobs, crews, todayIso }: { month: string;
             <p className="mb-3 text-xs text-[color:var(--body)]">{dayJobs.length ? `${dayJobs.length} stop${dayJobs.length === 1 ? "" : "s"} — in route order` : "No jobs scheduled."}</p>
             <div className="flex flex-col gap-2">
               {dayJobs.map((j, idx) => (
-                <div key={j.id} className="rounded-2xl border border-[color:var(--border)] bg-white/70 p-3 dark:bg-white/[0.04]">
+                <div key={j.id} className="rounded-2xl border border-[color:var(--border)] bg-white/[0.04] p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 text-sm font-semibold text-[color:var(--ink)]">

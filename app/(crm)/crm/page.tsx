@@ -122,7 +122,7 @@ export default async function Dashboard() {
           <div className="space-y-1">
             {(activity.data ?? []).map((a, i) => (
               <Link key={i} href={a.lead_id ? `/crm/leads/${a.lead_id}` : "/crm/wayne"}
-                className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-ice/10">
+                className="flex items-center justify-between rounded-xl border border-[color:var(--border)] bg-white/[0.02] px-3 py-2.5 text-sm transition hover:border-teal/40 hover:bg-teal/[0.06]">
                 <span className="text-navy dark:text-ice">{humanize(a)}</span>
                 <span className="shrink-0 text-xs text-slate/70">{new Date(a.created_at).toLocaleString("en-US", { timeZone: "America/Denver", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
               </Link>

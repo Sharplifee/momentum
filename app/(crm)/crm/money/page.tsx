@@ -27,10 +27,10 @@ export default async function Money({ searchParams }: { searchParams: { status?:
         <div className="mo-card p-4"><div className="text-xs text-[color:var(--body)]">Outstanding</div><div className="mt-0.5 text-2xl font-bold text-[color:var(--ink)]">${outstanding.toFixed(0)}</div></div>
         <div className="mo-card p-4"><div className="text-xs text-[color:var(--body)]">Paid this month</div><div className="mt-0.5 text-2xl font-bold text-emerald-600">${paidMonth.toFixed(0)}</div></div>
       </div>
-      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-xl bg-black/[0.04] p-1">
+      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-xl bg-white/[0.06] p-1">
         {["", "draft", "sent", "paid", "overdue", "void"].map((s) => (
           <Link key={s || "all"} href={s ? `/crm/money?status=${s}` : "/crm/money"}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${searchParams.status === s || (!searchParams.status && !s) ? "bg-white text-[color:var(--ink)] shadow-sm dark:bg-white/15" : "text-[color:var(--body)] hover:text-[color:var(--ink)]"}`}>
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${searchParams.status === s || (!searchParams.status && !s) ? "bg-teal/20 text-navy ring-1 ring-teal/40" : "text-[color:var(--body)] hover:text-[color:var(--ink)]"}`}>
             {s || "All"}
           </Link>
         ))}

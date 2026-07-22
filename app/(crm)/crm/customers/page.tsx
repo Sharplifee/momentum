@@ -23,14 +23,14 @@ export default async function Customers({ searchParams }: { searchParams: { q?: 
         <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Customers</h1>
         <form className="mb-4">
           <input name="q" defaultValue={searchParams.q ?? ""} placeholder="Search"
-            className="h-10 w-full rounded-xl border border-[color:var(--border)] bg-white/70 px-4 text-sm outline-none focus:border-teal dark:bg-white/10" />
+            className="h-10 w-full rounded-xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-sm outline-none focus:border-teal dark:bg-white/10" />
         </form>
         {[...sections.entries()].map(([letter, list]) => (
           <div key={letter} className="mb-4">
             <div className="px-3 pb-1 text-xs font-semibold text-[color:var(--body)]/70">{letter}</div>
             <div className="mo-card divide-y divide-[color:var(--border)] p-0">
               {(list ?? []).map((c) => (
-                <Link key={c.id} href={`/crm/customers/${c.id}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-black/[0.03]">
+                <Link key={c.id} href={`/crm/customers/${c.id}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.04]">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal/15 text-[13px] font-semibold text-teal">
                     {(c.full_name?.match(/\b\w/g) ?? ["?"]).slice(0, 2).join("").toUpperCase()}
                   </span>
