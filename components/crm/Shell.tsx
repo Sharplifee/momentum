@@ -19,6 +19,7 @@ const NAV: NavGroup[] = [
     { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
     { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
     { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager"] },
+    { href: "/crm/wayne", label: "Wayne", icon: "🤖", roles: ["owner", "manager"] },
     { href: "/crm/customers", label: "Customers", icon: "👥", roles: ["owner", "manager"] },
   ]},
   { group: "Run", items: [
@@ -35,7 +36,34 @@ const MOBILE_TABS: NavItem[] = [
   { href: "/crm/today", label: "Today", icon: "☀️", roles: ["owner", "manager", "crew"] },
   { href: "/crm/jobs", label: "Jobs", icon: "🗓️", roles: ["owner", "manager"] },
   { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager"] },
+    { href: "/crm/wayne", label: "Wayne", icon: "🤖", roles: ["owner", "manager"] },
 ];
+
+
+const ICON_PATHS: Record<string, string> = {
+  "☀️": "M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4L7 17M17 7l1.4-1.4M12 8a4 4 0 100 8 4 4 0 000-8z",
+  "🗓️": "M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z",
+  "🧭": "M12 3a9 9 0 100 18 9 9 0 000-18zM15 9l-2 5-4 2 2-5 4-2z",
+  "📊": "M5 20V10M12 20V4M19 20v-7",
+  "🌱": "M12 20v-6M12 14c0-4 3-7 8-7 0 5-3 8-8 7zM12 14c0-3-2.5-5.5-6.5-5.5C5.5 12 8 14.5 12 14z",
+  "💬": "M21 12a8 8 0 01-8 8H4l2.3-2.9A8 8 0 1121 12z",
+  "🤖": "M12 3v3M8 6h8a3 3 0 013 3v6a3 3 0 01-3 3H8a3 3 0 01-3-3V9a3 3 0 013-3zM9 12h.01M15 12h.01M9 15.5h6",
+  "👥": "M16 19v-1a4 4 0 00-8 0v1M12 11a3 3 0 100-6 3 3 0 000 6zM19 19v-1a3 3 0 00-2-2.8M15.5 5.3a3 3 0 010 5.4",
+  "💵": "M3 7h18v10H3zM12 10a2 2 0 100 4 2 2 0 000-4zM6 10h.01M18 14h.01",
+  "📈": "M4 19h16M4 15l4-4 3 3 5-6 4 4",
+  "⚙️": "M12 9a3 3 0 100 6 3 3 0 000-6zM4.5 12a7.5 7.5 0 01.2-1.7l-2-1.5 2-3.4 2.3 1a7.6 7.6 0 013-1.7L10.5 2h3l.5 2.7a7.6 7.6 0 013 1.7l2.3-1 2 3.4-2 1.5a7.5 7.5 0 010 3.4l2 1.5-2 3.4-2.3-1a7.6 7.6 0 01-3 1.7l-.5 2.7h-3l-.5-2.7a7.6 7.6 0 01-3-1.7l-2.3 1-2-3.4 2-1.5A7.5 7.5 0 014.5 12z",
+  "🧪": "M9 3h6M10 3v5l-5.2 9A2 2 0 006.6 20h10.8a2 2 0 001.8-3L14 8V3M8 15h8",
+  "🛠️": "M14.7 6.3a4 4 0 00-5.4 5.1L3 17.6V21h3.4l6.2-6.3a4 4 0 005.1-5.4l-2.6 2.6-2.3-2.3 2.6-2.6z",
+};
+function NavIcon({ name }: { name: string }) {
+  const d = ICON_PATHS[name];
+  if (!d) return <span className="text-base">{name}</span>;
+  return (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
+  );
+}
 
 export function Shell({ role, name, email, children }: { role: string; name: string; email?: string; children: React.ReactNode }) {
   const pathname = usePathname();
@@ -72,7 +100,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                   {items.map((n) => (
                     <Link key={n.href} href={n.href}
                       className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive(n.href) ? "bg-teal text-white shadow-card" : "text-slate hover:bg-ice/15 hover:text-navy dark:hover:text-ice"}`}>
-                      <span className="text-base">{n.icon}</span>{n.label}
+                      <NavIcon name={n.icon} />{n.label}
                     </Link>
                   ))}
                 </nav>
@@ -95,7 +123,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                     {items.map((n) => (
                       <Link key={n.href} href={n.href} onClick={() => setDrawer(false)}
                         className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium ${isActive(n.href) ? "bg-teal text-white" : "text-slate hover:bg-ice/15"}`}>
-                        <span className="text-base">{n.icon}</span>{n.label}
+                        <NavIcon name={n.icon} />{n.label}
                       </Link>
                     ))}
                   </div>
