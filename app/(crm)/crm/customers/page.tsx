@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import Link from "next/link";
+import { DeltaTile } from "@/components/crm/Charts";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,9 @@ export default async function Customers({ searchParams }: { searchParams: { q?: 
   let q = db.from("customers").select("id, full_name, phone, status, lifetime_value, created_at").neq("status", "opted_out").order("full_name").limit(300);
   if (searchParams.q) q = q.ilike("full_name", `%${searchParams.q}%`);
   const { data: customers } = await q;
+  const monthAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
+  const newMonth = (customers ?? []).filter((c) => c.created_at >= monthAgo).length;
+  const ltv = (customers ?? []).reduce((s2, c) => s2 + Number(c.lifetime_value ?? 0), 0);
 
   const sections = new Map<string, typeof customers>();
   for (const c of customers ?? []) {
@@ -20,7 +24,13 @@ export default async function Customers({ searchParams }: { searchParams: { q?: 
   return (
     <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Accounts</div>
         <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Customers</h1>
+        <div className="mb-5 grid grid-cols-3 gap-3">
+          <DeltaTile label="Total Clients" value={(customers ?? []).length} delta="active accounts" icon="◈" seed={5} />
+          <DeltaTile label="New (30d)" value={newMonth} delta="growth" icon="◎" seed={9} />
+          <DeltaTile label="Lifetime Value" value={`$${ltv.toFixed(0)}`} delta="all accounts" icon="▤" seed={13} />
+        </div>
         <form className="mb-4">
           <input name="q" defaultValue={searchParams.q ?? ""} placeholder="Search"
             className="h-10 w-full rounded-xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-sm outline-none focus:border-teal dark:bg-white/10" />

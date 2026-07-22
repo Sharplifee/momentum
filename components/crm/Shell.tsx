@@ -30,7 +30,7 @@ const MOBILE_TABS: NavItem[] = [
   { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
   { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
   { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
-  { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager", "crew"] },
+  { href: "/crm/messages", label: "Wayne", icon: "💬", roles: ["owner", "manager", "crew"] },
 ];
 
 
