@@ -22,9 +22,9 @@ export const leadIntakeSchema = z.object({
   landing_page: z.string().max(500).optional(),
   referrer: z.string().max(500).optional(),
   // honeypot — real users never fill this in; bots that autofill every field do
-  company_website: z.string().max(0).optional(),
+  company_website: z.string().optional(), // honeypot — validated permissively so bots get a SILENT ok (route branch), not a 400 tell
   // alias honeypot used by the live Claude Design form
-  company: z.string().max(0).optional(),
+  company: z.string().optional(), // honeypot alias
 });
 
 export type LeadIntake = z.infer<typeof leadIntakeSchema>;
