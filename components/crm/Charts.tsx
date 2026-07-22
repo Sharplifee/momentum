@@ -37,35 +37,37 @@ export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1
 
 export function FunnelChart({ stages }: { stages: { k: string; v: number; c: string; href?: string }[] }) {
   const max = Math.max(1, ...stages.map((s) => s.v));
-  const W = 200, layerH = 34, gap = 3, minW = 10;
-  const widths = stages.map((s) => Math.max(minW, (s.v / max) * (W - 12)));
+  const W = 200, layerH = 32, gap = 4;
+  // Blended truth-scaling: real proportions drive it, a floor keeps the funnel silhouette.
+  const width = (v: number) => (v === 0 ? W * 0.22 : W * (0.32 + 0.62 * (v / max)));
+  const widths = stages.map((s) => width(s.v));
   return (
-    <div className="flex items-center gap-6">
-      <svg viewBox={`0 0 ${W} ${stages.length * (layerH + gap)}`} className="h-40 w-48 shrink-0">
+    <div className="flex items-center gap-5">
+      <svg viewBox={`0 0 ${W} ${stages.length * (layerH + gap)}`} className="h-36 w-44 shrink-0">
         {stages.map((s, i) => {
           const topW = widths[i];
-          const botW = widths[i + 1] !== undefined ? Math.min(widths[i], Math.max(widths[i + 1], minW)) : Math.max(topW * 0.55, minW);
+          const botW = Math.min(topW, widths[i + 1] ?? topW * 0.6);
           const y = i * (layerH + gap);
           const x1 = (W - topW) / 2, x2 = (W - botW) / 2;
           return (
             <g key={s.k}>
-              <path d={`M${x1},${y} L${x1 + topW},${y} L${x2 + botW},${y + layerH} L${x2},${y + layerH} Z`} fill={s.c} opacity={s.v === 0 ? 0.25 : 0.92} />
-              {s.v > 0 && topW > 34 && <text x={W / 2} y={y + layerH / 2 + 4} textAnchor="middle" fontSize="12" fontWeight="700" fill="#0b0e17">{s.v}</text>}
+              <path d={`M${x1},${y} L${x1 + topW},${y} L${x2 + botW},${y + layerH} L${x2},${y + layerH} Z`}
+                fill={s.c} opacity={s.v === 0 ? 0.22 : 0.95} rx="3" />
+              {s.v > 0 && <text x={W / 2} y={y + layerH / 2 + 4.5} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#0b0e17">{s.v}</text>}
             </g>
           );
         })}
       </svg>
-      <div className="min-w-0 flex-1 space-y-2 text-sm">
+      <div className="min-w-0 flex-1 space-y-2.5 text-sm">
         {stages.map((s) => {
           const row = (
-            <span className="flex items-center gap-2.5 text-[color:var(--body)] transition hover:text-[color:var(--ink)]">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.c }} />
-              <span>{s.k}</span>
-              <span className="ml-auto h-1.5 w-24 overflow-hidden rounded-full bg-white/[0.07]"><span className="block h-full rounded-full" style={{ width: `${(s.v / max) * 100}%`, background: s.c }} /></span>
-              <span className="w-8 text-right font-semibold text-[color:var(--ink)]">{s.v}</span>
+            <span className="flex w-full items-center gap-2.5">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.c }} />
+              <span className="truncate text-[color:var(--body)]">{s.k}</span>
+              <span className={`ml-auto tabular-nums font-semibold ${s.v ? "text-[color:var(--ink)]" : "text-[color:var(--body)]/50"}`}>{s.v}</span>
             </span>
           );
-          return s.href ? <Link key={s.k} href={s.href} className="block">{row}</Link> : <div key={s.k}>{row}</div>;
+          return s.href ? <Link key={s.k} href={s.href} className="block transition hover:brightness-125">{row}</Link> : <div key={s.k}>{row}</div>;
         })}
       </div>
     </div>
