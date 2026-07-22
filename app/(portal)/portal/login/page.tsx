@@ -33,7 +33,8 @@ export default function PortalLogin() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
+    <main className="flex min-h-screen items-center justify-center px-6">
+      <div className="w-full max-w-md rounded-3xl border border-white/15 bg-white/[0.08] p-8 text-center shadow-2xl backdrop-blur-xl sm:p-10">
       <h1 className="mb-1 text-3xl font-bold">Momentum <span className="text-teal">🌱</span></h1>
       <p className="mb-8 text-white/60">Your lawn, your schedule — sign in with your phone.</p>
       {step === "phone" ? (
@@ -52,6 +53,7 @@ export default function PortalLogin() {
         </form>
       )}
       {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+      </div>
     </main>
   );
 }
