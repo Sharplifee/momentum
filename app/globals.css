@@ -3,43 +3,49 @@
 @tailwind utilities;
 
 :root {
-  --bg: #fbfcfd;
-  --bg-alt: #f3f7f9;
-  --card: 255 255 255;
-  --card-alpha: 0.82;
-  --border: #e3ebef;
-  --ink: #1c2e44;
-  --body: #5c7280;
+  --bg: #0b0e17;
+  --bg-alt: #111527;
+  --card: 21 26 44;
+  --card-alpha: 0.72;
+  --border: rgba(148, 155, 200, 0.14);
+  --ink: #e9ecf8;
+  --body: #98a1bd;
+  --accent: #8b7cf6;
 }
 .dark {
-  --bg: #14202f;
-  --bg-alt: #1c2e44;
-  --card: 28 46 68;
-  --card-alpha: 0.7;
-  --border: #2b3f57;
-  --ink: #eaf1f5;
-  --body: #a9bcc7;
+  --bg: #0b0e17;
+  --bg-alt: #111527;
+  --card: 21 26 44;
+  --card-alpha: 0.72;
+  --border: rgba(148, 155, 200, 0.14);
+  --ink: #e9ecf8;
+  --body: #98a1bd;
 }
 
 body {
   background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(150,178,190,0.14), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(74,143,181,0.10), transparent 55%),
+    radial-gradient(1100px 520px at 85% -8%, rgba(139,124,246,0.16), transparent 60%),
+    radial-gradient(800px 480px at -10% 108%, rgba(99,102,241,0.10), transparent 55%),
     var(--bg);
   color: var(--body);
 }
 
 /* Brand card language: frosted, soft-bordered, gently shadowed */
 .mo-card {
-  background: rgba(var(--card) / var(--card-alpha));
+  background: linear-gradient(180deg, rgba(var(--card) / 0.86), rgba(var(--card) / 0.62));
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(28,46,68,0.04), 0 4px 16px rgba(28,46,68,0.06);
-  backdrop-filter: blur(8px);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 30px rgba(0,0,0,0.28);
+  backdrop-filter: blur(12px);
+}
+.aiv-glow { position: relative; }
+.aiv-glow::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(420px 140px at 80% -20%, rgba(139,124,246,0.18), transparent 70%);
 }
 .mo-h1 { font-family: var(--font-display), "DM Sans", system-ui, sans-serif; color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
-.mo-primary { background: #4a8fb5; color: #fff; }
-.mo-primary:hover { background: #2f6c8e; }
+.mo-primary { background: linear-gradient(135deg, #8b7cf6, #6f5de8); color: #fff; box-shadow: 0 4px 18px rgba(139,124,246,0.35); }
+.mo-primary:hover { filter: brightness(1.08); }
 
 /* loading skeleton shimmer */
 @keyframes mo-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }

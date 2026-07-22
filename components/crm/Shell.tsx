@@ -91,11 +91,11 @@ export function Shell({ role, name, email, children }: { role: string; name: str
             if (!items.length) return null;
             return (
               <div key={g.group} className="mb-5">
-                <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate/60">{g.group}</div>
+                <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
                 <nav className="space-y-0.5">
                   {items.map((n) => (
                     <Link key={n.href} href={n.href}
-                      className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive(n.href) ? "bg-teal text-white shadow-card" : "text-slate hover:bg-ice/15 hover:text-navy dark:hover:text-ice"}`}>
+                      className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive(n.href) ? "bg-teal/15 text-navy shadow-glow ring-1 ring-teal/40" : "text-slate hover:bg-ice/15 hover:text-navy dark:hover:text-ice"}`}>
                       <NavIcon name={n.icon} />{n.label}
                     </Link>
                   ))}
@@ -103,6 +103,11 @@ export function Shell({ role, name, email, children }: { role: string; name: str
               </div>
             );
           })}
+          <div className="mt-6 rounded-2xl bg-gradient-to-br from-teal/25 via-teal/10 to-transparent p-4 ring-1 ring-teal/25">
+            <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-navy"><span>✦</span> Ask Wayne</div>
+            <p className="mb-2 text-[11px] leading-relaxed text-slate">Instant answers and automated follow-ups from your AI teammate.</p>
+            <Link href="/crm/wayne" className="mo-primary block rounded-xl px-3 py-1.5 text-center text-xs font-semibold">Open Wayne</Link>
+          </div>
         </aside>
 
         {/* mobile drawer */}
@@ -115,7 +120,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                 if (!items.length) return null;
                 return (
                   <div key={g.group} className="mb-5">
-                    <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate/60">{g.group}</div>
+                    <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
                     {items.map((n) => (
                       <Link key={n.href} href={n.href} onClick={() => setDrawer(false)}
                         className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium ${isActive(n.href) ? "bg-teal text-white" : "text-slate hover:bg-ice/15"}`}>
@@ -125,7 +130,12 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                   </div>
                 );
               })}
-            </aside>
+              <div className="mt-6 rounded-2xl bg-gradient-to-br from-teal/25 via-teal/10 to-transparent p-4 ring-1 ring-teal/25">
+            <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-navy"><span>✦</span> Ask Wayne</div>
+            <p className="mb-2 text-[11px] leading-relaxed text-slate">Instant answers and automated follow-ups from your AI teammate.</p>
+            <Link href="/crm/wayne" className="mo-primary block rounded-xl px-3 py-1.5 text-center text-xs font-semibold">Open Wayne</Link>
+          </div>
+        </aside>
           </div>
         )}
 

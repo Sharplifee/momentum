@@ -4,6 +4,39 @@ import { Card, StatCard, PageHeader, Chip } from "@/components/ui";
 import { STAGE_STYLE, STAGE_LABEL } from "@/lib/theme";
 import Link from "next/link";
 
+/** Tiny deterministic sparkline like the Aivora cards. */
+function Spark({ seed, up = true }: { seed: number; up?: boolean }) {
+  const pts: number[] = [];
+  let v = 30 + (seed % 20);
+  for (let i = 0; i < 12; i++) { v += Math.sin((i + seed) * 1.7) * 8 + (up ? 1.5 : -1); pts.push(Math.max(6, Math.min(44, v))); }
+  const d = pts.map((y, i) => `${i === 0 ? "M" : "L"}${(i * 100) / 11},${50 - y}`).join(" ");
+  return (
+    <svg viewBox="0 0 100 50" className="h-10 w-full" preserveAspectRatio="none">
+      <defs><linearGradient id={`g${seed}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b7cf6" stopOpacity="0.35"/><stop offset="100%" stopColor="#8b7cf6" stopOpacity="0"/></linearGradient></defs>
+      <path d={`${d} L100,50 L0,50 Z`} fill={`url(#g${seed})`} />
+      <path d={d} fill="none" stroke="#a99df8" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StatTile({ label, value, sub, href, icon, seed }: { label: string; value: string | number; sub?: string; href?: string; icon: string; seed: number }) {
+  const body = (
+    <div className="mo-card aiv-glow flex flex-col gap-2 p-4 transition hover:shadow-glow">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal/15 text-base text-teal ring-1 ring-teal/25">{icon}</span>
+        <span className="text-[13px] font-medium text-slate">{label}</span>
+      </div>
+      <div className="flex items-end justify-between gap-2">
+        <span className="font-display text-[30px] font-bold leading-none text-navy">{value}</span>
+        {sub && <span className="pb-1 text-[11px] font-medium text-green">{sub}</span>}
+      </div>
+      <Spark seed={seed} />
+    </div>
+  );
+  return href ? <Link href={href}>{body}</Link> : body;
+}
+
+
 export const dynamic = "force-dynamic";
 
 /** Turn a raw automation/lead_event into a human sentence. */
@@ -46,15 +79,16 @@ export default async function Dashboard() {
   const maxStage = Math.max(1, ...Object.values(byStage));
 
   const stats = [
-    { label: "New", value: newL.count ?? 0, href: "/crm/leads?stage=new", icon: "🌱" },
-    { label: "Contacted", value: contacted.count ?? 0, href: "/crm/leads?stage=contacted", icon: "📞" },
-    { label: "Quoted", value: quoted.count ?? 0, href: "/crm/leads?stage=quote_sent", icon: "📝" },
-    { label: "Revenue (7d)", value: `$${revenue.toFixed(0)}`, href: "/crm/money", icon: "💵" },
+    { label: "New Leads", value: newL.count ?? 0, sub: "this week", href: "/crm/leads?stage=new", icon: "◎", seed: 3 },
+    { label: "Contacted", value: contacted.count ?? 0, sub: "in motion", href: "/crm/leads?stage=contacted", icon: "☏", seed: 7 },
+    { label: "Quoted", value: quoted.count ?? 0, sub: "awaiting reply", href: "/crm/leads?stage=quote_sent", icon: "▤", seed: 11 },
+    { label: "Revenue (7d)", value: `$${revenue.toFixed(0)}`, sub: "+ live", href: "/crm/money", icon: "◈", seed: 5 },
   ];
 
   return (
     <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <PageHeader title={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, ${(profile.full_name ?? "").split(" ")[0]}`} action={<Link href="/crm/leads" className="mo-primary rounded-xl px-4 py-2 text-sm font-medium shadow-card">View pipeline →</Link>} />
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Dashboard</div>
+      <PageHeader title={`Welcome back, ${(profile.full_name ?? "").split(" ")[0]}`} action={<Link href="/crm/leads" className="mo-primary rounded-xl px-4 py-2 text-sm font-medium shadow-card">View pipeline →</Link>} />
 
       {blockers.length > 0 && (
         <div className="mb-6 rounded-2xl border border-gold/40 bg-gold/10 p-4 text-sm text-navy dark:text-ice">
@@ -63,7 +97,7 @@ export default async function Dashboard() {
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {stats.map((s) => <StatCard key={s.label} {...s} />)}
+        {stats.map((s) => <StatTile key={s.label} {...s} />)}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-5">
