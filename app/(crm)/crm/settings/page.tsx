@@ -15,7 +15,7 @@ export default async function Settings() {
   ]);
   return (
     <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <h1 className="mb-4 text-2xl font-bold">Settings</h1>
+      <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Settings</h1>
       <SettingsPanel services={services ?? []} zones={zones ?? []} config={config ?? []} templates={templates ?? []} crews={crews ?? []} />
     </Shell>
   );

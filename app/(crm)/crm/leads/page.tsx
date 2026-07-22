@@ -16,13 +16,13 @@ function ageLabel(iso: string): string {
 
 export default async function LeadsPage({ searchParams }: { searchParams: { q?: string; stage?: string; view?: string } }) {
   const { profile, role, db } = await requireStaff(["owner", "manager"]);
-  let query = db.from("leads").select("id, full_name, phone, city, zone_id, stage, score, service_interest, quote_amount, created_at").neq("source", "test").order("created_at", { ascending: false }).limit(200);
+  let query = db.from("leads").select("id, full_name, phone, city, zone_id, stage, score, service_interest, quote_amount, created_at").neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%").order("created_at", { ascending: false }).limit(200);
   if (searchParams.stage) query = query.eq("stage", searchParams.stage);
   if (searchParams.q) query = query.or(`full_name.ilike.%${searchParams.q}%,phone.ilike.%${searchParams.q}%,address.ilike.%${searchParams.q}%`);
   const { data: leads } = await query;
 
   const counts: Record<string, number> = {};
-  const { data: allStages } = await db.from("leads").select("stage").neq("source", "test");
+  const { data: allStages } = await db.from("leads").select("stage").neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%");
   for (const l of allStages ?? []) counts[l.stage] = (counts[l.stage] ?? 0) + 1;
   const kanban = searchParams.view === "kanban";
 

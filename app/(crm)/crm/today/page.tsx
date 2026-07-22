@@ -20,7 +20,7 @@ export default async function Today() {
 
   return (
     <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <h1 className="mb-4 text-2xl font-bold">Today — {today}</h1>
+      <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Today — {today}</h1>
       <TodayStops jobs={(jobs ?? []) as any} />
     </Shell>
   );

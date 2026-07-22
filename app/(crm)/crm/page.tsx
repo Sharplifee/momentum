@@ -49,10 +49,7 @@ export default async function Dashboard() {
     { label: "New", value: newL.count ?? 0, href: "/crm/leads?stage=new", icon: "🌱" },
     { label: "Contacted", value: contacted.count ?? 0, href: "/crm/leads?stage=contacted", icon: "📞" },
     { label: "Quoted", value: quoted.count ?? 0, href: "/crm/leads?stage=quote_sent", icon: "📝" },
-    { label: "Won", value: won.count ?? 0, href: "/crm/leads?stage=closed_won", icon: "🏆", tone: "win" as const },
     { label: "Revenue (7d)", value: `$${revenue.toFixed(0)}`, href: "/crm/money", icon: "💵" },
-    { label: "Avg response", value: avgResp != null ? `${avgResp}m` : "—", icon: "⚡" },
-    { label: "Ad spend", value: "Phase 5", href: "/crm/marketing", icon: "📈" },
   ];
 
   return (
@@ -65,7 +62,7 @@ export default async function Dashboard() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
 
@@ -90,7 +87,7 @@ export default async function Dashboard() {
           <h2 className="mo-h1 mb-3 text-base">Recent activity</h2>
           <div className="space-y-1">
             {(activity.data ?? []).map((a, i) => (
-              <Link key={i} href={a.lead_id ? `/crm/leads/${a.lead_id}` : "/crm/automations"}
+              <Link key={i} href={a.lead_id ? `/crm/leads/${a.lead_id}` : "/crm/wayne"}
                 className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-ice/10">
                 <span className="text-navy dark:text-ice">{humanize(a)}</span>
                 <span className="shrink-0 text-xs text-slate/70">{new Date(a.created_at).toLocaleString("en-US", { timeZone: "America/Denver", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>

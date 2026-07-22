@@ -56,6 +56,7 @@ export default async function WaynePage({ searchParams }: { searchParams: Promis
     { name: "Services & prices", desc: "The live catalog — Wayne can never invent a price", live: "Settings", href: "/crm/settings" },
     { name: "Business rules", desc: "Quiet hours, season window, zones & cities, booking rules", live: "Settings", href: "/crm/settings" },
     { name: "SMS templates", desc: `${templatesQ.count ?? 0} templates for instant structured sends`, live: "Messages", href: "/crm/messages" },
+    { name: "Diagnostics", desc: "Run the end-to-end Flow Tester across the whole pipeline", live: "owner", href: "/crm/test" },
   ];
 
   return (

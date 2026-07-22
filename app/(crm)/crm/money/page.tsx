@@ -12,17 +12,25 @@ export default async function Money({ searchParams }: { searchParams: { status?:
   let q = db.from("invoices").select("id, number, total, subtotal, tax, status, due_date, sent_at, created_at, reminders_sent, line_items, customers(full_name, phone)").order("created_at", { ascending: false }).limit(100);
   if (searchParams.status) q = q.eq("status", searchParams.status);
   const { data: invoices } = await q;
+  const { data: allInv } = await db.from("invoices").select("total, status, created_at");
+  const monthStart = new Date(); monthStart.setDate(1);
+  const outstanding = (allInv ?? []).filter((i: any) => ["sent", "overdue"].includes(i.status)).reduce((s: number, i: any) => s + Number(i.total), 0);
+  const paidMonth = (allInv ?? []).filter((i: any) => i.status === "paid" && new Date(i.created_at) >= monthStart).reduce((s: number, i: any) => s + Number(i.total), 0);
 
   return (
     <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Money</h1>
+        <h1 className="font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Money</h1>
         <Link href="/crm/money/pnl" className="rounded-lg bg-teal px-3 py-2 text-sm text-white">P&L →</Link>
       </div>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:max-w-md">
+        <div className="mo-card p-4"><div className="text-xs text-[color:var(--body)]">Outstanding</div><div className="mt-0.5 text-2xl font-bold text-[color:var(--ink)]">${outstanding.toFixed(0)}</div></div>
+        <div className="mo-card p-4"><div className="text-xs text-[color:var(--body)]">Paid this month</div><div className="mt-0.5 text-2xl font-bold text-emerald-600">${paidMonth.toFixed(0)}</div></div>
+      </div>
+      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-xl bg-black/[0.04] p-1">
         {["", "draft", "sent", "paid", "overdue", "void"].map((s) => (
           <Link key={s || "all"} href={s ? `/crm/money?status=${s}` : "/crm/money"}
-            className={`rounded-full px-3 py-1 text-sm ${searchParams.status === s || (!searchParams.status && !s) ? "bg-teal text-white" : "bg-white dark:bg-white/10"}`}>
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${searchParams.status === s || (!searchParams.status && !s) ? "bg-white text-[color:var(--ink)] shadow-sm dark:bg-white/15" : "text-[color:var(--body)] hover:text-[color:var(--ink)]"}`}>
             {s || "All"}
           </Link>
         ))}
