@@ -16,7 +16,7 @@ const NAV: NavGroup[] = [
     { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
     { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
     { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
-    { href: "/crm/messages", label: "Messages", icon: "💬", roles: ["owner", "manager", "crew"] },
+    { href: "/crm/messages", label: "Wayne", icon: "💬", roles: ["owner", "manager", "crew"] },
     { href: "/crm/customers", label: "Customers", icon: "👥", roles: ["owner", "manager"] },
     { href: "/crm/accounting", label: "Accounting", icon: "💵", roles: ["owner"] },
   ]},
