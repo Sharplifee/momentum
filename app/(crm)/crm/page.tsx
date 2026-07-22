@@ -86,7 +86,6 @@ export default async function Dashboard() {
   const revenue = (wonJobs.data ?? []).reduce((s, j) => s + Number(j.price ?? 0), 0);
   const rts = (resp.data ?? []).map((l) => l.response_time_seconds as number);
   const avgResp = rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length / 60) : null;
-  const blockers = ((checklist.data?.value as any)?.items ?? []).filter((i: any) => !i.done);
 
   // pipeline bar (teal scale)
   const byStage: Record<string, number> = { new: newL.count ?? 0, contacted: contacted.count ?? 0, quote_sent: quoted.count ?? 0, closed_won: won.count ?? 0 };
@@ -104,10 +103,7 @@ export default async function Dashboard() {
       <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Dashboard</div>
       <PageHeader title={`Welcome back, ${(profile.full_name ?? "").split(" ")[0]}`} action={<Link href="/crm/leads" className="mo-primary rounded-xl px-4 py-2 text-sm font-medium shadow-card">View pipeline →</Link>} />
 
-      {blockers.length > 0 && (
-        <div className="mb-6 rounded-2xl border border-gold/40 bg-gold/10 p-4 text-sm text-navy dark:text-ice">
-          <strong>Launch blockers ({blockers.length}):</strong> {blockers.map((b: any) => b.label).join(" · ")}
-        </div>
+              </div>
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

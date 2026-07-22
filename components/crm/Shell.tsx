@@ -1,8 +1,9 @@
 "use client";
 
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState , useEffect} from "react";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { AccountMenu } from "@/components/crm/AccountMenu";
 
@@ -59,8 +60,17 @@ function NavIcon({ name }: { name: string }) {
   );
 }
 
+function useBlockers() {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    fetch("/api/crm/status").then((r) => r.json()).then((d) => setN(d.blockers ?? 0)).catch(() => {});
+  }, []);
+  return n;
+}
+
 export function Shell({ role, name, email, children }: { role: string; name: string; email?: string; children: React.ReactNode }) {
   const pathname = usePathname();
+  const blockerCount = useBlockers();
   const [drawer, setDrawer] = useState(false);
   const can = (item: NavItem) => item.roles.includes(role);
   const isActive = (href: string) => (href === "/crm" ? pathname === "/crm" : pathname === href || pathname.startsWith(href + "/"));
