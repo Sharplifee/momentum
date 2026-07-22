@@ -67,15 +67,27 @@ export function AccountPanel({ profile, forcePassword }: { profile: Profile; for
       <Card className="mb-5">
         <h2 className="mo-h1 mb-3 text-base">Change password</h2>
         <div className="space-y-3">
-          <input type="password" value={cur} onChange={(e) => setCur(e.target.value)} placeholder="Current password" className="w-full rounded-xl border border-[color:var(--border)] bg-white/60 px-3 py-2 text-sm dark:bg-white/10" />
-          <input type="password" value={nw} onChange={(e) => setNw(e.target.value)} placeholder="New password (min 8 chars)" className="w-full rounded-xl border border-[color:var(--border)] bg-white/60 px-3 py-2 text-sm dark:bg-white/10" />
+          <label className="block">
+            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Current password</span>
+            <span className="block text-[11px] text-[color:var(--body)]">The password you just used to sign in</span>
+            <input type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} placeholder="Type your current password" className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" />
+          </label>
+          <label className="block">
+            <span className="block text-[13px] font-medium text-[color:var(--ink)]">New password</span>
+            <span className="block text-[11px] text-[color:var(--body)]">At least 8 characters — make it something only you know</span>
+            <input type="password" autoComplete="new-password" value={nw} onChange={(e) => setNw(e.target.value)} placeholder="Type a new password" className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" />
+          </label>
           {nw && (
             <div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-ice/20"><div className="h-full rounded-full bg-teal transition-all" style={{ width: `${st.pct}%` }} /></div>
               <span className="text-xs text-slate">{st.label}</span>
             </div>
           )}
-          <input type="password" value={nw2} onChange={(e) => setNw2(e.target.value)} placeholder="Confirm new password" className="w-full rounded-xl border border-[color:var(--border)] bg-white/60 px-3 py-2 text-sm dark:bg-white/10" />
+          <label className="block">
+            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Confirm new password</span>
+            <span className="block text-[11px] text-[color:var(--body)]">Type the same new password again</span>
+            <input type="password" autoComplete="new-password" value={nw2} onChange={(e) => setNw2(e.target.value)} placeholder="Type it once more" className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" />
+          </label>
           <Button onClick={changePassword} disabled={busy === "pw" || !cur || !st.ok}>{busy === "pw" ? "Saving…" : "Update password"}</Button>
         </div>
       </Card>
@@ -83,12 +95,15 @@ export function AccountPanel({ profile, forcePassword }: { profile: Profile; for
       <Card className="mb-5">
         <h2 className="mo-h1 mb-3 text-base">Profile</h2>
         <div className="space-y-3">
-          <label className="block text-xs text-slate">Display name
-            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-[color:var(--border)] bg-white/60 px-3 py-2 text-sm text-navy dark:bg-white/10 dark:text-ice" /></label>
-          <label className="block text-xs text-slate">Phone
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-[color:var(--border)] bg-white/60 px-3 py-2 text-sm text-navy dark:bg-white/10 dark:text-ice" /></label>
-          <label className="block text-xs text-slate">Email <span className="text-slate/50">(contact an owner to change)</span>
-            <input value={profile.email} disabled className="mt-1 w-full rounded-xl border border-[color:var(--border)] bg-ice/10 px-3 py-2 text-sm text-slate" /></label>
+          <label className="block">
+            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Display name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" /></label>
+          <label className="block">
+            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Phone</span>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" /></label>
+          <label className="block">
+            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Email <span className="font-normal text-[color:var(--body)]/60">(contact an owner to change)</span></span>
+            <input value={profile.email} disabled className="mt-1.5 h-12 w-full cursor-not-allowed rounded-2xl border border-[color:var(--border)] bg-white/[0.03] px-4 text-[15px] text-[color:var(--body)]" /></label>
           <Button onClick={saveProfile} disabled={busy === "profile"}>{busy === "profile" ? "Saving…" : "Save profile"}</Button>
         </div>
       </Card>
