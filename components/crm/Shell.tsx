@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState , useEffect} from "react";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { AccountMenu } from "@/components/crm/AccountMenu";
+import { LocationReporter } from "@/components/crm/LocationReporter";
 
 type NavItem = { href: string; label: string; icon: string; roles: string[] };
 type NavGroup = { group: string; items: NavItem[] };
@@ -158,6 +159,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
           More
         </button>
       </nav>
+      <LocationReporter />
     </div>
   );
 }

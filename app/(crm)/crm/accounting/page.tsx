@@ -7,12 +7,13 @@ export const dynamic = "force-dynamic";
 
 export default async function Accounting() {
   const { profile, role, db } = await requireStaff(["owner"]);
-  const [{ data: customers }, { data: jobs }, { data: invoices }, { data: payments }, { data: expenses }] = await Promise.all([
+  const [{ data: customers }, { data: jobs }, { data: invoices }, { data: payments }, { data: expenses }, { data: proofs }] = await Promise.all([
     db.from("customers").select("id, full_name, phone, created_at").neq("status", "opted_out").order("full_name"),
     db.from("jobs").select("customer_id, status, scheduled_date"),
     db.from("invoices").select("id, customer_id, total, status, created_at").order("created_at", { ascending: false }),
     db.from("payments").select("customer_id, amount, created_at"),
     db.from("expenses").select("id, category, amount, vendor, expense_date").order("expense_date", { ascending: false }).limit(50),
+    db.from("service_proofs").select("id, statement, minutes_on_site, arrival_at, departure_at, method, closest_meters, customers(full_name)").order("created_at", { ascending: false }).limit(12),
   ]);
 
   const rows = (customers ?? []).map((c) => {
@@ -111,6 +112,30 @@ export default async function Accounting() {
             </div>
           </BandCard>
         </div>
+
+        <BandCard title="Proof of service" sub="auto-verified by GPS — no one has to check anything off" className="mt-6">
+          <div className="space-y-2">
+            {(proofs ?? []).map((p: any) => (
+              <div key={p.id} className="flex items-start gap-3 rounded-xl border border-[color:var(--border)] bg-white/[0.02] px-3.5 py-3">
+                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-green/20 text-[10px] font-bold text-green">✓</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] text-[color:var(--ink)]">{p.statement}</span>
+                  <span className="mt-0.5 block text-[11px] text-[color:var(--body)]">
+                    {p.customers?.full_name ?? "Client"} · {p.minutes_on_site} min on site · within {Math.round(p.closest_meters ?? 0)}m · {p.method === "gps_auto" ? "verified automatically" : p.method}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[11px] text-[color:var(--body)]/70">
+                  {p.departure_at ? new Date(p.departure_at).toLocaleDateString("en-US", { timeZone: "America/Denver", month: "short", day: "numeric" }) : ""}
+                </span>
+              </div>
+            ))}
+            {!(proofs ?? []).length && (
+              <p className="py-4 text-sm text-[color:var(--body)]">
+                No verified visits yet. Once a crew phone is on site for the required time, the visit closes itself and the proof lands here.
+              </p>
+            )}
+          </div>
+        </BandCard>
 
         {/* ===== P&L strip ===== */}
         <BandCard title="Profit & Loss" sub="all-time, live" className="mt-6">
