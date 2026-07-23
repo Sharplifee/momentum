@@ -69,7 +69,7 @@ export async function resolveParcel(address: string, city?: string | null): Prom
 
   const wheres = [
     city ? `PARCEL_ADD LIKE '${houseNumber} %' AND UPPER(PARCEL_CITY)='${city.toUpperCase().replace(/'/g, "''")}'` : null,
-    `PARCEL_ADD LIKE '${houseNumber} %' AND (County='SALT LAKE' OR County='UTAH' OR County='Salt Lake' OR County='Utah')`,
+    `PARCEL_ADD LIKE '${houseNumber} %' AND County IN ('SaltLake','Utah')`,
   ].filter(Boolean) as string[];
 
   for (const where of wheres) {
@@ -115,4 +115,78 @@ export async function resolveParcel(address: string, city?: string | null): Prom
     }
   }
   return null;
+}
+
+/**
+ * Address autocomplete against real county parcel records.
+ *
+ * Typing "2891 Highland" returns the actual parcels that exist, so a shorthand or
+ * mistyped address gets corrected to a surveyed property instead of silently
+ * geocoding to a guessed point on a street centerline.
+ */
+export type AddressSuggestion = {
+  address: string;
+  city: string | null;
+  county: string | null;
+  parcel_id: string | null;
+  lat: number;
+  lng: number;
+  radius_m: number;
+  exact: boolean;
+};
+
+export async function suggestAddresses(query: string, limit = 8): Promise<AddressSuggestion[]> {
+  const n = normalize(query);
+  if (n.length < 4) return [];
+  const parts = n.split(" ");
+  const houseNumber = /^\d+$/.test(parts[0]) ? parts[0] : null;
+  const streetWords = (houseNumber ? parts.slice(1) : parts).filter((w) => !/^[NSEW]$/.test(w));
+  const token = streetWords.join(" ").replace(/'/g, "''");
+  if (!token) return [];
+
+  const where = houseNumber
+    ? `UPPER(PARCEL_ADD) LIKE '%${token}%' AND County IN ('SaltLake','Utah')`
+    : `UPPER(PARCEL_ADD) LIKE '%${token}%' AND County IN ('SaltLake','Utah')`;
+
+  const params = new URLSearchParams({
+    where, outFields: "PARCEL_ADD,PARCEL_CITY,County,PARCEL_ID",
+    returnGeometry: "true", outSR: "4326", resultRecordCount: "200", f: "json",
+  });
+
+  let json: any;
+  try {
+    const res = await fetch(`${PARCEL_QUERY}?${params}`, { cache: "no-store" });
+    json = await res.json();
+  } catch { return []; }
+
+  const scored = (json?.features ?? []).map((f: any) => {
+    const pa = normalize(f.attributes?.PARCEL_ADD);
+    const paNum = pa.split(" ")[0];
+    let score = 0;
+    if (houseNumber) {
+      if (paNum === houseNumber) score += 60;
+      else if (/^\d+$/.test(paNum)) score += Math.max(0, 40 - Math.abs(Number(paNum) - Number(houseNumber)) / 5);
+    }
+    const ps = new Set(pa.split(" "));
+    const overlap = streetWords.filter((w) => ps.has(w)).length;
+    score += (overlap / Math.max(1, streetWords.length)) * 40;
+    return { score, f, exact: houseNumber != null && paNum === houseNumber };
+  }).sort((a: any, b: any) => b.score - a.score).slice(0, limit);
+
+  const out: AddressSuggestion[] = [];
+  for (const s of scored) {
+    const ring = s.f.geometry?.rings?.[0];
+    if (!ring) continue;
+    const { lat, lng, radius_m } = centroidAndRadius(ring);
+    out.push({
+      address: s.f.attributes?.PARCEL_ADD ?? "",
+      city: s.f.attributes?.PARCEL_CITY ?? null,
+      county: s.f.attributes?.County ?? null,
+      parcel_id: s.f.attributes?.PARCEL_ID ?? null,
+      lat: Number(lat.toFixed(7)), lng: Number(lng.toFixed(7)),
+      radius_m: Number(radius_m.toFixed(1)),
+      exact: s.exact,
+    });
+  }
+  return out;
 }
