@@ -82,16 +82,22 @@ export async function processPing(profileId: string, deviceId: string, ping: Pin
 
   const { data: jobs } = await db
     .from("jobs")
-    .select("id, status, customer_id, property_id, arrival_at, properties(id, address, lat, lng), services(name, slug)")
+    .select("id, status, customer_id, property_id, arrival_at, properties(id, address, lat, lng, geofence_radius_m), services(name, slug)")
     .eq("scheduled_date", todayIso)
     .neq("status", "canceled");
 
   const ranked = ((jobs ?? []) as any[])
     .filter((j) => j.properties?.lat && j.properties?.lng)
-    .map((j) => ({ job: j, meters: metersBetween(ping.lat, ping.lng, j.properties.lat, j.properties.lng) }))
+    .map((j) => ({
+      job: j,
+      meters: metersBetween(ping.lat, ping.lng, j.properties.lat, j.properties.lng),
+      // Each property carries its own fence, measured from the county parcel polygon
+      // (centroid → farthest vertex). Falls back to the global default when unverified.
+      fence: Number(j.properties.geofence_radius_m) || cfg.geofence_meters,
+    }))
     .sort((a, b) => a.meters - b.meters);
 
-  const inside = ranked.filter((r) => r.meters <= cfg.geofence_meters);
+  const inside = ranked.filter((r) => r.meters <= r.fence);
   const match = inside[0] ?? null;
   const ambiguous = inside.length > 1 && inside[1].meters - inside[0].meters < cfg.ambiguity_meters;
 
