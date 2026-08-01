@@ -83,14 +83,14 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         </div>
 
         <BandCard title="This week" sub={`${week[0].dow} ${week[0].num} → ${week[6].dow} ${week[6].num} · teal = service · gold = quote`} className="mb-6">
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {week.map((d) => {
               const svc = service.filter((j) => j.scheduled_date === d.iso);
               const qts = quotes.filter((j) => j.scheduled_date === d.iso);
               const isToday = d.iso === todayIso;
               return (
                 <Link key={d.iso} href={`/crm/schedule?m=${d.iso.slice(0, 7)}&d=${d.iso}`}
-                  className={`min-h-[132px] rounded-2xl border p-2 transition hover:border-teal/50 ${isToday ? "border-teal/60 bg-teal/[0.08] shadow-glow" : "border-[color:var(--border)] bg-white/[0.02]"}`}>
+                  className={`min-h-[92px] rounded-2xl border p-1.5 transition hover:border-teal/50 sm:min-h-[132px] sm:p-2 ${isToday ? "border-teal/60 bg-teal/[0.08] shadow-glow" : "border-[color:var(--border)] bg-white/[0.02]"}`}>
                   <div className="mb-1.5 text-center">
                     <div className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--body)]/70">{d.dow}</div>
                     <div className={`mx-auto grid h-7 w-7 place-items-center rounded-full text-sm font-bold ${isToday ? "bg-teal text-white" : "text-[color:var(--ink)]"}`}>{d.num}</div>
