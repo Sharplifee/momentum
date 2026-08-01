@@ -60,10 +60,10 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap gap-1.5">
+      <div className="mb-4 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]{display:none}">
         {tabs.map(([k, label, n]) => (
           <button key={k} onClick={() => setTab(k as any)}
-            className={`rounded-xl px-3.5 py-1.5 text-sm font-medium transition ${
+            className={`shrink-0 whitespace-nowrap rounded-xl px-3.5 py-1.5 text-sm font-medium transition ${
               tab === k ? "bg-teal/15 text-navy ring-1 ring-teal/40 dark:text-ice" : "text-slate hover:bg-ice/15"
             }`}>
             {label}{n !== null && <span className="ml-1.5 text-xs text-slate/60">{n}</span>}

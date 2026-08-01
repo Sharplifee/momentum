@@ -18,12 +18,12 @@ export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1
   const body = (
     <div className="mo-card aiv-glow flex flex-col gap-2 p-4 transition hover:shadow-glow">
       <div className="flex items-center gap-2.5">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal/15 text-base text-teal ring-1 ring-teal/25">{icon}</span>
-        <span className="text-[13px] font-medium text-slate">{label}</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-teal/15 text-base text-teal ring-1 ring-teal/25">{icon}</span>
+        <span className="min-w-0 truncate text-[13px] font-medium text-slate">{label}</span>
       </div>
-      <div className="flex items-end justify-between gap-2">
+      <div className="flex flex-wrap items-end gap-x-2 gap-y-0.5">
         <span className="font-display text-[30px] font-bold leading-none text-navy">{value}</span>
-        {delta && <span className={`pb-1 text-[11px] font-semibold ${up ? "text-green" : "text-red"}`}>{delta}</span>}
+        {delta && <span className={`pb-0.5 text-[11px] font-semibold ${up ? "text-green" : "text-red"}`}>{delta}</span>}
       </div>
       <svg viewBox="0 0 100 50" className="h-9 w-full" preserveAspectRatio="none">
         <defs><linearGradient id={`dt${seed}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b7cf6" stopOpacity="0.35" /><stop offset="100%" stopColor="#8b7cf6" stopOpacity="0" /></linearGradient></defs>

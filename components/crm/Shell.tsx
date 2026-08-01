@@ -87,7 +87,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
         <div className="flex items-center gap-3 px-4 py-2.5 md:px-6">
           <button onClick={() => setDrawer(!drawer)} className="rounded-lg p-1.5 text-slate hover:bg-ice/15 md:hidden" aria-label="Menu">☰</button>
           <Link href={role === "crew" ? "/crm/today" : "/crm"} className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-teal font-display text-lg font-bold text-white">M</span>
+            <img src="/logo-mark.png" alt="Momentum" className="h-8 w-8 shrink-0 object-contain" />
             <span className="hidden font-display text-lg font-bold text-navy dark:text-ice sm:block">Momentum</span>
           </Link>
           <div className="mx-auto w-full max-w-md"><GlobalSearch /></div>

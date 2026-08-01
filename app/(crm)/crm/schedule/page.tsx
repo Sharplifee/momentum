@@ -97,13 +97,19 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                   </div>
                   <div className="space-y-1">
                     {svc.slice(0, 3).map((j) => (
-                      <div key={j.id} className="truncate rounded-md bg-teal/20 px-1.5 py-0.5 text-[10px] font-medium text-teal ring-1 ring-teal/25">{j.customer}</div>
+                      <div key={j.id} title={j.customer} className="hidden truncate rounded-md bg-teal/20 px-1.5 py-0.5 text-[10px] font-medium text-teal ring-1 ring-teal/25 sm:block">{j.customer}</div>
                     ))}
                     {qts.slice(0, 3).map((j) => (
-                      <div key={j.id} className="truncate rounded-md bg-gold/20 px-1.5 py-0.5 text-[10px] font-medium text-gold ring-1 ring-gold/30">{j.customer}</div>
+                      <div key={j.id} title={j.customer} className="hidden truncate rounded-md bg-gold/20 px-1.5 py-0.5 text-[10px] font-medium text-gold ring-1 ring-gold/30 sm:block">{j.customer}</div>
                     ))}
+                    {svc.length + qts.length > 0 && (
+                      <div className="flex flex-col items-center gap-0.5 pt-1 sm:hidden">
+                        {svc.length > 0 && <span className="rounded-md bg-teal/20 px-1.5 py-0.5 text-[10px] font-semibold text-teal ring-1 ring-teal/25">{svc.length}</span>}
+                        {qts.length > 0 && <span className="rounded-md bg-gold/20 px-1.5 py-0.5 text-[10px] font-semibold text-gold ring-1 ring-gold/30">{qts.length}</span>}
+                      </div>
+                    )}
                     {svc.length + qts.length === 0 && <div className="pt-2 text-center text-[10px] text-[color:var(--body)]/40">—</div>}
-                    {svc.length + qts.length > 6 && <div className="text-center text-[10px] text-[color:var(--body)]/60">+{svc.length + qts.length - 6} more</div>}
+                    {svc.length + qts.length > 6 && <div className="hidden text-center text-[10px] text-[color:var(--body)]/60 sm:block">+{svc.length + qts.length - 6} more</div>}
                   </div>
                 </Link>
               );
