@@ -106,7 +106,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                 <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
                 <nav className="space-y-0.5">
                   {items.map((n) => (
-                    <Link key={n.href} href={n.href}
+                    <Link key={n.href} href={n.href} prefetch
                       className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive(n.href) ? "bg-teal/15 text-navy shadow-glow ring-1 ring-teal/40" : "text-slate hover:bg-ice/15 hover:text-navy dark:hover:text-ice"}`}>
                       <NavIcon name={n.icon} />{n.label}
                     </Link>
@@ -129,7 +129,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                   <div key={g.group} className="mb-5">
                     <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
                     {items.map((n) => (
-                      <Link key={n.href} href={n.href} onClick={() => setDrawer(false)}
+                      <Link key={n.href} href={n.href} prefetch onClick={() => setDrawer(false)}
                         className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium ${isActive(n.href) ? "bg-teal text-white" : "text-slate hover:bg-ice/15"}`}>
                         <NavIcon name={n.icon} />{n.label}
                       </Link>
@@ -149,7 +149,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
       {/* mobile bottom tabs */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[color:var(--border)] bg-[#0b0e17]/95 px-1.5 pb-[env(safe-area-inset-bottom)] pt-0.5 backdrop-blur-xl md:hidden">
         {mobileTabs.map((n) => (
-          <Link key={n.href} href={n.href}
+          <Link key={n.href} href={n.href} prefetch
             className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium leading-none transition ${isActive(n.href) ? "text-teal" : "text-slate"}`}>
             {isActive(n.href) && <span className="absolute -top-px h-0.5 w-8 rounded-full bg-teal" />}
             <span className={`grid h-8 w-full max-w-[52px] place-items-center rounded-xl transition ${isActive(n.href) ? "bg-teal/15" : ""}`}><NavIcon name={n.icon} /></span>
