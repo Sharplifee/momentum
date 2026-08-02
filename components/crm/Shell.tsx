@@ -29,7 +29,7 @@ const NAV: NavGroup[] = [
 
 // mobile bottom tabs — the four crews reach for outdoors
 const MOBILE_TABS: NavItem[] = [
-  { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
+  { href: "/crm", label: "Home", icon: "📊", roles: ["owner", "manager"] },
   { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
   { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
   { href: "/crm/tracker", label: "Tracker", icon: "🧭", roles: ["owner", "manager"] },
@@ -147,17 +147,22 @@ export function Shell({ role, name, email, children }: { role: string; name: str
       </div>
 
       {/* mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[color:var(--border)] bg-[#0b0e17]/95 px-1.5 pb-[env(safe-area-inset-bottom)] pt-0.5 backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[color:var(--border)] bg-[#0b0e17]/95 pt-0.5 backdrop-blur-xl md:hidden"
+        style={{
+          paddingLeft: "max(14px, env(safe-area-inset-left))",
+          paddingRight: "max(14px, env(safe-area-inset-right))",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}>
         {mobileTabs.map((n) => (
           <Link key={n.href} href={n.href} prefetch
-            className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium leading-none transition ${isActive(n.href) ? "text-teal" : "text-slate"}`}>
+            className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[10.5px] font-medium leading-none transition ${isActive(n.href) ? "text-teal" : "text-slate"}`}>
             {isActive(n.href) && <span className="absolute -top-px h-0.5 w-8 rounded-full bg-teal" />}
-            <span className={`grid h-8 w-full max-w-[52px] place-items-center rounded-xl transition ${isActive(n.href) ? "bg-teal/15" : ""}`}><NavIcon name={n.icon} /></span>
+            <span className={`grid h-8 w-full max-w-[46px] place-items-center rounded-xl transition ${isActive(n.href) ? "bg-teal/15" : ""}`}><NavIcon name={n.icon} /></span>
             <span className="w-full truncate px-0.5 text-center">{n.label}</span>
           </Link>
         ))}
-        <button onClick={() => setDrawer(true)} className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium leading-none text-slate">
-          <span className="grid h-8 w-full max-w-[52px] place-items-center rounded-xl"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <button onClick={() => setDrawer(true)} className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[10.5px] font-medium leading-none text-slate">
+          <span className="grid h-8 w-full max-w-[46px] place-items-center rounded-xl"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
           <span className="w-full truncate px-0.5 text-center">More</span>
         </button>
       </nav>
