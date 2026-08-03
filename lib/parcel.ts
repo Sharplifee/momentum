@@ -147,23 +147,113 @@ async function geocodeCensus(address: string, city: string | null | undefined): 
 }
 
 async function pointInParcel(lat: number, lng: number, bufferDeg = 0): Promise<any[]> {
-  const geometry =
-    bufferDeg > 0
-      ? { xmin: lng - bufferDeg, ymin: lat - bufferDeg, xmax: lng + bufferDeg, ymax: lat + bufferDeg, spatialReference: { wkid: 4326 } }
-      : { x: lng, y: lat, spatialReference: { wkid: 4326 } };
-  const params = new URLSearchParams({
-    geometry: JSON.stringify(geometry),
-    geometryType: bufferDeg > 0 ? "esriGeometryEnvelope" : "esriGeometryPoint",
-    inSR: "4326", spatialRel: "esriSpatialRelIntersects",
-    outFields: "PARCEL_ADD,PARCEL_CITY,PARCEL_ID,County", returnGeometry: "true", outSR: "4326", f: "json",
-  });
-  try {
-    const json = await fetchJsonWithRetry(`${PARCEL_QUERY}?${params}`);
-    return json?.features ?? [];
-  } catch {
-    return [];
+  const build = (base: string) => {
+    const params = new URLSearchParams({
+      geometry: `${lng},${lat}`,
+      geometryType: "esriGeometryPoint",
+      inSR: "4326",
+      spatialRel: "esriSpatialRelIntersects",
+      outFields: "PARCEL_ADD,PARCEL_CITY,PARCEL_ID,County,PARCEL_ACRES",
+      returnGeometry: "true",
+      outSR: "4326",
+      resultRecordCount: "12",
+      f: "json",
+    });
+    if (bufferDeg > 0) {
+      params.set("distance", String(Math.round(bufferDeg * 111_320)));
+      params.set("units", "esriSRUnit_Meter");
+    }
+    return `${base}?${params.toString()}`;
+  };
+
+  // Statewide first — one call covers the whole service area. Fall through to
+  // the per-county services only when it comes back empty, because those are
+  // more complete but cost an extra round trip each.
+  for (const base of [PARCEL_QUERY, ...COUNTY_PARCEL_QUERIES]) {
+    const data = await fetchJsonWithRetry(build(base)).catch(() => null);
+    const feats: any[] = data?.features ?? [];
+    if (feats.length) return feats;
   }
+  return [];
 }
+
+
+const ADDRESS_POINTS_URL =
+  "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/UtahAddressPoints/FeatureServer/0/query";
+
+/** Salt Lake + Utah county bounding box, to keep the candidate set small. */
+const SERVICE_AREA_ENVELOPE = "-112.30,40.20,-111.45,40.95";
+
+/**
+ * Utah Address Points — the state's authoritative address layer.
+ *
+ * This is a better first stop than matching against the parcel layer's own
+ * PARCEL_ADD string, because a parcel's recorded address is often blank,
+ * abbreviated differently, or still shows the developer's original lot
+ * address. Address Points is maintained from local government address
+ * authorities and carries a ParcelID, which gives a direct address -> parcel
+ * link instead of a string comparison.
+ */
+async function queryAddressPoint(
+  houseNumber: string,
+  normalizedAddress: string
+): Promise<{ lat: number; lng: number; parcelId: string | null; fullAdd: string; city: string } | null> {
+  const params = new URLSearchParams({
+    where: `AddNum='${houseNumber.replace(/'/g, "''")}'`,
+    outFields: "FullAdd,City,ParcelID",
+    returnGeometry: "true",
+    outSR: "4326",
+    resultRecordCount: "600",
+    f: "json",
+    geometry: SERVICE_AREA_ENVELOPE,
+    geometryType: "esriGeometryEnvelope",
+    inSR: "4326",
+    spatialRel: "esriSpatialRelIntersects",
+  });
+  const data = await fetchJsonWithRetry(`${ADDRESS_POINTS_URL}?${params.toString()}`).catch(() => null);
+  const feats: any[] = data?.features ?? [];
+  for (const f of feats) {
+    if (normalize(f.attributes?.FullAdd) !== normalizedAddress) continue;
+    const g = f.geometry;
+    if (typeof g?.y !== "number" || typeof g?.x !== "number") continue;
+    return {
+      lat: g.y,
+      lng: g.x,
+      parcelId: f.attributes?.ParcelID ?? null,
+      fullAdd: f.attributes?.FullAdd ?? "",
+      city: f.attributes?.City ?? "",
+    };
+  }
+  return null;
+}
+
+/** Fetch a parcel by its county parcel id — the link Address Points hands us. */
+async function queryParcelById(parcelId: string): Promise<any | null> {
+  const params = new URLSearchParams({
+    where: `PARCEL_ID='${parcelId.replace(/'/g, "''")}'`,
+    outFields: "PARCEL_ADD,PARCEL_CITY,PARCEL_ID,County,TAXEXEMPT_TYPE,TOTAL_MKT_VALUE,PARCEL_ACRES",
+    returnGeometry: "true",
+    outSR: "4326",
+    resultRecordCount: "5",
+    f: "json",
+  });
+  const data = await fetchJsonWithRetry(`${PARCEL_QUERY}?${params.toString()}`).catch(() => null);
+  return data?.features?.[0] ?? null;
+}
+
+
+/**
+ * Per-county LIR parcel services.
+ *
+ * The statewide layer has gaps: it reports 284,092 Utah County parcels while
+ * the county's own LIR service has 327,655. Two verified Utah County addresses
+ * returned nothing statewide and resolved cleanly against the county service,
+ * so every spatial lookup falls back through these.
+ */
+const COUNTY_PARCEL_QUERIES = [
+  "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Parcels_SaltLake_LIR/FeatureServer/0/query",
+  "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Parcels_Utah_LIR/FeatureServer/0/query",
+];
 
 export type ParcelResult = {
   parcel_address: string | null;
@@ -175,7 +265,7 @@ export type ParcelResult = {
   score: number;
   ring: number[][];
   pin_method: "interior_pin";
-  match_method: "address_exact" | "address_fuzzy" | "geocode_point" | "geocode_buffer";
+  match_method: "address_exact" | "address_fuzzy" | "address_point" | "geocode_point" | "geocode_buffer";
 };
 
 function toResult(feature: any, score: number, matchMethod: ParcelResult["match_method"]): ParcelResult | null {
@@ -236,6 +326,27 @@ export async function resolveParcel(address: string, city?: string | null): Prom
     }
   }
 
+  // Tier 1b: Utah Address Points. Authoritative, and its ParcelID gives a direct
+  // link to the lot — so an address the parcel layer records under a different
+  // string still resolves. If the id lookup misses, the point itself is still a
+  // far better geocode than street-centreline interpolation, so fall through to
+  // containment using it.
+  const pt = await queryAddressPoint(houseNumber, n);
+  if (pt) {
+    if (pt.parcelId) {
+      const byId = await queryParcelById(pt.parcelId);
+      if (byId) {
+        const r = toResult(byId, 100, "address_point");
+        if (r) return r;
+      }
+    }
+    const contains = await pointInParcel(pt.lat, pt.lng);
+    if (contains.length === 1) {
+      const r = toResult(contains[0], 95, "address_point");
+      if (r) return r;
+    }
+  }
+
   // Tier 2/3: geocode + spatial containment, corroborated by the point actually
   // falling inside the surveyed lot (tier 2) or, failing that, by both proximity
   // and a non-trivial text score agreeing (tier 3).
@@ -283,7 +394,7 @@ export async function resolveParcel(address: string, city?: string | null): Prom
 }
 
 export type ResolveAllOutcome = {
-  id: string; address: string; matched: string | null;
+  id: string; address: string; city?: string | null; matched: string | null;
   radius_m?: number; score?: number; match_method?: ParcelResult["match_method"]; note?: string;
 };
 
@@ -317,11 +428,11 @@ export async function resolveAllUnresolvedProperties(
         geocoded_at: new Date().toISOString(),
       }).eq("id", p.id);
       results.push({
-        id: p.id, address: p.address, matched: parcel.parcel_address,
+        id: p.id, address: p.address, city: p.city, matched: parcel.parcel_address,
         radius_m: parcel.radius_m, score: parcel.score, match_method: parcel.match_method,
       });
     } else {
-      results.push({ id: p.id, address: p.address, matched: null, note: "no parcel found in Utah's records — needs staff review" });
+      results.push({ id: p.id, address: p.address, city: p.city, matched: null, note: "no parcel found in Utah's records — needs staff review" });
     }
   }
   return results;
