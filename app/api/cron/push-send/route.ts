@@ -1,24 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { sendApns } from "@/lib/apns";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const EXPO_ENDPOINT = "https://exp.host/--/api/v2/push/send";
-
 type Queued = {
   id: number; profile_id: string; title: string; body: string;
-  data: Record<string, unknown>; category: string | null;
+  data: Record<string, unknown>; category: string | null; attempts: number;
 };
 
 /**
- * Drains the push outbox.
+ * Drains the push outbox straight to Apple.
  *
  * Notifications are queued by database triggers rather than sent inline, so a
- * slow or failing push service never blocks the request that raised them. This
- * route batches by device and retires tokens that the push service reports as
- * dead — a reinstalled phone issues a new token and the old one would otherwise
- * fail forever.
+ * slow or failing push service never blocks the request that raised them.
+ * Tokens Apple reports as dead are retired — a reinstalled phone issues a new
+ * one and the old would otherwise fail forever.
  */
 export async function GET(req: NextRequest) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -28,12 +26,12 @@ export async function GET(req: NextRequest) {
 
   const { data: queued } = await db
     .from("push_queue")
-    .select("id, profile_id, title, body, data, category")
+    .select("id, profile_id, title, body, data, category, attempts")
     .is("sent_at", null)
     .lte("send_after", new Date().toISOString())
     .lt("attempts", 5)
     .order("id")
-    .limit(100);
+    .limit(60);
 
   if (!queued?.length) return NextResponse.json({ ok: true, sent: 0 });
 
@@ -51,78 +49,66 @@ export async function GET(req: NextRequest) {
     byProfile.set(t.profile_id, list);
   }
 
-  const messages: any[] = [];
-  const rowFor: number[] = [];
+  const dead = new Set<string>();
+  const delivered: number[] = [];
   const noDevice: number[] = [];
+  const failed: { id: number; reason: string; attempts: number }[] = [];
 
   for (const q of queued as Queued[]) {
     const targets = byProfile.get(q.profile_id) ?? [];
     if (!targets.length) { noDevice.push(q.id); continue; }
-    for (const to of targets) {
-      messages.push({
-        to, title: q.title, body: q.body, data: q.data,
-        sound: "default", priority: "high",
-        channelId: q.category ?? "default",
-        badge: 1,
-      });
-      rowFor.push(q.id);
+
+    const results = await Promise.all(
+      targets.map((deviceToken) =>
+        sendApns({
+          deviceToken,
+          title: q.title,
+          body: q.body,
+          data: q.data,
+          badge: 1,
+          threadId: q.category ?? undefined,
+        }).then((r) => ({ deviceToken, r }))
+      )
+    );
+
+    // One phone succeeding is enough — the person got the message.
+    const anyOk = results.some((x) => x.r.ok);
+    for (const { deviceToken, r } of results) {
+      if (!r.ok && r.retire) dead.add(deviceToken);
+    }
+    if (anyOk) {
+      delivered.push(q.id);
+    } else {
+      const first = results.find((x) => !x.r.ok)?.r as any;
+      failed.push({ id: q.id, reason: first?.reason ?? "unknown", attempts: (q.attempts ?? 0) + 1 });
     }
   }
 
-  // Nobody has that app installed yet — retire the row rather than retrying forever.
+  const now = new Date().toISOString();
+  if (delivered.length) {
+    await db.from("push_queue").update({ sent_at: now }).in("id", delivered);
+  }
   if (noDevice.length) {
+    // Nobody has the app installed yet — retire rather than retrying forever.
     await db.from("push_queue")
-      .update({ sent_at: new Date().toISOString(), last_error: "no_active_device" })
+      .update({ sent_at: now, last_error: "no_active_device" })
       .in("id", noDevice);
   }
-  if (!messages.length) return NextResponse.json({ ok: true, sent: 0, skipped: noDevice.length });
-
-  const dead: string[] = [];
-  const delivered = new Set<number>();
-  const failed = new Map<number, string>();
-
-  for (let i = 0; i < messages.length; i += 100) {
-    const chunk = messages.slice(i, i + 100);
-    try {
-      const res = await fetch(EXPO_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(chunk),
-      });
-      const json = await res.json().catch(() => ({}));
-      const tickets: any[] = json?.data ?? [];
-      tickets.forEach((t, j) => {
-        const rowId = rowFor[i + j];
-        if (t?.status === "ok") { delivered.add(rowId); return; }
-        failed.set(rowId, t?.message ?? "push_error");
-        if (t?.details?.error === "DeviceNotRegistered") dead.push(chunk[j].to);
-      });
-    } catch (e: any) {
-      chunk.forEach((_, j) => failed.set(rowFor[i + j], e?.message ?? "network_error"));
-    }
-  }
-
-  if (delivered.size) {
+  for (const f of failed) {
     await db.from("push_queue")
-      .update({ sent_at: new Date().toISOString() })
-      .in("id", [...delivered]);
+      .update({ attempts: f.attempts, last_error: f.reason })
+      .eq("id", f.id);
   }
-  for (const [id, err] of failed) {
-    if (delivered.has(id)) continue;
-    const row = queued.find((q) => q.id === id);
-    await db.from("push_queue")
-      .update({ attempts: (row as any)?.attempts ?? 1, last_error: err })
-      .eq("id", id);
-  }
-  if (dead.length) {
-    await db.from("push_tokens").update({ active: false }).in("token", dead);
+  if (dead.size) {
+    await db.from("push_tokens").update({ active: false }).in("token", [...dead]);
   }
 
   return NextResponse.json({
     ok: true,
-    sent: delivered.size,
-    failed: failed.size,
-    retired_tokens: dead.length,
+    sent: delivered.length,
+    failed: failed.length,
+    retired_tokens: dead.size,
     skipped_no_device: noDevice.length,
+    errors: failed.slice(0, 5).map((f) => f.reason),
   });
 }
