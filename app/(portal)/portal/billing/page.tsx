@@ -1,9 +1,10 @@
 import { requireCustomer } from "@/lib/portal";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { PayButton } from "@/components/portal/PayButton";
 
 export const dynamic = "force-dynamic";
 
-export default async function Billing() {
+export default async function Billing({ searchParams }: { searchParams: { paid?: string; canceled?: string; pay?: string } }) {
   const { customer, admin } = await requireCustomer();
   const { data: invoices } = await admin
     .from("invoices")
@@ -21,6 +22,15 @@ export default async function Billing() {
   return (
     <PortalShell name={customer.full_name?.split(" ")[0] ?? ""}>
       <h1 className="mb-4 text-2xl font-bold">Billing</h1>
+      {searchParams?.paid && (
+        <div className="mb-4 rounded-xl border border-teal/40 bg-teal/15 p-3 text-sm">Payment received — thank you! Your receipt is on its way.</div>
+      )}
+      {searchParams?.canceled && (
+        <div className="mb-4 rounded-xl border border-white/15 bg-white/10 p-3 text-sm text-white/70">Checkout canceled — nothing was charged.</div>
+      )}
+      {searchParams?.pay === "pending" && (
+        <div className="mb-4 rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-sm text-amber-100">Card payments aren’t switched on yet — message us and we’ll take care of it.</div>
+      )}
       <div className="space-y-3">
         {(invoices ?? []).map((inv: any) => (
           <div key={inv.id} className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
@@ -38,11 +48,14 @@ export default async function Billing() {
             {(inv.payments ?? []).map((p: any, i: number) => (
               <p key={i} className="text-xs text-white/50">Paid ${Number(p.amount).toFixed(2)} · {p.method} · {new Date(p.paid_at).toLocaleDateString()}</p>
             ))}
+            {inv.status !== "paid" && inv.status !== "void" && (
+              <PayButton invoiceId={inv.id} amount={Number(inv.total ?? 0)} />
+            )}
           </div>
         ))}
         {!invoices?.length && <p className="text-white/60">No invoices yet — billing starts after your first completed visit.</p>}
       </div>
-      <p className="mt-4 text-xs text-white/40">Online payment arrives soon; we'll text you a secure link when it's live.</p>
+      <p className="mt-4 text-xs text-white/40">Card payments are handled by Stripe — we never see or store your card. Prefer check or cash? Just tell the crew.</p>
     </PortalShell>
   );
 }

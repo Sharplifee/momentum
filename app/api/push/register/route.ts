@@ -5,12 +5,13 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 
 /**
- * The crew app posts its push token here after the user grants permission.
+ * The crew app and the customer app both post their push token here after the
+ * user grants permission.
  * Tokens are unique per install and iOS reissues them on reinstall, so the
  * upsert re-points an existing token at whoever is signed in now.
  */
 export async function POST(req: NextRequest) {
-  const staff = await staffFromSession(["owner", "manager", "crew"]);
+  const staff = await staffFromSession(["owner", "manager", "crew", "customer"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { token, platform, app_version, device_id } = await req.json().catch(() => ({}));
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
 
 /** Called on sign-out so a shared phone stops receiving the last user's alerts. */
 export async function DELETE(req: NextRequest) {
-  const staff = await staffFromSession(["owner", "manager", "crew"]);
+  const staff = await staffFromSession(["owner", "manager", "crew", "customer"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { token } = await req.json().catch(() => ({}));
   if (!token) return NextResponse.json({ error: "token required" }, { status: 400 });
