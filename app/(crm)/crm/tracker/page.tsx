@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { PageHeader, StatCard } from "@/components/ui";
 import { TrackerPanel } from "@/components/crm/TrackerPanel";
+import { AddressSuggestions } from "@/components/crm/AddressSuggestions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,19 @@ export default async function Tracker() {
     db.from("v_ops_today").select("gps_verified, status"),
   ]);
 
+  // Unmatched addresses can never be verified on site, so they surface here
+  // with the resolver's best reading of what they are meant to be.
+  const { data: suggestions } = await db
+    .from("address_suggestions")
+    .select("id, property_id, original, original_city, suggested, suggested_city, confidence, reason")
+    .eq("status", "open")
+    .order("confidence", { ascending: false });
+
+  const grouped = (suggestions ?? []).reduce((acc: Record<string, any[]>, s: any) => {
+    (acc[s.property_id] ??= []).push(s);
+    return acc;
+  }, {});
+
   const exceptions = ex.data ?? [];
   const jobsToday = today.data ?? [];
   const critical = exceptions.filter((e: any) => e.severity === "critical").length;
@@ -39,6 +53,8 @@ export default async function Tracker() {
         <StatCard label="Verified today" value={`${verifiedToday}/${jobsToday.length}`} icon="☀️" tone={verifiedToday > 0 ? "win" : "default"} />
         <StatCard label="Devices to fix" value={needsAttention} icon="📱" />
       </div>
+
+      <AddressSuggestions groups={grouped} />
 
       <TrackerPanel
         exceptions={exceptions as any}
