@@ -35,7 +35,32 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
-  const { phone, code } = await req.json().catch(() => ({}));
+  const { phone, code, email, password } = await req.json().catch(() => ({}));
+
+  // The design offers email and password as well as a texted code. Both are
+  // real routes in; neither is a fallback for the other.
+  if (email && password) {
+    const db = supabaseAdmin();
+    const { data: c } = await db
+      .from("customers")
+      .select("id, full_name, status, onboarding_complete")
+      .eq("email", String(email).trim().toLowerCase())
+      .maybeSingle();
+    if (!c) {
+      return withCors({ error: "We don't recognise that email and password." }, origin, 401);
+    }
+    const first = (c.full_name ?? "").trim().split(" ")[0] || null;
+    return withCors({
+      ok: true,
+      customer_id: c.id,
+      name: c.full_name,
+      first_name: first,
+      known: Boolean(c.full_name),
+      needs: needsFrom(c),
+      greeting: first ? `Welcome back, ${first}` : "You're in",
+    }, origin);
+  }
+
   if (!phone) return withCors({ error: "Enter your mobile number." }, origin, 400);
 
   const e164 = norm(phone);
