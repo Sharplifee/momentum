@@ -41,7 +41,7 @@ export default async function PortalHome() {
       <div className="mt-4 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur">
         <h2 className="mb-1 text-sm font-medium text-white/60">Balance</h2>
         <p className="text-2xl font-bold">${balance.toFixed(2)}</p>
-        {balance > 0 && <p className="text-xs text-white/50">Online payment coming soon — we'll text you a link.</p>}
+        {balance > 0 && <Link href="/portal/billing" className="mt-2 inline-block rounded-xl bg-teal px-4 py-2 text-sm font-semibold">Pay now</Link>}
       </div>
       <div className="mt-4 grid grid-cols-3 gap-3">
         <Link href="/portal/messages" className="rounded-2xl bg-teal p-4 text-center text-sm font-semibold">💬 Message us</Link>

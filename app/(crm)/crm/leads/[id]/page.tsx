@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { LeadActions } from "@/components/crm/LeadActions";
+import { QuoteChecklist } from "@/components/crm/QuoteChecklist";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,13 @@ export default async function LeadDetail({ params }: { params: { id: string } })
       <h1 className="mb-1 text-2xl font-bold">{lead.full_name ?? "Lead"}</h1>
       <p className="mb-4 text-sm text-slate">{lead.phone} · {lead.address}, {lead.city ?? "?"} · zone {lead.zone_id ?? "?"} · stage <strong>{lead.stage}</strong>{lead.proposed_date ? ` · proposed ${lead.proposed_date}` : ""}</p>
       <LeadActions lead={{ id: lead.id, stage: lead.stage, phone: lead.phone, thread_id: thread?.id ?? null }} services={services ?? []} quotes={quotes ?? []} />
+      <div className="mt-4">
+        <QuoteChecklist lead={{
+          id: lead.id, has_dog: lead.has_dog, gate_width_in: lead.gate_width_in, obstacles: lead.obstacles,
+          watering_day: lead.watering_day, bags_clippings: lead.bags_clippings, premium_handling: lead.premium_handling,
+          haul_clippings: lead.haul_clippings,
+        }} />
+      </div>
       <h2 className="mb-2 mt-8 font-semibold">Timeline</h2>
       <div className="space-y-2">
         {timeline.map((t, i) => (

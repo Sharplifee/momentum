@@ -3,6 +3,7 @@ import { sendSms } from "@/lib/sms";
 import { sendMetaCapiEvent } from "@/lib/meta";
 import { getAvailability } from "@/lib/availability";
 import { logAutomation } from "@/lib/automation";
+import { pricingModifiers } from "@/lib/pricing";
 
 /**
  * Stage automations A3–A6 (build plan 3.4). Idempotent: each transition
@@ -74,20 +75,35 @@ export async function runStageAutomation(leadId: string, newStage: string, actor
     }
     await db.from("leads").update({ customer_id: customerId }).eq("id", leadId);
 
-    // property
-    let { data: property } = await db.from("properties").select("id").eq("customer_id", customerId).eq("address", lead.address ?? "").maybeSingle();
+    // property — carries the on-site personal-quote checklist over from the lead
+    let { data: property } = await db.from("properties").select("id, has_dog, gate_width_in, obstacles, watering_day, bags_clippings, premium_handling, haul_clippings").eq("customer_id", customerId).eq("address", lead.address ?? "").maybeSingle();
     if (!property && lead.address) {
       const { data: p } = await db
         .from("properties")
-        .insert({ customer_id: customerId, address: lead.address, city: lead.city, zone_id: lead.zone_id })
-        .select("id").single();
+        .insert({
+          customer_id: customerId, address: lead.address, city: lead.city, zone_id: lead.zone_id,
+          has_dog: lead.has_dog ?? false, gate_width_in: lead.gate_width_in ?? null,
+          obstacles: lead.obstacles ?? [], watering_day: lead.watering_day ?? null,
+          bags_clippings: lead.bags_clippings ?? false, premium_handling: lead.premium_handling ?? false,
+          haul_clippings: lead.haul_clippings ?? false,
+        })
+        .select("id, has_dog, gate_width_in, obstacles, watering_day, bags_clippings, premium_handling, haul_clippings").single();
       property = p;
     }
 
-    // agreement (recurring) or one-off job
-    const { data: quote } = await db.from("quotes").select("id, total").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    // agreement (recurring) or one-off job — base price plus any on-site checklist modifiers
+    const { data: quote } = await db.from("quotes").select("id, total, line_items").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
     const { data: svc } = await db.from("services").select("id, recurring, base_price").eq("slug", lead.service_interest ?? "weekly-mow").maybeSingle();
-    const price = quote?.total ?? svc?.base_price ?? 45;
+    const basePrice = quote?.total ?? svc?.base_price ?? 45;
+    const modifiers = property ? await pricingModifiers(db, property) : [];
+    const modifierTotal = modifiers.filter((m) => !m.blocked).reduce((s, m) => s + m.price, 0);
+    const price = basePrice + modifierTotal;
+    if (quote && modifiers.length) {
+      await db.from("quotes").update({
+        line_items: [...(quote.line_items ?? []), ...modifiers.filter((m) => !m.blocked).map((m) => ({ service: m.label, qty: 1, price: m.price }))],
+        total: price,
+      }).eq("id", quote.id);
+    }
 
     const { data: existingAg } = await db.from("service_agreements").select("id").eq("customer_id", customerId).eq("active", true).maybeSingle();
     if (!existingAg) {

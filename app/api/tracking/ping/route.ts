@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { processPing, sweepStaleVisits } from "@/lib/tracking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +21,20 @@ export async function POST(req: NextRequest) {
   const { lat, lng, accuracy, speed, device_key, user_agent, platform } = body ?? {};
   if (typeof lat !== "number" || typeof lng !== "number" || !device_key) {
     return NextResponse.json({ error: "lat, lng, device_key required" }, { status: 400 });
+  }
+
+  // Desktop browsers are not crew. A laptop parked at a desk sits inside a
+  // client geofence all day and manufactures fake visits. Enforced here rather
+  // than client-side, because the upsert below re-activates any device that
+  // pings — so deactivating one in the database does nothing on its own.
+  const ua = (user_agent ?? "").toLowerCase();
+  const plat = (platform ?? "").toLowerCase();
+  const isMobile =
+    /iphone|ipad|android/.test(ua) ||
+    /^(ios|android)$/.test(plat) ||
+    /iphone|ipad|android/.test(plat);
+  if (!isMobile) {
+    return NextResponse.json({ ok: true, ignored: "non_mobile_device" });
   }
 
   const db = supabaseAdmin();
@@ -57,10 +70,7 @@ export async function POST(req: NextRequest) {
     speed: speed ?? null,
   });
 
-  const result = await processPing(user.id, device.id, { lat, lng, accuracy });
-
-  // Opportunistic sweep — keeps departures honest without needing a frequent cron.
-  if (Math.random() < 0.15) { try { await sweepStaleVisits(); } catch {} }
-
-  return NextResponse.json({ ok: true, ...result });
+  // Geofencing is handled in Postgres by trg_momentum_ping_ingest, which runs
+  // momentum_process_ping against the surveyed parcel polygon. Nothing to do here.
+  return NextResponse.json({ ok: true });
 }

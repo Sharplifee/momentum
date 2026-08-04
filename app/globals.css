@@ -72,3 +72,51 @@ select:-webkit-autofill {
   border-radius: 16px;
   transition: background-color 600000s 0s, color 600000s 0s;
 }
+
+/* Interactive surfaces.
+   The theme is driven by CSS variables, not by a .dark class, so any component
+   written as `bg-white/60 dark:bg-white/10` renders a literal white block —
+   the dark: variant never fires. These classes follow the real theme. */
+.mo-surface {
+  background: rgba(var(--card) / 0.55);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+.mo-surface::placeholder { color: var(--body); opacity: 1; }
+.mo-surface:focus { border-color: var(--accent); outline: none; }
+
+.mo-chip {
+  background: rgba(var(--card) / 0.55);
+  border: 1px solid var(--border);
+  color: var(--body);
+}
+.mo-chip:hover { color: var(--ink); }
+.mo-chip[data-active="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.mo-segment { background: rgba(var(--card) / 0.45); border: 1px solid var(--border); }
+.mo-segment-item { color: var(--body); }
+.mo-segment-item[data-active="true"] { background: rgba(var(--accent) / 0.22); color: var(--ink); }
+
+/* Translucent white was used throughout as a "subtle surface" tint, written for
+   a light theme that no longer exists — it renders as pale blocks on the dark
+   UI. Remap those tints onto the card colour so every surface follows the real
+   theme. Solid `bg-white` is left alone; it's used deliberately for badges. */
+.bg-white\/5   { background-color: rgba(var(--card) / 0.35) !important; }
+.bg-white\/10  { background-color: rgba(var(--card) / 0.45) !important; }
+.bg-white\/20  { background-color: rgba(var(--card) / 0.55) !important; }
+.bg-white\/40  { background-color: rgba(var(--card) / 0.60) !important; }
+.bg-white\/50  { background-color: rgba(var(--card) / 0.62) !important; }
+.bg-white\/60  { background-color: rgba(var(--card) / 0.65) !important; }
+.bg-white\/70  { background-color: rgba(var(--card) / 0.70) !important; }
+.bg-white\/80  { background-color: rgba(var(--card) / 0.78) !important; }
+
+/* Same story for text: navy was the light-theme ink. */
+.text-navy { color: var(--ink); }
+
+/* Calendar gridlines were pure white borders — far too loud on a dark surface. */
+.mo-calendar td, .mo-calendar th,
+table.mo-grid td, table.mo-grid th { border-color: var(--border) !important; }

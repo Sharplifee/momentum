@@ -25,7 +25,7 @@ const STATUS_PILL: Record<string, string> = {
   in_progress: "bg-teal/15 text-teal",
   completed: "bg-emerald-500/12 text-emerald-600",
   exception: "bg-amber-500/15 text-amber-600",
-  canceled: "bg-black/[0.04] text-[color:var(--body)] line-through",
+  cancelled: "bg-black/[0.04] text-[color:var(--body)] line-through",
 };
 
 function ymd(d: Date) {
@@ -108,12 +108,12 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
               <button
                 key={i}
                 onClick={() => setSelected(iso)}
-                className={`relative flex min-h-[92px] flex-col items-stretch gap-1 border-b border-r border-[color:var(--border)]/60 p-1.5 text-left transition ${i % 7 === 0 ? "border-l" : ""} ${i < 7 ? "border-t" : ""} ${isSel ? "bg-teal/[0.07]" : "hover:bg-white/[0.03]"} ${inMonth ? "" : "opacity-40"}`}
+                className={`relative flex min-h-[76px] flex-col items-stretch gap-1 border-b border-r sm:min-h-[104px] border-[color:var(--border)]/60 p-1.5 text-left transition ${i % 7 === 0 ? "border-l" : ""} ${i < 7 ? "border-t" : ""} ${isSel ? "bg-teal/[0.07]" : "hover:bg-white/[0.03]"} ${inMonth ? "" : "opacity-40"}`}
               >
                 <span className={`self-start rounded-full text-[13px] leading-none ${isToday ? "grid h-6 w-6 place-items-center bg-teal font-semibold text-white" : "px-1 pt-0.5 font-medium text-[color:var(--ink)]"}`}>
                   {d.getUTCDate()}
                 </span>
-                <div className="flex flex-col gap-0.5">
+                <div className="hidden flex-col gap-0.5 sm:flex">
                   {list.slice(0, 3).map((j) => (
                     <span key={j.id} className="flex items-center gap-1 truncate rounded-md bg-white/[0.06] px-1 py-0.5 text-[11px] leading-tight text-[color:var(--ink)]">
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${j.kind === "quote" ? "bg-gold" : (CREW_DOT[j.crew_id ?? 0] ?? "bg-slate-400")}`} />
@@ -122,8 +122,16 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
                   ))}
                   {list.length > 3 && <span className="px-1 text-[10px] font-medium text-[color:var(--body)]">+{list.length - 3} more</span>}
                 </div>
+                {list.length > 0 && (
+                  <div className="flex flex-wrap content-start gap-1 px-0.5 sm:hidden">
+                    {list.slice(0, 6).map((j) => (
+                      <span key={j.id} className={`h-1.5 w-1.5 rounded-full ${j.kind === "quote" ? "bg-gold" : (CREW_DOT[j.crew_id ?? 0] ?? "bg-slate-400")}`} />
+                    ))}
+                    {list.length > 6 && <span className="text-[9px] font-semibold leading-none text-[color:var(--body)]">+{list.length - 6}</span>}
+                  </div>
+                )}
                 {list.length > 0 && capTotal > 0 && (
-                  <span className={`absolute bottom-1 right-1.5 text-[9px] font-semibold ${list.length >= capTotal ? "text-red-500" : "text-[color:var(--body)]/50"}`}>
+                  <span className={`absolute bottom-1 right-1.5 hidden text-[9px] font-semibold sm:block ${list.length >= capTotal ? "text-red-500" : "text-[color:var(--body)]/50"}`}>
                     {list.length}/{capTotal}
                   </span>
                 )}

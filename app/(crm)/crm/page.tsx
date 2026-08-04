@@ -71,7 +71,7 @@ export default async function Dashboard() {
     db.from("leads").select("response_time_seconds").not("response_time_seconds", "is", null).gte("created_at", weekAgo),
     db.from("lead_events").select("type, detail, actor, created_at, lead_id").order("created_at", { ascending: false }).limit(12),
     db.from("system_config").select("value").eq("key", "launch_checklist").single(),
-    db.from("jobs").select("id, scheduled_date, agreement_id, status, customers(full_name), crew_id").gte("scheduled_date", todayIso).lt("scheduled_date", weekEnd).neq("status", "canceled").order("scheduled_date"),
+    db.from("jobs").select("id, scheduled_date, agreement_id, status, customers(full_name), crew_id").gte("scheduled_date", todayIso).lt("scheduled_date", weekEnd).neq("status", "cancelled").order("scheduled_date"),
     db.from("customers").select("id", { count: "exact", head: true }).neq("status", "opted_out"),
     db.from("leads").select("created_at").gte("created_at", twoWeeksAgo).neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%"),
     db.from("leads").select("source").neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%"),

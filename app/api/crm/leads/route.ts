@@ -21,5 +21,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, quote_id: quote.id, total });
   }
 
+  if (body.action === "checklist") {
+    // Personal-quote checklist, captured on site by staff during the in-person visit.
+    const fields = ["has_dog", "gate_width_in", "obstacles", "watering_day", "bags_clippings", "premium_handling", "haul_clippings"];
+    const update: Record<string, unknown> = {};
+    for (const f of fields) if (f in (body.checklist ?? {})) update[f] = body.checklist[f];
+    const { error } = await db.from("leads").update(update).eq("id", body.lead_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await logAutomation({ trigger: "crm.lead_checklist", ref_id: body.lead_id, detail: { by: staff.full_name, update } });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }

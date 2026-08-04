@@ -16,7 +16,7 @@ export default function Home() {
         href="/quote"
         className="rounded-lg bg-moss px-6 py-3 font-semibold text-white hover:opacity-90"
       >
-        Get a free quote
+        Request a personal quote
       </Link>
       <p className="text-sm text-stone-400">
         <Link href="/legal/terms" className="underline">Terms</Link> ·{" "}

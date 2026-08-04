@@ -28,7 +28,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
     .select("id, scheduled_date, status, window_start, crew_id, weather_flag, agreement_id, properties(address), services(name), customers(full_name)")
     .gte("scheduled_date", rangeStart)
     .lte("scheduled_date", rangeEnd)
-    .neq("status", "canceled");
+    .neq("status", "cancelled");
   if (role === "crew") {
     const { data: myCrew } = await db.from("crews").select("id").eq("lead_profile", profile.id).maybeSingle();
     if (myCrew) jobsQ = jobsQ.eq("crew_id", myCrew.id);
@@ -53,14 +53,23 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const service = shaped.filter((j) => j.kind === "service");
   const quotes = shaped.filter((j) => j.kind === "quote");
 
-  const week = Array.from({ length: 7 }, (_, i) => {
+  // Five days, starting today. Seven columns on a phone leaves each one too
+  // narrow to read; five gives every day room for real names.
+  const week = Array.from({ length: 5 }, (_, i) => {
     const d = new Date(weekStart.getTime() + i * 86400_000);
-    return { iso: d.toLocaleDateString("en-CA"), dow: d.toLocaleDateString("en-US", { weekday: "short" }), num: d.getDate() };
+    return {
+      iso: d.toLocaleDateString("en-CA"),
+      dow: d.toLocaleDateString("en-US", { weekday: "short" }),
+      num: d.getDate(),
+      month: d.toLocaleDateString("en-US", { month: "short" }),
+    };
   });
   const weekIsos = week.map((w) => w.iso);
   const svcWeek = service.filter((j) => weekIsos.includes(j.scheduled_date));
   const qWeek = quotes.filter((j) => weekIsos.includes(j.scheduled_date));
   const todayJobs = shaped.filter((j) => j.scheduled_date === todayIso);
+  const svcToday = service.filter((j) => j.scheduled_date === todayIso);
+  const qToday = quotes.filter((j) => j.scheduled_date === todayIso);
   const svcPts = week.map((w) => service.filter((j) => j.scheduled_date === w.iso).length);
   const qPts = week.map((w) => quotes.filter((j) => j.scheduled_date === w.iso).length);
   const capacity = (crews ?? []).reduce((s, c) => s + (c.max_daily_jobs ?? 12), 0) * 7 || 1;
@@ -69,38 +78,51 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   return (
     <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Scheduling</div>
         <h1 className="mb-1 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Schedule</h1>
         <p className="mb-5 text-sm text-[color:var(--body)]">
           Both calendars, always visible — <span className="font-medium text-teal">service visits</span> and <span className="font-medium text-gold">quote visits</span>.
         </p>
 
-        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <DeltaTile label="Service This Week" value={svcWeek.length} delta="client calendar" icon="✓" seed={7} points={svcPts} />
-          <DeltaTile label="Quote Visits This Week" value={qWeek.length} delta="sales calendar" icon="▤" seed={11} points={qPts} />
-          <DeltaTile label="Today" value={todayJobs.length} delta={todayJobs.length ? "on the board" : "clear day"} icon="◎" seed={3} />
-          <DeltaTile label="Crew Utilization" value={`${util}%`} delta="of weekly capacity" up={util < 85} icon="◈" seed={5} />
+        {/* One strip rather than four tiles: the only numbers that matter here are
+            how much work there is this week and how much of it is today. */}
+        <div className="mo-card mb-6 grid grid-cols-2 gap-y-5 p-5 sm:grid-cols-4">
+          <div>
+            <div className="font-display text-[34px] font-bold leading-none text-teal">{svcWeek.length}</div>
+            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Service · week</div>
+          </div>
+          <div>
+            <div className="font-display text-[34px] font-bold leading-none text-[color:var(--ink)]">{svcToday.length}</div>
+            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Service · today</div>
+          </div>
+          <div>
+            <div className="font-display text-[34px] font-bold leading-none text-gold">{qWeek.length}</div>
+            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Quotes · week</div>
+          </div>
+          <div>
+            <div className="font-display text-[34px] font-bold leading-none text-[color:var(--ink)]">{qToday.length}</div>
+            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Quotes · today</div>
+          </div>
         </div>
 
-        <BandCard title="This week" sub={`${week[0].dow} ${week[0].num} → ${week[6].dow} ${week[6].num} · teal = service · gold = quote`} className="mb-6">
-          <div className="grid grid-cols-7 gap-2">
+        <BandCard title="This week" sub={`${week[0].dow} ${week[0].num} → ${week[4].dow} ${week[4].num} · teal = service · gold = quote`} className="mb-6">
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
             {week.map((d) => {
               const svc = service.filter((j) => j.scheduled_date === d.iso);
               const qts = quotes.filter((j) => j.scheduled_date === d.iso);
               const isToday = d.iso === todayIso;
               return (
                 <Link key={d.iso} href={`/crm/schedule?m=${d.iso.slice(0, 7)}&d=${d.iso}`}
-                  className={`min-h-[132px] rounded-2xl border p-2 transition hover:border-teal/50 ${isToday ? "border-teal/60 bg-teal/[0.08] shadow-glow" : "border-[color:var(--border)] bg-white/[0.02]"}`}>
+                  className={`min-h-[150px] rounded-2xl border p-2 transition hover:border-teal/50 sm:min-h-[170px] ${isToday ? "border-teal/60 bg-teal/[0.08] shadow-glow" : "border-[color:var(--border)] bg-white/[0.02]"}`}>
                   <div className="mb-1.5 text-center">
                     <div className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--body)]/70">{d.dow}</div>
-                    <div className={`mx-auto grid h-7 w-7 place-items-center rounded-full text-sm font-bold ${isToday ? "bg-teal text-white" : "text-[color:var(--ink)]"}`}>{d.num}</div>
+                    <div className={`mx-auto grid h-8 w-8 place-items-center rounded-full text-[15px] font-bold ${isToday ? "bg-teal text-white" : "text-[color:var(--ink)]"}`}>{d.num}</div>
                   </div>
                   <div className="space-y-1">
                     {svc.slice(0, 3).map((j) => (
-                      <div key={j.id} className="truncate rounded-md bg-teal/20 px-1.5 py-0.5 text-[10px] font-medium text-teal ring-1 ring-teal/25">{j.customer}</div>
+                      <div key={j.id} title={j.customer} className="truncate rounded-md bg-teal/20 px-1.5 py-1 text-[10px] font-medium leading-tight text-teal ring-1 ring-teal/25">{j.customer}</div>
                     ))}
                     {qts.slice(0, 3).map((j) => (
-                      <div key={j.id} className="truncate rounded-md bg-gold/20 px-1.5 py-0.5 text-[10px] font-medium text-gold ring-1 ring-gold/30">{j.customer}</div>
+                      <div key={j.id} title={j.customer} className="truncate rounded-md bg-gold/20 px-1.5 py-1 text-[10px] font-medium leading-tight text-gold ring-1 ring-gold/30">{j.customer}</div>
                     ))}
                     {svc.length + qts.length === 0 && <div className="pt-2 text-center text-[10px] text-[color:var(--body)]/40">—</div>}
                     {svc.length + qts.length > 6 && <div className="text-center text-[10px] text-[color:var(--body)]/60">+{svc.length + qts.length - 6} more</div>}

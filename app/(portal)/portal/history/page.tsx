@@ -13,6 +13,13 @@ export default async function History() {
     .order("scheduled_date", { ascending: false })
     .limit(30);
 
+  const jobIds = (jobs ?? []).map((j) => j.id);
+  const { data: proofs } = jobIds.length
+    ? await admin.from("service_proofs").select("job_id, statement").in("job_id", jobIds)
+    : { data: [] };
+  const proofByJob: Record<string, string> = {};
+  for (const p of proofs ?? []) if (p.job_id) proofByJob[p.job_id] = p.statement;
+
   const photosByJob: Record<string, string[]> = {};
   for (const j of jobs ?? []) {
     const { data: events } = await admin.from("job_events").select("photo_url").eq("job_id", j.id).eq("type", "photo").limit(4);
@@ -34,6 +41,11 @@ export default async function History() {
           <div key={j.id} className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
             <p className="font-semibold">{new Date(j.scheduled_date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
             <p className="text-sm text-white/60">{j.services?.name} · {j.crews?.name ?? ""}</p>
+            {proofByJob[j.id] && (
+              <p className="mt-1 flex items-start gap-1.5 text-sm text-white/80">
+                <span className="text-teal">✓</span> {proofByJob[j.id]}
+              </p>
+            )}
             {j.notes && <p className="mt-1 text-sm text-white/70">{j.notes}</p>}
             {photosByJob[j.id]?.length > 0 && (
               <div className="mt-2 flex gap-2 overflow-x-auto">

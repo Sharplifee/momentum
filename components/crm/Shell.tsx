@@ -16,6 +16,7 @@ const NAV: NavGroup[] = [
     { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
     { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
     { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
+    { href: "/crm/tracker", label: "Tracker", icon: "🧭", roles: ["owner", "manager"] },
     { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
     { href: "/crm/messages", label: "Wayne", icon: "💬", roles: ["owner", "manager", "crew"] },
     { href: "/crm/customers", label: "Customers", icon: "👥", roles: ["owner", "manager"] },
@@ -28,9 +29,10 @@ const NAV: NavGroup[] = [
 
 // mobile bottom tabs — the four crews reach for outdoors
 const MOBILE_TABS: NavItem[] = [
-  { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
+  { href: "/crm", label: "Home", icon: "📊", roles: ["owner", "manager"] },
   { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
   { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
+  { href: "/crm/tracker", label: "Tracker", icon: "🧭", roles: ["owner", "manager"] },
   { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
   { href: "/crm/messages", label: "Wayne", icon: "💬", roles: ["owner", "manager", "crew"] },
 ];
@@ -85,7 +87,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
         <div className="flex items-center gap-3 px-4 py-2.5 md:px-6">
           <button onClick={() => setDrawer(!drawer)} className="rounded-lg p-1.5 text-slate hover:bg-ice/15 md:hidden" aria-label="Menu">☰</button>
           <Link href={role === "crew" ? "/crm/today" : "/crm"} className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-teal font-display text-lg font-bold text-white">M</span>
+            <img src="/logo-mark.png" alt="Momentum" className="h-8 w-8 shrink-0 object-contain" />
             <span className="hidden font-display text-lg font-bold text-navy dark:text-ice sm:block">Momentum</span>
           </Link>
           <div className="mx-auto w-full max-w-md"><GlobalSearch /></div>
@@ -104,7 +106,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                 <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
                 <nav className="space-y-0.5">
                   {items.map((n) => (
-                    <Link key={n.href} href={n.href}
+                    <Link key={n.href} href={n.href} prefetch
                       className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive(n.href) ? "bg-teal/15 text-navy shadow-glow ring-1 ring-teal/40" : "text-slate hover:bg-ice/15 hover:text-navy dark:hover:text-ice"}`}>
                       <NavIcon name={n.icon} />{n.label}
                     </Link>
@@ -127,7 +129,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
                   <div key={g.group} className="mb-5">
                     <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
                     {items.map((n) => (
-                      <Link key={n.href} href={n.href} onClick={() => setDrawer(false)}
+                      <Link key={n.href} href={n.href} prefetch onClick={() => setDrawer(false)}
                         className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium ${isActive(n.href) ? "bg-teal text-white" : "text-slate hover:bg-ice/15"}`}>
                         <NavIcon name={n.icon} />{n.label}
                       </Link>
@@ -145,18 +147,23 @@ export function Shell({ role, name, email, children }: { role: string; name: str
       </div>
 
       {/* mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-[color:var(--border)] bg-[#0b0e17]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[color:var(--border)] bg-[#0b0e17]/95 pt-0.5 backdrop-blur-xl md:hidden"
+        style={{
+          paddingLeft: "max(14px, env(safe-area-inset-left))",
+          paddingRight: "max(14px, env(safe-area-inset-right))",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}>
         {mobileTabs.map((n) => (
-          <Link key={n.href} href={n.href}
-            className={`relative flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition ${isActive(n.href) ? "text-teal" : "text-slate"}`}>
+          <Link key={n.href} href={n.href} prefetch
+            className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[10.5px] font-medium leading-none transition ${isActive(n.href) ? "text-teal" : "text-slate"}`}>
             {isActive(n.href) && <span className="absolute -top-px h-0.5 w-8 rounded-full bg-teal" />}
-            <span className={`grid h-7 w-12 place-items-center rounded-xl transition ${isActive(n.href) ? "bg-teal/15" : ""}`}><NavIcon name={n.icon} /></span>
-            {n.label}
+            <span className={`grid h-8 w-full max-w-[46px] place-items-center rounded-xl transition ${isActive(n.href) ? "bg-teal/15" : ""}`}><NavIcon name={n.icon} /></span>
+            <span className="w-full truncate px-0.5 text-center">{n.label}</span>
           </Link>
         ))}
-        <button onClick={() => setDrawer(true)} className="flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-slate">
-          <span className="grid h-7 w-12 place-items-center rounded-xl"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
-          More
+        <button onClick={() => setDrawer(true)} className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[10.5px] font-medium leading-none text-slate">
+          <span className="grid h-8 w-full max-w-[46px] place-items-center rounded-xl"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+          <span className="w-full truncate px-0.5 text-center">More</span>
         </button>
       </nav>
       <LocationReporter />

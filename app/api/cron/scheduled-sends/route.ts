@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .from("scheduled_sends")
     .select("*")
     .is("sent_at", null)
-    .eq("canceled", false)
+    .eq("cancelled", false)
     .lte("send_after", new Date().toISOString())
     .order("send_after")
     .limit(50);

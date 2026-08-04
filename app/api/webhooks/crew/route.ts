@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json().catch(() => null);
   const { job_id, event, note, actor } = body ?? {};
-  if (!job_id || !["arrived", "departed", "exception"].includes(event)) {
-    return NextResponse.json({ error: "job_id and event (arrived|departed|exception) required" }, { status: 400 });
+  const CREW_EVENTS = ["arrived", "departed", "exception", "yard_not_ready", "access_blocked"];
+  if (!job_id || !CREW_EVENTS.includes(event)) {
+    return NextResponse.json({ error: `job_id and event (${CREW_EVENTS.join("|")}) required` }, { status: 400 });
   }
   const db = supabaseAdmin();
   const now = new Date().toISOString();
@@ -26,6 +27,17 @@ export async function POST(req: NextRequest) {
     // A9 extension: completed job → auto-draft invoice
     const { draftInvoiceForJob } = await import("@/lib/invoices");
     await draftInvoiceForJob(job_id);
+  } else if (event === "yard_not_ready" || event === "access_blocked") {
+    // job_events row below feeds momentum_service_monitor's yard_not_ready/access_blocked
+    // checks, which raise the exception (and, for repeated readiness failures, escalate to
+    // price review) — kept centralized there rather than duplicated here.
+    await db.from("jobs").update({ status: "exception" }).eq("id", job_id);
+    await sendSms({
+      to: "+13853076535",
+      message: `⚠️ ${event === "access_blocked" ? "Access blocked" : "Yard not ready"} (${job_id.slice(0, 8)}…): ${note ?? "no detail"}`,
+      sender: "system",
+      bypassQuietHours: true,
+    });
   } else {
     await db.from("jobs").update({ status: "exception" }).eq("id", job_id);
     await db.from("exceptions").insert({

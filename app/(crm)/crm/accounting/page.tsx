@@ -7,13 +7,15 @@ export const dynamic = "force-dynamic";
 
 export default async function Accounting() {
   const { profile, role, db } = await requireStaff(["owner"]);
-  const [{ data: customers }, { data: jobs }, { data: invoices }, { data: payments }, { data: expenses }, { data: proofs }] = await Promise.all([
+  const [{ data: customers }, { data: jobs }, { data: invoices }, { data: payments }, { data: expenses }, { data: proofs }, { data: margins }, { data: payroll }] = await Promise.all([
     db.from("customers").select("id, full_name, phone, created_at").neq("status", "opted_out").order("full_name"),
     db.from("jobs").select("customer_id, status, scheduled_date"),
     db.from("invoices").select("id, customer_id, total, status, created_at").order("created_at", { ascending: false }),
     db.from("payments").select("customer_id, amount, created_at"),
     db.from("expenses").select("id, category, amount, vendor, expense_date").order("expense_date", { ascending: false }).limit(50),
     db.from("service_proofs").select("id, statement, minutes_on_site, arrival_at, departure_at, method, closest_meters, customers(full_name)").order("created_at", { ascending: false }).limit(12),
+    db.from("v_client_margin").select("*").order("margin_per_visit", { ascending: true }).limit(8),
+    db.from("v_payroll_rollup").select("*").order("period_start", { ascending: false }).limit(6),
   ]);
 
   const rows = (customers ?? []).map((c) => {
@@ -136,6 +138,32 @@ export default async function Accounting() {
             )}
           </div>
         </BandCard>
+
+        {/* ===== Labor: margin + payroll, driven off GPS-derived labor_entries ===== */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <BandCard title="Thinnest margins" sub="fixed $/visit revenue vs. actual minutes on site">
+            <div className="space-y-1.5">
+              {(margins ?? []).map((m: any, i: number) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="min-w-0 flex-1 truncate text-[color:var(--body)]">{m.customer_name ?? "—"} · {m.minutes_on_site}min</span>
+                  <span className={`font-semibold ${m.margin_per_visit < 0 ? "text-red" : "text-[color:var(--ink)]"}`}>${Number(m.margin_per_visit ?? 0).toFixed(2)}</span>
+                </div>
+              ))}
+              {!(margins ?? []).length && <p className="py-4 text-sm text-[color:var(--body)]">No GPS-verified visits with a labor cost yet — labor_entries generates nightly from the prior day's visits.</p>}
+            </div>
+          </BandCard>
+          <BandCard title="Payroll rollup" sub="weekly, GPS service + drive time">
+            <div className="space-y-1.5">
+              {(payroll ?? []).map((p: any, i: number) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="text-[color:var(--body)]">{p.period_start} · {p.total_hours}h ({p.drive_minutes}min drive)</span>
+                  <span className="font-semibold text-[color:var(--ink)]">{p.total_cost != null ? `$${Number(p.total_cost).toFixed(2)}` : "rate not set"}</span>
+                </div>
+              ))}
+              {!(payroll ?? []).length && <p className="py-4 text-sm text-[color:var(--body)]">No payroll periods yet. Set hourly rates in crew_rates to start computing cost.</p>}
+            </div>
+          </BandCard>
+        </div>
 
         {/* ===== P&L strip ===== */}
         <BandCard title="Profit & Loss" sub="all-time, live" className="mt-6">

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
 import { logAutomation } from "@/lib/automation";
-import { sweepStaleVisits } from "@/lib/tracking";
 
 export const runtime = "nodejs";
 
@@ -20,9 +19,6 @@ export async function GET(req: NextRequest) {
   }
   const db = supabaseAdmin();
 
-  // Close anything still hanging open first.
-  await sweepStaleVisits();
-
   const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
 
   // Today's scheduled work that has no outcome at all.
@@ -30,7 +26,7 @@ export async function GET(req: NextRequest) {
     .from("jobs")
     .select("id, status, crew_id, scheduled_date, properties(address), customers(full_name), crews(name, phone, lead_profile)")
     .eq("scheduled_date", todayIso)
-    .neq("status", "canceled");
+    .neq("status", "cancelled");
 
   const unresolved = ((jobs ?? []) as any[]).filter((j) => !["completed", "exception"].includes(j.status));
   if (!unresolved.length) {

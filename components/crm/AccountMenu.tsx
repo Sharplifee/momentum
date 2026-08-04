@@ -23,8 +23,8 @@ export function AccountMenu({ name, email, role }: { name: string; email?: strin
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/60 py-1 pl-1 pr-2.5 hover:bg-white dark:bg-white/10">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-teal text-xs font-bold text-white">{initials}</span>
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-white/60 p-1 pr-1 hover:bg-white sm:pr-2.5 dark:bg-white/10">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal text-xs font-bold leading-none text-white">{initials}</span>
         <span className="hidden text-sm font-medium text-navy dark:text-ice sm:block">{name?.split(" ")[0]}</span>
       </button>
       {open && (

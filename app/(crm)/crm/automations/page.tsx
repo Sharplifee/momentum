@@ -1,2 +1,2 @@
 import { redirect } from "next/navigation";
-export default function Page() { redirect("/crm/wayne"); }
+export default function Page() { redirect("/crm/messages"); }

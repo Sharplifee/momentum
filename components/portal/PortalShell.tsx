@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PushBridge } from "@/components/portal/PushBridge";
 
 const NAV = [
   { href: "/portal", label: "Home" },
@@ -17,6 +18,7 @@ export function PortalShell({ name, children }: { name: string; children: React.
   const pathname = usePathname();
   return (
     <div className="mx-auto max-w-2xl px-4 pb-24">
+      <PushBridge />
       <header className="flex items-center justify-between py-5">
         <div className="text-xl font-bold tracking-tight">Momentum <span className="text-teal">🌱</span></div>
         <span className="text-sm text-white/60">{name}</span>

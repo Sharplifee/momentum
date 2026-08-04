@@ -66,19 +66,19 @@ export default async function LeadsPage({ searchParams }: { searchParams: { q?: 
       </div>
 
       <form className="mb-3"><input name="q" defaultValue={searchParams.q} placeholder="Search name, phone, or address…"
-        className="w-full max-w-md rounded-xl border border-[color:var(--border)] bg-white/60 px-3 py-2 text-sm text-navy outline-none focus:border-teal dark:bg-white/10 dark:text-ice" /></form>
+        className="mo-surface w-full max-w-md rounded-xl px-3 py-2 text-sm" /></form>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link href="/crm/leads" className={`rounded-full px-3 py-1 text-sm ${!searchParams.stage ? "bg-teal text-white" : "bg-white/60 text-slate dark:bg-white/10"}`}>All</Link>
+        <Link href="/crm/leads" data-active={!searchParams.stage} className="mo-chip rounded-full px-3 py-1 text-sm transition">All</Link>
         {STAGES.map((s) => (
           <Link key={s} href={`/crm/leads?stage=${s}`}
-            className={`rounded-full px-3 py-1 text-sm ${searchParams.stage === s ? "bg-teal text-white" : "bg-white/60 text-slate dark:bg-white/10"}`}>
+            data-active={searchParams.stage === s} className="mo-chip rounded-full px-3 py-1 text-sm transition">
             {STAGE_LABEL[s]} <span className="opacity-60">{counts[s] ?? 0}</span>
           </Link>
         ))}
-        <div className="ml-auto flex gap-1 rounded-full bg-ice/15 p-0.5 text-xs">
-          <Link href={`/crm/leads${searchParams.stage ? `?stage=${searchParams.stage}` : ""}`} className={`rounded-full px-2.5 py-1 ${!kanban ? "bg-white text-navy dark:bg-white/20 dark:text-ice" : "text-slate"}`}>List</Link>
-          <Link href={`/crm/leads?view=kanban${searchParams.stage ? `&stage=${searchParams.stage}` : ""}`} className={`rounded-full px-2.5 py-1 ${kanban ? "bg-white text-navy dark:bg-white/20 dark:text-ice" : "text-slate"}`}>Board</Link>
+        <div className="mo-segment ml-auto flex gap-1 rounded-full p-0.5 text-xs">
+          <Link href={`/crm/leads${searchParams.stage ? `?stage=${searchParams.stage}` : ""}`} data-active={!kanban} className="mo-segment-item rounded-full px-2.5 py-1 transition">List</Link>
+          <Link href={`/crm/leads?view=kanban${searchParams.stage ? `&stage=${searchParams.stage}` : ""}`} data-active={kanban} className="mo-segment-item rounded-full px-2.5 py-1 transition">Board</Link>
         </div>
       </div>
 

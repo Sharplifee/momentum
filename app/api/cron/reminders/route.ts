@@ -34,9 +34,9 @@ export async function GET(req: NextRequest) {
     // idempotence: one reminder per job
     const { data: already } = await db.from("job_events").select("id").eq("job_id", job.id).eq("type", "reminder_sent").maybeSingle();
     if (already) continue;
-    const windowTxt = job.window_start ? `${job.window_start.slice(0, 5)}–${job.window_end?.slice(0, 5) ?? ""}` : "during the day";
+    // Never state a specific arrival time window to a customer — day only.
     const msg = tpl
-      ? renderTemplate(tpl.body, { window: windowTxt, address: job.properties?.address ?? "your property" })
+      ? renderTemplate(tpl.body, { window: "sometime during the day", address: job.properties?.address ?? "your property" })
       : `Reminder: Momentum crew comes tomorrow at ${job.properties?.address}.`;
     const r = await sendSms({ to: c.phone, message: msg, sender: "system" });
     if (r.ok || (r as any).scheduled_id) {

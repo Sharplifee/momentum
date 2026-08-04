@@ -28,7 +28,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-[400px]">
         {/* brand */}
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 grid h-16 w-16 place-items-center rounded-[22px] bg-gradient-to-br from-teal to-teal-hover font-display text-3xl font-bold text-white shadow-glow ring-1 ring-white/20">M</div>
+          <img src="/logo.png" alt="Momentum Landscaping" className="mb-5 h-20 w-auto" />
           <h1 className="font-display text-[26px] font-bold tracking-tight text-[color:var(--ink)]">Momentum Landscaping</h1>
           <p className="mt-1 text-sm text-[color:var(--body)]">Operations · sign in to your workspace</p>
         </div>
