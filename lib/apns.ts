@@ -71,6 +71,8 @@ export type ApnsMessage = {
   data?: Record<string, unknown>;
   badge?: number;
   threadId?: string;
+  /** APNs topic. Defaults to the crew bundle; the customer app passes its own. */
+  topic?: string;
 };
 
 /**
@@ -81,7 +83,7 @@ export type ApnsMessage = {
 const PERMANENT = new Set(["BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic", "TopicDisallowed"]);
 
 export async function sendApns(msg: ApnsMessage): Promise<ApnsResult> {
-  const bundleId = process.env.APNS_BUNDLE_ID ?? "com.momentumlandscapingut.crew";
+  const bundleId = msg.topic || process.env.APNS_BUNDLE_ID || "com.momentumlandscapingut.crew";
 
   const payload = JSON.stringify({
     aps: {

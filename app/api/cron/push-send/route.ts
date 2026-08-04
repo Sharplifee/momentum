@@ -38,14 +38,15 @@ export async function GET(req: NextRequest) {
   const ids = [...new Set(queued.map((q) => q.profile_id).filter(Boolean))];
   const { data: tokens } = await db
     .from("push_tokens")
-    .select("token, profile_id")
+    .select("token, profile_id, bundle_id")
     .in("profile_id", ids)
     .eq("active", true);
 
-  const byProfile = new Map<string, string[]>();
+  type Device = { token: string; bundle_id: string | null };
+  const byProfile = new Map<string, Device[]>();
   for (const t of tokens ?? []) {
     const list = byProfile.get(t.profile_id) ?? [];
-    list.push(t.token);
+    list.push({ token: t.token, bundle_id: t.bundle_id });
     byProfile.set(t.profile_id, list);
   }
 
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
     if (!targets.length) { noDevice.push(q.id); continue; }
 
     const results = await Promise.all(
-      targets.map((deviceToken) =>
+      targets.map(({ token: deviceToken, bundle_id }) =>
         sendApns({
           deviceToken,
           title: q.title,
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest) {
           data: q.data,
           badge: 1,
           threadId: q.category ?? undefined,
+          topic: bundle_id ?? undefined,
         }).then((r) => ({ deviceToken, r }))
       )
     );
