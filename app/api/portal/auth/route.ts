@@ -59,19 +59,19 @@ export async function POST(req: NextRequest) {
 
       if (r?.reason === "locked") {
         return withCors({
-          error: "Too many tries. Try again in fifteen minutes, or sign in with your mobile number.",
+          error: "Too many tries. Wait fifteen minutes, or sign in with your phone number instead.",
         }, origin, 429);
       }
       if (r?.reason === "no_password") {
         // Knows the email, has never set a password. Sending them to the code
         // is kinder than an error they cannot act on.
         return withCors({
-          error: "You haven't set a password yet. Sign in with your mobile number instead.",
+          error: "You haven't set a password yet — sign in with your phone number and we'll text you a code.",
           use_phone: true,
         }, origin, 409);
       }
       if (!r?.ok) {
-        return withCors({ error: "We don't recognise that email and password." }, origin, 401);
+        return withCors({ error: "We don't recognize that email and password." }, origin, 401);
       }
 
       const { data: known } = await db
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       .eq("email", String(email).trim().toLowerCase())
       .maybeSingle();
     if (!c) {
-      return withCors({ error: "We don't recognise that email and password." }, origin, 401);
+      return withCors({ error: "We don't recognize that email and password." }, origin, 401);
     }
     const first = (c.full_name ?? "").trim().split(" ")[0] || null;
     return withCors({
@@ -108,11 +108,11 @@ export async function POST(req: NextRequest) {
     }, origin);
   }
 
-  if (!phone) return withCors({ error: "Enter your mobile number." }, origin, 400);
+  if (!phone) return withCors({ error: "Enter your phone number." }, origin, 400);
 
   const e164 = norm(phone);
   if (!valid(e164)) {
-    return withCors({ error: "That doesn't look like a US mobile number." }, origin, 400);
+    return withCors({ error: "That doesn't look like a US phone number." }, origin, 400);
   }
 
   const db = supabaseAdmin();

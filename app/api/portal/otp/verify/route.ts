@@ -28,11 +28,11 @@ export async function POST(req: NextRequest) {
 
   if (!otp) {
     await logAutomation({ trigger: "portal.otp.verify_fail", status: "skipped", detail: { phone, reason: "no_active_code" } });
-    return NextResponse.json({ error: "invalid_code" }, { status: 401 });
+    return NextResponse.json({ error: "That code didn't match. Try again." }, { status: 401 });
   }
   if (otp.attempts >= 5) {
-    await logAutomation({ trigger: "portal.otp.verify_fail", status: "skipped", detail: { phone, reason: "too_many_attempts" } });
-    return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
+    await logAutomation({ trigger: "portal.otp.verify_fail", status: "skipped", detail: { phone, reason: "Too many tries. Ask for a new code." } });
+    return NextResponse.json({ error: "Too many tries. Ask for a new code." }, { status: 429 });
   }
 
   const expected = Buffer.from(otp.code_hash, "hex");
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!match) {
     await db.from("otp_codes").update({ attempts: otp.attempts + 1 }).eq("id", otp.id);
     await logAutomation({ trigger: "portal.otp.verify_fail", status: "skipped", detail: { phone, attempts: otp.attempts + 1 } });
-    return NextResponse.json({ error: "invalid_code" }, { status: 401 });
+    return NextResponse.json({ error: "That code didn't match. Try again." }, { status: 401 });
   }
 
   await db.from("otp_codes").update({ consumed_at: new Date().toISOString() }).eq("id", otp.id);
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 200 });
       userId = list?.users.find((u) => u.email === placeholderEmail)?.id ?? null;
     }
-    if (!userId) return NextResponse.json({ error: "user_resolution_failed" }, { status: 500 });
+    if (!userId) return NextResponse.json({ error: "We couldn't finish signing you in. Try again." }, { status: 500 });
     // profiles.phone is UNIQUE and may already belong to a staff profile (e.g. owner
     // testing as a customer) — the customer's phone of record lives on customers, so
     // fall back to a phone-less profile row on conflict rather than failing the login.
@@ -78,12 +78,12 @@ export async function POST(req: NextRequest) {
     }
     if (profErr) {
       await logAutomation({ trigger: "portal.otp.link_error", status: "error", error: profErr.message });
-      return NextResponse.json({ error: "account_link_failed" }, { status: 500 });
+      return NextResponse.json({ error: "We couldn't finish signing you in. Try again." }, { status: 500 });
     }
     const { error: linkCustErr } = await db.from("customers").update({ profile_id: userId }).eq("id", customer!.id);
     if (linkCustErr) {
       await logAutomation({ trigger: "portal.otp.link_error", status: "error", error: linkCustErr.message });
-      return NextResponse.json({ error: "account_link_failed" }, { status: 500 });
+      return NextResponse.json({ error: "We couldn't finish signing you in. Try again." }, { status: 500 });
     }
   }
 

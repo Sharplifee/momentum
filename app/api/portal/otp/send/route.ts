@@ -14,7 +14,7 @@ function hashCode(code: string, phone: string): string {
 export async function POST(req: NextRequest) {
   const { phone: rawPhone } = await req.json().catch(() => ({}));
   const phone = toE164(String(rawPhone ?? ""));
-  if (!phone) return NextResponse.json({ error: "invalid_phone" }, { status: 400 });
+  if (!phone) return NextResponse.json({ error: "That doesn't look like a US phone number." }, { status: 400 });
 
   const db = supabaseAdmin();
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const { count } = await db.from("otp_codes").select("id", { count: "exact", head: true }).eq("phone", phone).gte("created_at", hourAgo);
   if ((count ?? 0) >= 3) {
     await logAutomation({ trigger: "portal.otp.rate_limited", status: "skipped", detail: { phone } });
-    return NextResponse.json({ error: "rate_limited", message: "Too many codes requested — try again in an hour." }, { status: 429 });
+    return NextResponse.json({ error: "Too many tries just now. Give it a minute.", message: "Too many codes requested — try again in an hour." }, { status: 429 });
   }
 
   const code = String(crypto.randomInt(100000, 1000000));

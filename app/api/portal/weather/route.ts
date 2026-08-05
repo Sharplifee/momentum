@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const res = await fetch(`${base.replace(/\/$/, "")}/api/weather?lat=${lat}&lng=${lng}`, {
     next: { revalidate: 900 },
   }).catch(() => null);
-  if (!res?.ok) return withCors({ error: "weather unavailable" }, origin, 503);
+  if (!res?.ok) return withCors({ error: "Weather isn't available right now." }, origin, 503);
   const w = await res.json();
 
   const day = date ? (w.days ?? []).find((d: any) => d.date === date) : (w.days ?? [])[0];

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     if (c.phone) body.set("phone", c.phone);
     body.set("metadata[customer_id]", c.id);
     const r = await fetch("https://api.stripe.com/v1/customers", { method: "POST", headers: auth, body });
-    if (!r.ok) return withCors({ error: "Couldn't reach payments." }, origin, 502);
+    if (!r.ok) return withCors({ error: "We couldn't reach payments. Try again in a moment." }, origin, 502);
     sid = (await r.json()).id;
     await db.from("customers").update({ stripe_customer_id: sid }).eq("id", c.id);
   }
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   si.set("payment_method_types[]", "card");
   si.set("usage", "off_session");
   const r2 = await fetch("https://api.stripe.com/v1/setup_intents", { method: "POST", headers: auth, body: si });
-  if (!r2.ok) return withCors({ error: "Couldn't start that." }, origin, 502);
+  if (!r2.ok) return withCors({ error: "We couldn't start that. Try again in a moment." }, origin, 502);
   const intent = await r2.json();
   return withCors({ client_secret: intent.client_secret,
                     publishable_key: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null }, origin);

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     full_name: full_name ?? null, phone: e164, address, city: city ?? null,
     requested_window: requested_window ?? null, stage: "new", source: "app",
   });
-  if (error) return withCors({ error: "Couldn't send that. Try again." }, origin, 400);
+  if (error) return withCors({ error: "We couldn't send that. Try again." }, origin, 400);
   return withCors({
     ok: true,
     message: "Got it. Wayne will text you shortly to arrange your quote visit.",
