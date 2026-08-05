@@ -41,6 +41,53 @@ export async function POST(req: NextRequest) {
   // real routes in; neither is a fallback for the other.
   if (email && password) {
     const db = supabaseAdmin();
+
+    // Password checking is built and wired but switched off, because no
+    // customer has ever set one — turning it on today would lock out everybody
+    // at once. Flip customer_password_auth_enabled in system_config and email
+    // sign-in starts demanding a real password on the next request, no deploy.
+    const { data: cfg } = await db
+      .from("system_config").select("value")
+      .eq("key", "customer_password_auth_enabled").maybeSingle();
+    const enforce = String((cfg as any)?.value ?? "false") === "true";
+
+    if (enforce) {
+      const { data: rows } = await db.rpc("momentum_check_customer_password", {
+        p_email: String(email).trim(), p_password: String(password),
+      });
+      const r = Array.isArray(rows) ? rows[0] : rows;
+
+      if (r?.reason === "locked") {
+        return withCors({
+          error: "Too many tries. Try again in fifteen minutes, or sign in with your mobile number.",
+        }, origin, 429);
+      }
+      if (r?.reason === "no_password") {
+        // Knows the email, has never set a password. Sending them to the code
+        // is kinder than an error they cannot act on.
+        return withCors({
+          error: "You haven't set a password yet. Sign in with your mobile number instead.",
+          use_phone: true,
+        }, origin, 409);
+      }
+      if (!r?.ok) {
+        return withCors({ error: "We don't recognise that email and password." }, origin, 401);
+      }
+
+      const { data: known } = await db
+        .from("customers")
+        .select("id, full_name, status, onboarding_complete")
+        .eq("id", r.customer_id).maybeSingle();
+      if (!known) return withCors({ error: "not found" }, origin, 404);
+
+      const f = (known.full_name ?? "").trim().split(" ")[0] || null;
+      return withCors({
+        ok: true, customer_id: known.id, name: known.full_name, first_name: f,
+        known: Boolean(known.full_name), needs: needsFrom(known),
+        greeting: f ? `Welcome back, ${f}` : "You're in",
+      }, origin);
+    }
+
     const { data: c } = await db
       .from("customers")
       .select("id, full_name, status, onboarding_complete")
