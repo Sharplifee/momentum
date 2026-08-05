@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { MonthCalendar } from "@/components/crm/MonthCalendar";
 import { DeltaTile, BandCard } from "@/components/crm/Charts";
+import { ScheduleMap } from "@/components/crm/ScheduleMap";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +83,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         <p className="mb-5 text-sm text-[color:var(--body)]">
           Both calendars, always visible — <span className="font-medium text-teal">service visits</span> and <span className="font-medium text-gold">quote visits</span>.
         </p>
+
+        <ScheduleMap token={process.env.MAPKIT_TOKEN ?? null} />
 
         {/* One strip rather than four tiles: the only numbers that matter here are
             how much work there is this week and how much of it is today. */}
