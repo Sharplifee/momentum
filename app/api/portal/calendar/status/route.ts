@@ -28,7 +28,10 @@ export async function GET(req: NextRequest) {
         available: true,
         feed_url: `webcal://crm.momentumlandscapingut.com/api/portal/calendar/feed/${c.id}.ics` },
       { id: "google",  name: "Google Calendar", connected: linked.has("google"),
-        available: false, reason: "Coming soon — use the Apple subscription for now." },
+        available: Boolean(process.env.GOOGLE_CLIENT_ID),
+        start_url: `${base}/api/portal/calendar/google/start?customer_id=${c.id}`,
+        reason: process.env.GOOGLE_CLIENT_ID ? undefined
+          : "Coming soon — use the Apple subscription for now." },
       { id: "outlook", name: "Outlook", connected: linked.has("outlook"),
         available: false, reason: "Coming soon — use the Apple subscription for now." },
     ],
