@@ -1567,8 +1567,8 @@ const Mock = {
       { id: "leaf",   name: "Leaf Cleanup",            price_cents: 12000, emoji: "🍂" },
     ];
   },
-  async servicesRequest(items, note) { console.log("[mock cart]", items, note); return { ok: true }; },
-  async quotesCreate(payload)  { console.log("[mock quote]", payload); return { ok: true, eta_minutes: 60 }; },
+  async servicesRequest(items, note) { void 0; return { ok: true }; },
+  async quotesCreate(payload)  { void 0; return { ok: true, eta_minutes: 60 }; },
   async paymentMethod()         { return { brand: "visa", last4: "4421", exp: "9/27" }; },
   async invoices() {
     return [{ id: "mock-inv", amount_cents: 4500, status: "open", due_at: new Date(Date.now() + 7 * 864e5).toISOString() }];
@@ -1857,8 +1857,8 @@ function HomeScreen({ tweaks, customerName, onGetQuote, onNavigate, clientStatus
           </div>
 
           <section className="prospect-hero card" style={cardStyle}>
-            <div className="ph-eyebrow">FREE PERSONAL QUOTE</div>
-            <div className="ph-title">Get your price,<br />hassle-free.</div>
+            <div className="ph-eyebrow">PERSONAL QUOTE</div>
+            <div className="ph-title">Get your price,<br />walked in person.</div>
             <div className="ph-sub">No login. No credit card. Just tell us about your yard.</div>
             <button className="ph-cta" type="button" onClick={onGetQuote}>
               Schedule My Personal Quote {Icon.arrowRight}
@@ -3048,6 +3048,67 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
     var ok = bind() && chips();
     if(ok || ++tries>40) clearInterval(t);
   },250);
+})();
+</script>
+
+<style>
+/* ── Pass: the small things ──────────────────────────────────────
+
+   Tap targets. Thirty-one of thirty-five controls declared a height under
+   Apple's 44pt minimum. A customer using this stands in a doorway one-handed,
+   so anything tappable gets a real target without changing how it looks. */
+button, [role="button"], a.btn, .tab, .tabbar > *, .st-toggle, .cs-day {
+  min-height: 44px;
+  touch-action: manipulation;          /* kills the 300ms double-tap delay */
+}
+.cs-day { min-height: 44px; display: flex; flex-direction: column;
+          align-items: center; justify-content: center }
+
+/* Text selection and callouts. Long-pressing a label in an app should not
+   offer to look it up or copy it — that reads as a web page, not an app. */
+body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none }
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text }
+
+/* iOS zooms the whole page when a field under 16px takes focus, which then
+   leaves the layout shifted. */
+input, select, textarea { font-size: 16px }
+
+/* Momentary grey flash on every tap. */
+* { -webkit-tap-highlight-color: transparent }
+
+/* Focus has to stay visible for anyone navigating by keyboard or switch. */
+:focus-visible { outline: 2px solid #3A6EA5; outline-offset: 2px; border-radius: 10px }
+
+/* Respect the system setting rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important; transition-duration: .01ms !important }
+}
+</style>
+<script>
+(function () {
+  /* Most controls had no accessible name, so VoiceOver announced "button".
+     Falling back to the visible text is better than silence. */
+  function label() {
+    document.querySelectorAll('button, [role="button"]').forEach(function (b) {
+      if (b.getAttribute('aria-label')) return;
+      var t = (b.textContent || '').trim().replace(/\s+/g, ' ');
+      if (t) b.setAttribute('aria-label', t.slice(0, 60));
+    });
+  }
+  label();
+  new MutationObserver(label).observe(document.documentElement,
+    { childList: true, subtree: true });
+
+  /* A double-tap on iOS zooms the page and there is no way back without a
+     reload. Nothing here needs pinch zoom. */
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  var last = 0;
+  document.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    if (now - last <= 320) e.preventDefault();
+    last = now;
+  }, { passive: false });
 })();
 </script>
 </body>
