@@ -643,6 +643,66 @@ a:hover { color: var(--teal); }
 .screen-fade-enter-active { opacity: 1; transform: translateY(0); transition: opacity 0.25s, transform 0.25s; }
 
 </style>
+
+<style>
+/* ── WebView viewport correction ────────────────────────────────
+   Inside the iOS shell the page was laid out wider and shorter than the
+   screen: the tab bar's last item was cut off on the right, the logo bled
+   past both edges, and a white void appeared below the content that turned
+   black. All three are the same cause — 100vh is a stale value in a WebView
+   and does not account for the dynamic toolbar, and nothing clamped the
+   horizontal axis. */
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;                 /* nothing may exceed the screen width */
+  background: #fbfcfd;                /* kills the black void below content */
+  overscroll-behavior-y: none;        /* no rubber-band revealing the void */
+}
+#root, .app-shell, .shell {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* dvh follows the live viewport; vh does not. The fallback keeps older
+   WebViews working. */
+@supports (height: 100dvh) {
+  body { min-height: 100dvh; }
+  .app-shell, .shell, #root { min-height: 100dvh; }
+}
+
+/* The tab bar sits on the home-indicator, so it needs the safe area or its
+   last item is clipped — which is exactly what happened to "Account". */
+.tabbar, .tab-bar, nav[class*="tab"] {
+  padding-left: max(8px, env(safe-area-inset-left));
+  padding-right: max(8px, env(safe-area-inset-right));
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+.tabbar > *, .tab-bar > *, nav[class*="tab"] > * { min-width: 0; }
+
+/* Anything that would push the page sideways gets clamped. */
+img, svg, video, canvas { max-width: 100%; height: auto }
+</style>
+<script>
+/* iOS reports the wrong viewport height for a moment after launch, which is
+   why the layout corrected itself when you navigated away and back. Nudging
+   it on load and on rotation forces the recalculation without the round trip. */
+(function () {
+  function setVH() {
+    document.documentElement.style.setProperty('--ml-vh', window.innerHeight + 'px');
+    document.body && (document.body.style.minHeight = window.innerHeight + 'px');
+  }
+  setVH();
+  window.addEventListener('resize', setVH, { passive: true });
+  window.addEventListener('orientationchange', function () { setTimeout(setVH, 120); });
+  /* First paint in a WebView often measures before the toolbar settles. */
+  [60, 300, 900].forEach(function (t) { setTimeout(setVH, t); });
+})();
+</script>
 </head>
 <body>
 <div id="root"></div>
