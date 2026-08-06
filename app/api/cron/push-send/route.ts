@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 type Queued = {
-  id: number; profile_id: string; title: string; body: string;
+  id: number; profile_id: string | null; customer_id: string | null; title: string; body: string;
   data: Record<string, unknown>; category: string | null; attempts: number;
 };
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const { data: queued } = await db
     .from("push_queue")
-    .select("id, profile_id, title, body, data, category, attempts")
+    .select("id, profile_id, customer_id, title, body, data, category, attempts")
     .is("sent_at", null)
     .lte("send_after", new Date().toISOString())
     .lt("attempts", 5)
@@ -35,20 +35,29 @@ export async function GET(req: NextRequest) {
 
   if (!queued?.length) return NextResponse.json({ ok: true, sent: 0 });
 
-  const ids = [...new Set(queued.map((q) => q.profile_id).filter(Boolean))];
-  const { data: tokens } = await db
-    .from("push_tokens")
-    .select("token, profile_id, bundle_id")
-    .in("profile_id", ids)
-    .eq("active", true);
+  // Staff are addressed by profile, customers by customer — one queue, two
+  // kinds of recipient, so both sets of devices get looked up together.
+  const profileIds = [...new Set(queued.map((q) => q.profile_id).filter(Boolean))] as string[];
+  const customerIds = [...new Set(queued.map((q) => q.customer_id).filter(Boolean))] as string[];
+
+  const [staffTokens, customerTokens] = await Promise.all([
+    profileIds.length
+      ? db.from("push_tokens").select("token, profile_id, bundle_id").in("profile_id", profileIds).eq("active", true)
+      : Promise.resolve({ data: [] as any[] }),
+    customerIds.length
+      ? db.from("push_tokens").select("token, customer_id, bundle_id").in("customer_id", customerIds).eq("active", true)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
 
   type Device = { token: string; bundle_id: string | null };
-  const byProfile = new Map<string, Device[]>();
-  for (const t of tokens ?? []) {
-    const list = byProfile.get(t.profile_id) ?? [];
-    list.push({ token: t.token, bundle_id: t.bundle_id });
-    byProfile.set(t.profile_id, list);
-  }
+  const byOwner = new Map<string, Device[]>();
+  const add = (owner: string, d: Device) => {
+    const list = byOwner.get(owner) ?? [];
+    list.push(d);
+    byOwner.set(owner, list);
+  };
+  for (const t of staffTokens.data ?? []) add(`p:${t.profile_id}`, { token: t.token, bundle_id: t.bundle_id });
+  for (const t of customerTokens.data ?? []) add(`c:${t.customer_id}`, { token: t.token, bundle_id: t.bundle_id });
 
   const dead = new Set<string>();
   const delivered: number[] = [];
@@ -56,7 +65,8 @@ export async function GET(req: NextRequest) {
   const failed: { id: number; reason: string; attempts: number }[] = [];
 
   for (const q of queued as Queued[]) {
-    const targets = byProfile.get(q.profile_id) ?? [];
+    const owner = q.profile_id ? `p:${q.profile_id}` : q.customer_id ? `c:${q.customer_id}` : null;
+    const targets = (owner && byOwner.get(owner)) || [];
     if (!targets.length) { noDevice.push(q.id); continue; }
 
     const results = await Promise.all(

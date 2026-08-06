@@ -1789,18 +1789,71 @@ window.Pill = Pill;
 <script type="text/babel">
 /*src/screen-login.jsx*/
 function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
+  // Sign-in goes to the real backend at /api/portal/auth. The primary route is
+  // a mobile number and a texted code, because that is what the backend
+  // actually enforces — email and password exist there too, but password
+  // checking is switched off until customers have set one, so offering it as
+  // the only way in signs nobody in.
+  //
+  // Asking for a code and proving the number are the same act as signing up:
+  // an unknown number still gets in and the app collects the rest.
+  const [phone, setPhone] = React.useState("");
+  const [code, setCode] = React.useState("");
+  const [sent, setSent] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState("");
   const isPreview = mode !== "live";
 
-  const submit = (e) => {
+  const base = () => (window.MLConfig && window.MLConfig.apiBase) || "";
+
+  const pretty = (v) => {
+    const d = (v || "").replace(/\D/g, "").slice(0, 10);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return "(" + d.slice(0, 3) + ") " + d.slice(3);
+    return "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6);
+  };
+
+  async function post(body) {
+    const r = await fetch(base() + "/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const text = await r.text();
+    const json = text ? JSON.parse(text) : null;
+    if (!r.ok) throw new Error((json && json.error) || "Something went wrong. Try again.");
+    return json;
+  }
+
+  const sendCode = async (e) => {
     e.preventDefault();
-    const em = email.trim();
-    if (!em || !password) { setErr("Enter your email and password"); return; }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { setErr("Enter a valid email address"); return; }
-    setErr("");
-    onLogin({ email: em, name: em.split("@")[0].split(/[._-]/)[0].replace(/^\w/, (c) => c.toUpperCase()) });
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length !== 10) { setErr("Enter your 10-digit mobile number"); return; }
+    setErr(""); setBusy(true);
+    try {
+      await post({ phone: digits });
+      setSent(true);
+    } catch (ex) { setErr(ex.message); }
+    finally { setBusy(false); }
+  };
+
+  const verify = async (e) => {
+    e.preventDefault();
+    if (code.trim().length < 6) { setErr("Enter the 6-digit code we texted you"); return; }
+    setErr(""); setBusy(true);
+    try {
+      const u = await post({ phone: phone.replace(/\D/g, ""), code: code.trim() });
+      // customer_id is the whole point of this call — every other portal route
+      // is keyed on it, so it has to survive login.
+      onLogin({
+        id: u.customer_id,
+        name: u.name || u.first_name || null,
+        greeting: u.greeting,
+        known: u.known,
+        needs: u.needs || [],
+      });
+    } catch (ex) { setErr(ex.message); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -1812,15 +1865,54 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
         </div>
         <div className="login-tag">Your lawn, on autopilot.</div>
 
-        <form className="login-form" onSubmit={submit}>
-          <label className="lf-label">Email</label>
-          <input className="lf-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <label className="lf-label">Password</label>
-          <input className="lf-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          {err && <div className="lf-err">{err}</div>}
-          <button className="lf-submit" type="submit">Sign In</button>
-          {isPreview && <div className="lf-hint">Preview mode — accounts activate once the backend is connected.</div>}
-        </form>
+        {!sent ? (
+          <form className="login-form" onSubmit={sendCode}>
+            <label className="lf-label">Mobile number</label>
+            <input
+              className="lf-input"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="(801) 555-0134"
+              value={pretty(phone)}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            {err && <div className="lf-err">{err}</div>}
+            <button className="lf-submit" type="submit" disabled={busy}>
+              {busy ? "Sending…" : "Text Me A Code"}
+            </button>
+            <div className="lf-hint">
+              {isPreview
+                ? "Preview mode — accounts activate once the backend is connected."
+                : "New here? Same button. We'll set you up inside."}
+            </div>
+          </form>
+        ) : (
+          <form className="login-form" onSubmit={verify}>
+            <label className="lf-label">Code sent to {pretty(phone)}</label>
+            <input
+              className="lf-input"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="------"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            />
+            {err && <div className="lf-err">{err}</div>}
+            <button className="lf-submit" type="submit" disabled={busy}>
+              {busy ? "Checking…" : "Sign In"}
+            </button>
+            <button
+              type="button"
+              className="login-quote-link"
+              onClick={() => { setSent(false); setCode(""); setErr(""); }}
+            >
+              Use a different number
+            </button>
+          </form>
+        )}
 
         <button type="button" className="login-quote-link" onClick={onSneakPeek}>
           Sneak peek — <span className="lql-cta">look inside the app →</span>
@@ -2891,7 +2983,9 @@ function App() {
   const customerEmail = user?.email || tweaks.customerEmail;
 
   const handleLogin = (u) => {
-    setUser({ name: u.name || u.email, email: u.email });
+    // id is what every /api/portal route is keyed on; dropping it here is
+    // what left the app talking to its own mock data.
+    setUser({ id: u.id || null, name: u.name || u.email || "there", email: u.email || null, needs: u.needs || [] });
     setRoute("home");
   };
 
@@ -3109,6 +3203,60 @@ input, select, textarea { font-size: 16px }
     if (now - last <= 320) e.preventDefault();
     last = now;
   }, { passive: false });
+})();
+</script>
+
+<script>
+/* Push registration bridge — customer iOS shell.
+   The shell (github.com/Sharplifee/momentum-customer) hands over the APNs
+   device token it got from iOS; this page owns the signed-in customer, so the
+   two are joined here rather than natively. In a plain browser no token ever
+   arrives and none of this runs.
+   Registration needs both halves and they land in either order, so each half
+   just tries again once it has the other. */
+(function () {
+  var API = (window.MLConfig && window.MLConfig.apiBase) || "";
+  var sent = null;
+
+  function customerId() {
+    try {
+      var u = JSON.parse(sessionStorage.getItem("ml_user") || "null");
+      return (u && u.id) || null;
+    } catch (e) { return null; }
+  }
+
+  function attempt() {
+    var push = window.__momentumPush;
+    var id = customerId();
+    if (!push || !push.token || !id) return;
+    var key = id + ":" + push.token;
+    if (sent === key) return;
+    sent = key;
+    fetch(API + "/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer_id: id,
+        token: push.token,
+        bundle_id: push.bundleId,
+        app_version: push.appVersion,
+        platform: "ios"
+      })
+    }).catch(function () {
+      /* The shell re-injects on every launch, so a dropped registration
+         repairs itself next time the app opens. */
+      sent = null;
+    });
+  }
+
+  window.momentumRegisterPush = function (token, bundleId, appVersion) {
+    window.__momentumPush = { token: token, bundleId: bundleId, appVersion: appVersion };
+    attempt();
+  };
+
+  /* The customer signs in some time after the token arrives, so watch for it. */
+  setInterval(attempt, 2000);
+  attempt();
 })();
 </script>
 </body>
