@@ -75,8 +75,9 @@ export function FunnelChart({ stages }: { stages: { k: string; v: number; c: str
 }
 
 export function AreaChart({ points, height = 96, label }: { points: number[]; height?: number; label?: string }) {
-  const max = Math.max(1, ...points);
-  const peak = points.indexOf(max);
+  const peakValue = points.length ? Math.max(...points) : 0;
+  const max = Math.max(1, peakValue);
+  const peak = peakValue > 0 ? points.indexOf(peakValue) : -1;
   const n = Math.max(1, points.length - 1);
   const xy = points.map((v, i) => [(i * 100) / n, 46 - (v / max) * 38] as const);
   const d = `M${xy.map(([x, y]) => `${x},${y}`).join(" L")}`;
@@ -87,13 +88,13 @@ export function AreaChart({ points, height = 96, label }: { points: number[]; he
         {[10, 22, 34].map((y) => <line key={y} x1="0" x2="100" y1={y} y2={y} stroke="rgba(148,155,200,0.10)" strokeWidth="0.4" />)}
         <path d={`${d} L100,50 L0,50 Z`} fill="url(#areaK)" />
         <path d={d} fill="none" stroke="#a99df8" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
-        {max > 0 && (
+        {peak >= 0 && (
           <g>
             <line x1={xy[peak][0]} x2={xy[peak][0]} y1={xy[peak][1]} y2={48} stroke="#8b7cf6" strokeWidth="0.5" strokeDasharray="1.5 1.5" />
             <circle cx={xy[peak][0]} cy={xy[peak][1]} r="2.2" fill="#0b0e17" stroke="#a99df8" strokeWidth="1.2" />
             <g transform={`translate(${Math.min(88, Math.max(6, xy[peak][0] - 6))},${Math.max(4, xy[peak][1] - 11)})`}>
               <rect width="13" height="8" rx="2.5" fill="#8b7cf6" />
-              <text x="6.5" y="5.7" textAnchor="middle" fontSize="5" fontWeight="700" fill="#fff">{max}</text>
+              <text x="6.5" y="5.7" textAnchor="middle" fontSize="5" fontWeight="700" fill="#fff">{peakValue}</text>
             </g>
           </g>
         )}
