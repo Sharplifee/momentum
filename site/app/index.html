@@ -1614,7 +1614,7 @@ function useWeather(address, date) {
 // ─────────────────────────────────────────────────────────────
 // Crew AI replies via window.claude.complete
 // ─────────────────────────────────────────────────────────────
-async function crewReply({ history, customerName = "Connor", crew = "Crew", nextDate }) {
+async function crewReply({ history, customerName = "Jane", crew = "Crew", nextDate }) {
   const dateStr = nextDate ? fmtShort(nextDate) : "Thursday";
   const persona = `You are ${crew}, the friendly crew lead at Momentum Landscaping, a residential lawn-care company in South Jordan, Utah. You text customers from your phone. Replies must be 1–2 short sentences, warm and professional, no emojis unless natural. Their next scheduled service is ${dateStr} at 10:30 AM. The customer's name is ${customerName}. Reply to their most recent message. Never break character. Never mention you are AI.`;
   const transcript = history.map(m => (m.from === "me" ? `${customerName}: ${m.text}` : `${m.name || crew}: ${m.text}`)).join("\n");
@@ -1750,7 +1750,7 @@ const Mock = {
   async messagesList() { return JSON.parse(sessionStorage.getItem("ml_msgs") || "[]"); },
   async messagesSend(body) {
     const list = await Mock.messagesList();
-    list.push({ id: `m-${Date.now()}`, sender: "customer", sender_name: "Connor", body, created_at: new Date().toISOString() });
+    list.push({ id: `m-${Date.now()}`, sender: "customer", sender_name: "Jane", body, created_at: new Date().toISOString() });
     sessionStorage.setItem("ml_msgs", JSON.stringify(list));
     return { ok: true };
   },
@@ -2534,7 +2534,7 @@ function MessagesScreen({ tweaks, customerName }) {
     try {
       const reply = await MLData.crewReply({
         history,
-        customerName: (customerName || "Connor").split(" ")[0],
+        customerName: (customerName || "Jane").split(" ")[0],
         crew: "Crew",
         nextDate: MLData.nextServiceDate(),
       });
@@ -2897,7 +2897,7 @@ function AccountScreen({ tweaks, customerName, customerEmail, customerAddress, p
     <div className="screen screen-account">
       <div className="dark-header tall">
         <Avatar letter={initial} size={72} color="#ffffff" />
-        <div className="acc-name">{customerName || "Connor Sharp"}</div>
+        <div className="acc-name">{customerName || "Jane Anderson"}</div>
         <div className="acc-email">{customerEmail || "demo@momentumlandscapingut.com"}</div>
         <div className="acc-address">{customerAddress || "South Jordan, UT"}</div>
         <div className="acc-badges">
@@ -3156,7 +3156,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "cardStyle": "frost",
   "bgIntensity": 1,
   "clientStatus": "active",
-  "customerName": "Connor Sharp",
+  "customerName": "Jane Anderson",
   "customerEmail": "demo@momentumlandscapingut.com",
   "customerAddress": "South Jordan, UT",
   "plan": "Weekly Lawn Care",
