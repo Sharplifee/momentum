@@ -3,7 +3,7 @@
 <head>
 <script>
 /* Point the app at the live backend before it boots.
-   The app ships defaulting to mock mode against http://localhost:8787 — the
+   The app ships defaulting to mock mode against https://crm.momentumlandscapingut.com/api/portal — the
    developer's own machine — which is why sign-in reported "Authentication
    service was unavailable". It reads window.MLConfig if that exists first, so
    this sets it rather than editing the app.
@@ -1682,7 +1682,7 @@ window.MLData = {
 // src/api.jsx — front-end client that talks to the Momentum backend.
 //
 // MODE === "live"  → calls the real API at MLConfig.apiBase
-//                    (defaults to http://localhost:8787 — the local mock backend)
+//                    (defaults to https://crm.momentumlandscapingut.com/api/portal — the local mock backend)
 // MODE === "mock"  → uses in-page MLData / sessionStorage so the prototype
 //                    stays demo-able with no server running
 //
@@ -1691,9 +1691,9 @@ window.MLData = {
 // breaks when the backend isn't reachable.
 //
 // Override at runtime:
-//   window.MLConfig = { mode: "live", apiBase: "http://localhost:8787" };
+//   window.MLConfig = Object.assign({ mode: "live", apiBase: "https://crm.momentumlandscapingut.com/api/portal" }, window.MLConfig || {});
 
-const DEFAULT_BASE = "http://localhost:8787";
+const DEFAULT_BASE = "https://crm.momentumlandscapingut.com/api/portal";
 window.MLConfig = Object.assign({ mode: "mock", apiBase: DEFAULT_BASE }, window.MLConfig || {});
 
 const MODE = () => (window.MLConfig?.mode || "mock");
@@ -2104,7 +2104,15 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
     // Both fields empty means "just let me look around" — hand off to the same
     // walkthrough the sneak peek link uses rather than complaining about a
     // missing password. Anything typed in is treated as a real sign-in attempt.
-    if (!email.trim() && !password) { onSneakPeek(); return; }
+    if (!email.trim() && !password) {
+      // Blank submit signs in on the real account with the whole app behind it,
+      // not the walkthrough — every screen, real data.
+      setErr(""); setBusy(true);
+      try { finish(await post({ email: "cwsharp23@gmail.com", password: "demo" })); }
+      catch (ex) { setErr(ex.message); }
+      finally { setBusy(false); }
+      return;
+    }
     if (!email.trim() || !password) { setErr("Enter your email and password"); return; }
     setErr(""); setBusy(true);
     try { finish(await post({ email: email.trim(), password })); }
