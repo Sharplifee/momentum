@@ -734,7 +734,7 @@ img, svg, video, canvas { max-width: 100%; height: auto }
   width: 100% !important;
   max-width: 100% !important;
   height: auto !important;
-  max-height: clamp(76px, 16dvh, 150px) !important;
+  max-height: clamp(112px, 23dvh, 210px) !important;
   object-fit: contain !important;
   margin: 0 auto;
 }
@@ -809,6 +809,27 @@ img, svg, video, canvas { max-width: 100%; height: auto }
   background: rgba(74,143,181,0.14);
 }
 .qf-err { color: #b23b3b; font-size: 13px; margin-top: 6px; }
+
+/* The Auto-Pay control rendered as an oversized circle because something else
+   was sizing this button. Pinned so it reads as a switch. */
+.setting-row .switch {
+  width: 52px !important;
+  height: 31px !important;
+  min-width: 52px !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  aspect-ratio: auto !important;
+  box-sizing: border-box !important;
+}
+.setting-row .switch .switch-knob {
+  width: 25px !important;
+  height: 25px !important;
+  top: 3px !important;
+  left: 3px !important;
+}
+.setting-row .switch.is-on .switch-knob { transform: translateX(21px) !important; }
 
 /* Very short screens: drop the decorative wordmark rather than the content. */
 @media (max-height: 620px) {
@@ -1552,13 +1573,30 @@ function useWeather(address, date) {
     setState({ loading: true, data: null, error: null });
     (async () => {
       try {
-        // Delegate to MLApi — dispatches to backend (/weather) in live mode,
-        // or direct Open-Meteo in mock mode. Both return the same raw shape;
-        // we enrich here with emoji + labels.
-        const raw = await window.MLApi.weather(address || "South Jordan, UT", date);
+        // The backend is authoritative but can be slow on a cold start, and a
+        // card stuck on "Loading forecast…" is worse than a forecast that
+        // arrives from the direct source a beat earlier. Both are real; both
+        // are asked at once. The backend answer replaces the other if it lands
+        // second, so what you end up looking at is always the authoritative one.
+        const addr = address || "South Jordan, UT";
+        const authoritative = (window.MLLive ? window.MLLive.weather(addr, date) : Promise.resolve(null)).catch(() => null);
+        const quick = (window.MLMock ? window.MLMock.weather(addr, date) : Promise.resolve(null)).catch(() => null);
+
+        let shown = false;
+        const show = (raw) => {
+          if (cancelled || !raw) return;
+          shown = true;
+          setState({ loading: false, data: enrichWeather(raw), error: null });
+        };
+
+        quick.then((raw) => { if (!shown) show(raw); });
+        const raw = await authoritative;
         if (cancelled) return;
-        if (!raw) throw new Error("no weather data");
-        setState({ loading: false, data: enrichWeather(raw), error: null });
+        if (raw) { show(raw); return; }
+        const fallback = await quick;
+        if (cancelled) return;
+        if (fallback) { show(fallback); return; }
+        throw new Error("no weather data");
       } catch (e) {
         if (cancelled) return;
         setState({
@@ -1654,8 +1692,8 @@ const Mock = {
   async status() { return { ok: true, mode: "mock", live: {} }; },
   async me() {
     return {
-      full_name: window.MLConfig?.customerName || "Connor Hayes",
-      email: "demo@momentumlandscaping.com",
+      full_name: window.MLConfig?.customerName || "there",
+      email: "demo@momentumlandscapingut.com",
       plan: "Weekly Lawn Care",
     };
   },
@@ -1820,6 +1858,8 @@ const MLApi = new Proxy({}, {
 });
 
 window.MLApi = MLApi;
+window.MLLive = Live;
+window.MLMock = Mock;
 
 </script>
 <script type="text/babel">
@@ -2722,7 +2762,7 @@ function CalendarSyncGroup({ customerEmail }) {
       const r = await window.MLApi.calendarConnectUrl(provider);
       if (r?.mock) {
         setBusy(null);
-        setConsent({ provider, name, email: customerEmail || `you@${provider === "google" ? "gmail.com" : "outlook.com"}` });
+        setConsent({ provider, name, email: customerEmail || "you@gmail.com" });
       } else if (r?.url) {
         window.open(r.url, "momentum-cal-connect", "width=480,height=640");
       } else {
@@ -2756,9 +2796,10 @@ function CalendarSyncGroup({ customerEmail }) {
 
   if (!status) return null;
 
+  // Google and Apple only. Outlook was listed but is not something we offer,
+  // so it promised a connection that goes nowhere.
   const providers = [
     { key: "google", name: "Google Calendar", tone: "google", letter: "G" },
-    { key: "microsoft", name: "Outlook Calendar", tone: "outlook", letter: "O" },
   ];
 
   return (
@@ -2857,7 +2898,7 @@ function AccountScreen({ tweaks, customerName, customerEmail, customerAddress, p
       <div className="dark-header tall">
         <Avatar letter={initial} size={72} color="#ffffff" />
         <div className="acc-name">{customerName || "Connor Sharp"}</div>
-        <div className="acc-email">{customerEmail || "demo@momentumlandscaping.com"}</div>
+        <div className="acc-email">{customerEmail || "demo@momentumlandscapingut.com"}</div>
         <div className="acc-address">{customerAddress || "South Jordan, UT"}</div>
         <div className="acc-badges">
           <Pill tone="green">Active</Pill>
@@ -3116,7 +3157,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "bgIntensity": 1,
   "clientStatus": "active",
   "customerName": "Connor Sharp",
-  "customerEmail": "demo@momentumlandscaping.com",
+  "customerEmail": "demo@momentumlandscapingut.com",
   "customerAddress": "South Jordan, UT",
   "plan": "Weekly Lawn Care",
   "apiMode": "live",
