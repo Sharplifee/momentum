@@ -8,8 +8,12 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ m?: string; d?: string }> }) {
-  const { profile, role, db } = await requireStaff(["owner", "manager", "crew"]);
-  const sp = await searchParams;
+  // Auth and the URL params do not depend on each other, so waiting for one
+  // then the other cost a round trip for nothing.
+  const [{ profile, role, db }, sp] = await Promise.all([
+    requireStaff(["owner", "manager", "crew"]),
+    searchParams,
+  ]);
 
   const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
   const month = /^\d{4}-\d{2}$/.test(sp.m ?? "") ? (sp.m as string) : todayIso.slice(0, 7);

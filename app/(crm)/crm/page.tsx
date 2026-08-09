@@ -62,11 +62,10 @@ export default async function Dashboard() {
   const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
   const weekEnd = new Date(new Date(todayIso + "T12:00:00").getTime() + 7 * 86400_000).toLocaleDateString("en-CA");
   const twoWeeksAgo = new Date(Date.now() - 14 * 86400_000).toISOString();
-  const [newL, contacted, quoted, won, wonJobs, resp, activity, checklist, weekJobs, custCount, leadSeries, srcRows, custSeries] = await Promise.all([
-    db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "new").neq("source", "test"),
-    db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "contacted").neq("source", "test"),
-    db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "quote_sent").neq("source", "test"),
-    db.from("leads").select("id", { count: "exact", head: true }).eq("stage", "closed_won").neq("source", "test"),
+  const [summary, wonJobs, resp, activity, checklist, weekJobs, custCount, leadSeries, srcRows, custSeries] = await Promise.all([
+    // Four separate counts of the same table became one grouped query inside
+    // Postgres. Each round trip was costing more than the query itself.
+    db.rpc("momentum_dashboard_summary"),
     db.from("jobs").select("price").eq("status", "completed").gte("created_at", weekAgo),
     db.from("leads").select("response_time_seconds").not("response_time_seconds", "is", null).gte("created_at", weekAgo),
     db.from("lead_events").select("type, detail, actor, created_at, lead_id").order("created_at", { ascending: false }).limit(12),
@@ -87,6 +86,13 @@ export default async function Dashboard() {
   }
   const thisWk = dayCounts.slice(7).reduce((a, b) => a + b, 0);
   const prevWk = dayCounts.slice(0, 7).reduce((a, b) => a + b, 0);
+  const S = (summary as any)?.data ?? {};
+  const stageCount = (k: string) => Number(S.stages?.[k] ?? 0);
+  const newL = { count: stageCount("new") };
+  const contacted = { count: stageCount("contacted") };
+  const quoted = { count: stageCount("quote_sent") };
+  const won = { count: stageCount("closed_won") };
+
   const wkDelta = prevWk ? Math.round(((thisWk - prevWk) / prevWk) * 100) : (thisWk ? 100 : 0);
   const srcAgg: Record<string, number> = {};
   for (const r of (srcRows.data ?? []) as any[]) srcAgg[r.source ?? "direct"] = (srcAgg[r.source ?? "direct"] ?? 0) + 1;
