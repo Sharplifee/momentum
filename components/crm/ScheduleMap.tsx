@@ -21,6 +21,9 @@ type Range = "day" | "week" | "month";
 
 declare global { interface Window { mapkit: any } }
 
+/** Centre of the south Salt Lake Valley band, wide enough to hold all 7 zones. */
+const SERVICE_AREA = { lat: 40.5622, lng: -111.9297, span: 0.34 };
+
 /**
  * The schedule, on a map.
  *
@@ -68,6 +71,12 @@ export function ScheduleMap({ token }: { token: string | null }) {
         showsScale: window.mapkit.FeatureVisibility.Adaptive,
         colorScheme: window.mapkit.Map.ColorSchemes.Dark,
       });
+      // Open on the service area. Without this MapKit starts at 0,0 — the Gulf
+      // of Guinea — whenever there is nothing to frame.
+      map.current.region = new window.mapkit.CoordinateRegion(
+        new window.mapkit.Coordinate(SERVICE_AREA.lat, SERVICE_AREA.lng),
+        new window.mapkit.CoordinateSpan(SERVICE_AREA.span, SERVICE_AREA.span)
+      );
     }
 
     if (window.mapkit) { init(); return; }
@@ -101,7 +110,13 @@ export function ScheduleMap({ token }: { token: string | null }) {
     drawn.current = [];
 
     const shown = stops.filter((s) => filter === "all" || s.kind === filter);
-    if (!shown.length) return;
+    if (!shown.length) {
+      map.current.setRegionAnimated(new mk.CoordinateRegion(
+        new mk.Coordinate(SERVICE_AREA.lat, SERVICE_AREA.lng),
+        new mk.CoordinateSpan(SERVICE_AREA.span, SERVICE_AREA.span)
+      ));
+      return;
+    }
 
     const teal = "#7FB8BE", gold = "#D9A441";
     const items: any[] = [], overlays: any[] = [];

@@ -115,8 +115,8 @@ export default async function Dashboard() {
 
   const stats = [
     { label: "Incoming Leads", value: newL.count ?? 0, delta: `${wkDelta >= 0 ? "+" : ""}${wkDelta}% vs last wk`, up: wkDelta >= 0, href: "/crm/leads?stage=new", icon: "◎", seed: 3, points: dayCounts },
-    { label: "Quote Visits (7d)", value: quoteVisits.length, delta: "sales calendar", href: "/crm/schedule", icon: "▤", seed: 11, points: qvPts },
-    { label: "Service Visits (7d)", value: svcJobs.length, delta: "client calendar", href: "/crm/schedule", icon: "✓", seed: 7, points: svPts },
+    { label: "Quote Visits", value: quoteVisits.length, delta: "next 7 days", href: "/crm/schedule", icon: "▤", seed: 11, points: qvPts },
+    { label: "Service Visits", value: svcJobs.length, delta: "next 7 days", href: "/crm/schedule", icon: "✓", seed: 7, points: svPts },
     { label: "Total Clients", value: custCount.count ?? 0, delta: "accounts", href: "/crm/customers", icon: "◈", seed: 5, points: custPts },
   ];
 

@@ -28,7 +28,7 @@ export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1
       <svg viewBox="0 0 100 50" className="h-9 w-full" preserveAspectRatio="none">
         <defs><linearGradient id={`dt${seed}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b7cf6" stopOpacity="0.35" /><stop offset="100%" stopColor="#8b7cf6" stopOpacity="0" /></linearGradient></defs>
         {hasData && <path d={`${d} L100,50 L0,50 Z`} fill={`url(#dt${seed})`} />}
-        <path d={d} fill="none" stroke={hasData ? "#a99df8" : "rgba(148,155,200,0.35)"} strokeWidth={hasData ? 2 : 1.2} strokeLinecap="round" strokeDasharray={hasData ? undefined : "3 3"} />
+        <path d={d} fill="none" stroke={hasData ? "#a99df8" : "rgba(148,155,200,0.22)"} strokeWidth={2} strokeLinecap="round"  />
       </svg>
     </div>
   );
@@ -36,11 +36,22 @@ export function DeltaTile({ label, value, delta, up = true, icon, href, seed = 1
 }
 
 export function FunnelChart({ stages }: { stages: { k: string; v: number; c: string; href?: string }[] }) {
-  const max = Math.max(1, ...stages.map((s) => s.v));
   const W = 200, layerH = 32, gap = 4;
-  // Blended truth-scaling: real proportions drive it, a floor keeps the funnel silhouette.
-  const width = (v: number) => (v === 0 ? W * 0.22 : W * (0.32 + 0.62 * (v / max)));
-  const widths = stages.map((s) => width(s.v));
+
+  // A funnel must never widen. Scaling each band to its own value made Quoted
+  // (4) bulge out below Contacted (2), which reads as a broken chart rather
+  // than a pipeline. Each band is now sized by how many are still in play at
+  // that stage or beyond, so the shape only ever narrows — and the count
+  // printed on it stays the real number.
+  const remaining = stages.map((_, i) =>
+    stages.slice(i).reduce((sum, s) => sum + s.v, 0)
+  );
+  const top = Math.max(1, remaining[0]);
+  const widths = remaining.map((r, i) => {
+    const share = r / top;                     // 1 at the mouth, less below
+    const floor = 0.26 - i * 0.02;             // keeps the tail visible at zero
+    return W * Math.max(floor, 0.30 + 0.66 * share);
+  });
   return (
     <div className="flex items-center gap-5">
       <svg viewBox={`0 0 ${W} ${stages.length * (layerH + gap)}`} className="h-36 w-44 shrink-0">
