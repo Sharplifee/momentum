@@ -1,50 +1,125 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { customerFrom } from "@/lib/portalAuth";
+import { corsHeaders, withCors } from "@/lib/portalCors";
 import { runWayne } from "@/lib/wayne";
 import { logAutomation } from "@/lib/automation";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-async function customerFromSession() {
-  const s = supabaseServer();
-  const { data: { user } } = await s.auth.getUser();
-  if (!user) return null;
+/**
+ * Messages for the customer app.
+ *
+ * This route identified the caller from a browser session cookie, while every
+ * other portal route identifies them by the customer id the app holds from
+ * sign-in. The app is a static page on another origin and has no such cookie,
+ * so this always answered 401 — and since a failed call quietly falls back to
+ * samples, the app showed an invented conversation rather than an error.
+ *
+ * The thread is resolved from the customer instead of being passed in, so no
+ * one can ask for a thread that is not theirs. SMS and in-app messages share
+ * one thread on purpose: the crew sees a single conversation either way.
+ */
+
+async function threadFor(customerId: string, phone: string | null) {
   const admin = supabaseAdmin();
-  const { data: customer } = await admin.from("customers").select("id, phone, full_name").eq("profile_id", user.id).maybeSingle();
-  return customer;
+
+  const { data: byCustomer } = await admin
+    .from("threads")
+    .select("id, phone, escalated, lead_id")
+    .eq("customer_id", customerId)
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (byCustomer) return byCustomer;
+
+  // Threads opened by SMS are keyed on the phone number before anyone links
+  // them to a customer record, so fall back to that and adopt it.
+  if (phone) {
+    const { data: byPhone } = await admin
+      .from("threads")
+      .select("id, phone, escalated, lead_id")
+      .eq("phone", phone)
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (byPhone) {
+      await admin.from("threads").update({ customer_id: customerId }).eq("id", byPhone.id);
+      return byPhone;
+    }
+  }
+
+  return null;
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      ...corsHeaders(req.headers.get("origin")),
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    },
+  });
 }
 
 export async function GET(req: NextRequest) {
-  const customer = await customerFromSession();
-  if (!customer) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const threadId = req.nextUrl.searchParams.get("thread_id");
-  const admin = supabaseAdmin();
-  // ownership check — thread must belong to this customer's phone
-  const { data: thread } = await admin.from("threads").select("id, phone").eq("id", threadId!).single();
-  if (!thread || thread.phone !== customer.phone) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const { data: messages } = await admin.from("messages").select("id, direction, sender, channel, body, created_at").eq("thread_id", thread.id).order("created_at").limit(100);
-  return NextResponse.json({ messages });
+  const origin = req.headers.get("origin");
+  const customer = await customerFrom(req);
+  if (!customer) return withCors({ error: "unauthorized" }, origin, 401);
+
+  const thread = await threadFor(customer.id, customer.phone);
+  // No thread yet is a normal state for a new customer, not an error. An empty
+  // list lets the app show the crew and an open composer instead of inventing
+  // a conversation that never happened.
+  if (!thread) return withCors({ messages: [], thread_id: null }, origin);
+
+  const { data: messages } = await supabaseAdmin()
+    .from("messages")
+    .select("id, direction, sender, channel, body, created_at")
+    .eq("thread_id", thread.id)
+    .order("created_at")
+    .limit(100);
+
+  return withCors({ messages: messages ?? [], thread_id: thread.id }, origin);
 }
 
 export async function POST(req: NextRequest) {
-  const customer = await customerFromSession();
-  if (!customer) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const { thread_id, body } = await req.json().catch(() => ({}));
-  if (!thread_id || !body) return NextResponse.json({ error: "thread_id and body required" }, { status: 400 });
+  const origin = req.headers.get("origin");
+  const customer = await customerFrom(req);
+  if (!customer) return withCors({ error: "unauthorized" }, origin, 401);
+
+  const { body } = await req.json().catch(() => ({} as any));
+  if (!body || !String(body).trim()) return withCors({ error: "body required" }, origin, 400);
 
   const admin = supabaseAdmin();
-  const { data: thread } = await admin.from("threads").select("id, phone, escalated, lead_id").eq("id", thread_id).single();
-  if (!thread || thread.phone !== customer.phone) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  let thread = await threadFor(customer.id, customer.phone);
 
-  // store the portal message on the SAME thread as SMS (channel=portal)
+  // A first message from someone we have never texted still has to land
+  // somewhere, so the thread is opened here rather than dropping it.
+  if (!thread) {
+    const { data: created, error } = await admin
+      .from("threads")
+      .insert({ customer_id: customer.id, phone: customer.phone, escalated: false })
+      .select("id, phone, escalated, lead_id")
+      .single();
+    if (error || !created) return withCors({ error: "could not open a conversation" }, origin, 500);
+    thread = created;
+  }
+
   await admin.from("messages").insert({
-    thread_id: thread.id, channel: "portal", direction: "inbound", sender: "customer", body: String(body),
+    thread_id: thread.id,
+    channel: "portal",
+    direction: "inbound",
+    sender: "customer",
+    body: String(body),
   });
-  await admin.from("threads").update({ last_message_at: new Date().toISOString(), customer_id: customer.id }).eq("id", thread.id);
+  await admin
+    .from("threads")
+    .update({ last_message_at: new Date().toISOString(), customer_id: customer.id })
+    .eq("id", thread.id);
 
-  // escalated → store only (staff has both channels)
+  // Once a human has taken the thread over, Wayne stays out of it.
   if (!thread.escalated) {
     const reply = await runWayne(
       { thread_id: thread.id, phone: customer.phone, lead_id: thread.lead_id, customer_id: customer.id, channel: "portal" },
@@ -54,12 +129,19 @@ export async function POST(req: NextRequest) {
       return null;
     });
     if (reply) {
-      // portal replies land in the thread (no SMS needed — customer is right here)
-      await admin.from("messages").insert({ thread_id: thread.id, channel: "portal", direction: "outbound", sender: "wayne", body: reply });
+      await admin.from("messages").insert({
+        thread_id: thread.id, channel: "portal", direction: "outbound", sender: "wayne", body: reply,
+      });
     }
   }
 
-  const { data: messages } = await admin.from("messages").select("id, direction, sender, channel, body, created_at").eq("thread_id", thread.id).order("created_at").limit(100);
+  const { data: messages } = await admin
+    .from("messages")
+    .select("id, direction, sender, channel, body, created_at")
+    .eq("thread_id", thread.id)
+    .order("created_at")
+    .limit(100);
+
   await logAutomation({ trigger: "portal.message", ref_id: thread.id, detail: { customer: customer.id } });
-  return NextResponse.json({ ok: true, messages });
+  return withCors({ ok: true, messages: messages ?? [], thread_id: thread.id }, origin);
 }

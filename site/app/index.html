@@ -834,6 +834,11 @@ img, svg, video, canvas { max-width: 100%; height: auto }
 /* Date held until the schedule answers; same type size so nothing jumps. */
 .ns-headline-wait { opacity: 0.45; }
 
+/* An empty thread should look deliberate, not broken. */
+.chat-empty { padding: 40px 28px; text-align: center; }
+.chat-empty-title { font-size: 17px; font-weight: 700; color: rgba(28,46,68,0.75); margin-bottom: 6px; }
+.chat-empty-sub { font-size: 14px; line-height: 1.5; color: rgba(28,46,68,0.5); max-width: 300px; margin: 0 auto; }
+
 /* Very short screens: drop the decorative wordmark rather than the content. */
 @media (max-height: 620px) {
   .screen-quote .quote-sub { display: none; }
@@ -2590,24 +2595,35 @@ window.ScheduleScreen = ScheduleScreen;
 /*src/screen-messages.jsx*/
 function MessagesScreen({ tweaks, customerName }) {
   const firstName = (customerName || "there").split(" ")[0];
-  const [msgs, setMsgs] = React.useState(() => {
-    try {
-      const saved = JSON.parse(sessionStorage.getItem("ml_msgs") || "null");
-      if (saved) return saved;
-    } catch {}
-    return [
-      { from: "C", name: "Crew", text: `Hi ${firstName}! Just confirming we're on for Thursday 10:30 AM in South Jordan.`, time: "9:12 AM" },
-      { from: "me", text: "Sounds good — gate code is 4421.", time: "9:14 AM" },
-      { from: "C", name: "Crew", text: "Got it. We'll handle the side yard hedges too while we're there.", time: "9:18 AM" },
-      { from: "me", text: "Perfect, thank you!", time: "9:20 AM" },
-    ];
-  });
+  // Starts empty and fills in from the real thread. It used to seed a made-up
+  // exchange about a gate code that never happened, which read as history.
+  const [msgs, setMsgs] = React.useState([]);
+  const [loaded, setLoaded] = React.useState(false);
+
+  const toBubble = React.useCallback((m) => ({
+    from: m.direction === "inbound" || m.sender === "customer" ? "me" : "C",
+    name: m.sender === "customer" ? undefined : "Crew",
+    text: m.body,
+    time: new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+  }), []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    window.MLApi.messagesList()
+      .then((r) => {
+        if (cancelled) return;
+        const list = (r && r.messages) || [];
+        setMsgs(Array.isArray(list) ? list.map(toBubble) : []);
+      })
+      .catch(() => { if (!cancelled) setMsgs([]); })
+      .finally(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
+  }, [toBubble]);
   const [draft, setDraft] = React.useState("");
   const [typing, setTyping] = React.useState(false);
   const scrollRef = React.useRef(null);
 
   React.useEffect(() => {
-    try { sessionStorage.setItem("ml_msgs", JSON.stringify(msgs)); } catch {}
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [msgs, typing]);
 
@@ -2621,6 +2637,12 @@ function MessagesScreen({ tweaks, customerName }) {
     setDraft("");
     setTyping(true);
     try {
+      const sent = await window.MLApi.messagesSend(text);
+      if (sent && Array.isArray(sent.messages)) {
+        setTyping(false);
+        setMsgs(sent.messages.map(toBubble));
+        return;
+      }
       const reply = await MLData.crewReply({
         history,
         customerName: (customerName || "Jane").split(" ")[0],
@@ -2666,6 +2688,15 @@ function MessagesScreen({ tweaks, customerName }) {
       </div>
 
       <div className="chat-scroll" ref={scrollRef}>
+        {loaded && msgs.length === 0 && (
+          <div className="chat-empty">
+            <div className="chat-empty-title">No messages yet</div>
+            <div className="chat-empty-sub">
+              Send your crew a note — gate codes, dogs in the yard, anything they
+              should know before they arrive.
+            </div>
+          </div>
+        )}
         {msgs.map((m, i) => {
           if (m.from === "me") {
             return (
