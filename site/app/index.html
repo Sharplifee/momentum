@@ -1789,14 +1789,13 @@ window.Pill = Pill;
 <script type="text/babel">
 /*src/screen-login.jsx*/
 function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
-  // Sign-in goes to the real backend at /api/portal/auth. The primary route is
-  // a mobile number and a texted code, because that is what the backend
-  // actually enforces — email and password exist there too, but password
-  // checking is switched off until customers have set one, so offering it as
-  // the only way in signs nobody in.
-  //
-  // Asking for a code and proving the number are the same act as signing up:
-  // an unknown number still gets in and the app collects the rest.
+  // Two real ways in, not one with a fallback: email and password, or a code
+  // texted to your phone. Password checking is enforced server-side only once
+  // customers have set one, and the backend answers a passwordless email by
+  // pointing here at the code instead of erroring.
+  const [tab, setTab] = React.useState("email");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [code, setCode] = React.useState("");
   const [sent, setSent] = React.useState(false);
@@ -1819,21 +1818,45 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const text = await r.text();
-    const json = text ? JSON.parse(text) : null;
-    if (!r.ok) throw new Error((json && json.error) || "Something went wrong. Try again.");
+    const txt = await r.text();
+    const json = txt ? JSON.parse(txt) : null;
+    if (!r.ok) {
+      const e = new Error((json && json.error) || "Something went wrong. Try again.");
+      e.usePhone = Boolean(json && json.use_phone);
+      throw e;
+    }
     return json;
   }
 
+  const finish = (u) => onLogin({
+    id: u.customer_id,
+    name: u.name || u.first_name || null,
+    email: u.email || email || null,
+    greeting: u.greeting,
+    known: u.known,
+    needs: u.needs || [],
+  });
+
+  const signInEmail = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !password) { setErr("Enter your email and password"); return; }
+    setErr(""); setBusy(true);
+    try { finish(await post({ email: email.trim(), password })); }
+    catch (ex) {
+      setErr(ex.message);
+      // The backend tells us when an account exists but has no password set.
+      if (ex.usePhone) setTab("phone");
+    }
+    finally { setBusy(false); }
+  };
+
   const sendCode = async (e) => {
     e.preventDefault();
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length !== 10) { setErr("Enter your 10-digit mobile number"); return; }
+    const d = phone.replace(/\D/g, "");
+    if (d.length !== 10) { setErr("Enter your 10-digit mobile number"); return; }
     setErr(""); setBusy(true);
-    try {
-      await post({ phone: digits });
-      setSent(true);
-    } catch (ex) { setErr(ex.message); }
+    try { await post({ phone: d }); setSent(true); }
+    catch (ex) { setErr(ex.message); }
     finally { setBusy(false); }
   };
 
@@ -1841,20 +1864,12 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
     e.preventDefault();
     if (code.trim().length < 6) { setErr("Enter the 6-digit code we texted you"); return; }
     setErr(""); setBusy(true);
-    try {
-      const u = await post({ phone: phone.replace(/\D/g, ""), code: code.trim() });
-      // customer_id is the whole point of this call — every other portal route
-      // is keyed on it, so it has to survive login.
-      onLogin({
-        id: u.customer_id,
-        name: u.name || u.first_name || null,
-        greeting: u.greeting,
-        known: u.known,
-        needs: u.needs || [],
-      });
-    } catch (ex) { setErr(ex.message); }
+    try { finish(await post({ phone: phone.replace(/\D/g, ""), code: code.trim() })); }
+    catch (ex) { setErr(ex.message); }
     finally { setBusy(false); }
   };
+
+  const swap = (t) => { setTab(t); setErr(""); setSent(false); setCode(""); };
 
   return (
     <div className="screen screen-login">
@@ -1865,50 +1880,64 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
         </div>
         <div className="login-tag">Your lawn, on autopilot.</div>
 
-        {!sent ? (
+        {tab === "email" ? (
+          <form className="login-form" onSubmit={signInEmail}>
+            <label className="lf-label">Email</label>
+            <input
+              className="lf-input" type="email" autoComplete="email"
+              placeholder="you@email.com"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+            />
+            <label className="lf-label">Password</label>
+            <input
+              className="lf-input" type="password" autoComplete="current-password"
+              placeholder="••••••••"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+            />
+            {err && <div className="lf-err">{err}</div>}
+            <button className="lf-submit" type="submit" disabled={busy}>
+              {busy ? "Signing in…" : "Sign In"}
+            </button>
+            <button type="button" className="login-quote-link" onClick={() => swap("phone")}>
+              Text me a code instead →
+            </button>
+            {isPreview && (
+              <div className="lf-hint">Preview mode — accounts activate once the backend is connected.</div>
+            )}
+          </form>
+        ) : !sent ? (
           <form className="login-form" onSubmit={sendCode}>
             <label className="lf-label">Mobile number</label>
             <input
-              className="lf-input"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel"
+              className="lf-input" type="tel" inputMode="numeric" autoComplete="tel"
               placeholder="(801) 555-0134"
-              value={pretty(phone)}
-              onChange={(e) => setPhone(e.target.value)}
+              value={pretty(phone)} onChange={(e) => setPhone(e.target.value)}
             />
             {err && <div className="lf-err">{err}</div>}
             <button className="lf-submit" type="submit" disabled={busy}>
               {busy ? "Sending…" : "Text Me A Code"}
             </button>
-            <div className="lf-hint">
-              {isPreview
-                ? "Preview mode — accounts activate once the backend is connected."
-                : "New here? Same button. We'll set you up inside."}
-            </div>
+            <button type="button" className="login-quote-link" onClick={() => swap("email")}>
+              Use email and password →
+            </button>
+            {isPreview && (
+              <div className="lf-hint">Preview mode — accounts activate once the backend is connected.</div>
+            )}
           </form>
         ) : (
           <form className="login-form" onSubmit={verify}>
             <label className="lf-label">Code sent to {pretty(phone)}</label>
             <input
-              className="lf-input"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="------"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              className="lf-input" type="text" inputMode="numeric"
+              autoComplete="one-time-code" maxLength={6} placeholder="------"
+              value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             />
             {err && <div className="lf-err">{err}</div>}
             <button className="lf-submit" type="submit" disabled={busy}>
               {busy ? "Checking…" : "Sign In"}
             </button>
-            <button
-              type="button"
-              className="login-quote-link"
-              onClick={() => { setSent(false); setCode(""); setErr(""); }}
-            >
+            <button type="button" className="login-quote-link"
+              onClick={() => { setSent(false); setCode(""); setErr(""); }}>
               Use a different number
             </button>
           </form>
@@ -2927,8 +2956,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "customerEmail": "demo@momentumlandscaping.com",
   "customerAddress": "South Jordan, UT",
   "plan": "Weekly Lawn Care",
-  "apiMode": "mock",
-  "apiBase": "http://localhost:8787"
+  "apiMode": "live",
+  "apiBase": "https://crm.momentumlandscapingut.com/api/portal"
 }/*EDITMODE-END*/;
 
 function App() {
