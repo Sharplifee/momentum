@@ -1675,10 +1675,32 @@ async function call(path, { method = "GET", body, signal, timeoutMs = 6000 } = {
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const headers = { "Content-Type": "application/json", ...(await authHeader()) };
-    const r = await fetch(`${BASE()}${path}`, {
+    // Every portal route is keyed on customer_id and none of them read the
+    // bearer token, so the id has to ride along on the request itself. Without
+    // this the app was calling the backend and getting nothing back, then
+    // quietly showing samples instead.
+    let url = `${BASE()}${path}`;
+    try {
+      const cid = sessionStorage.getItem("ml_customer_id");
+      if (cid && !/[?&]customer_id=/.test(url)) {
+        url += (url.includes("?") ? "&" : "?") + "customer_id=" + encodeURIComponent(cid);
+      }
+    } catch (e) {}
+    const r = await fetch(url, {
       method, headers,
       signal: signal || ctrl.signal,
-      body: body ? JSON.stringify(body) : undefined,
+      body: body
+        ? JSON.stringify(
+            (() => {
+              try {
+                const cid = sessionStorage.getItem("ml_customer_id");
+                return cid && body && typeof body === "object" && !Array.isArray(body) && !body.customer_id
+                  ? { ...body, customer_id: cid }
+                  : body;
+              } catch (e) { return body; }
+            })()
+          )
+        : undefined,
     });
     const text = await r.text();
     const json = text ? JSON.parse(text) : null;
@@ -3215,6 +3237,15 @@ function App() {
   const customerName = user?.name || tweaks.customerName;
   const customerEmail = user?.email || tweaks.customerEmail;
 
+  // Every portal request reads the id from the session, so it is written the
+  // moment anyone signs in — real account or walkthrough.
+  React.useEffect(() => {
+    try {
+      if (user && user.id) sessionStorage.setItem("ml_customer_id", user.id);
+      else sessionStorage.removeItem("ml_customer_id");
+    } catch (e) {}
+  }, [user && user.id]);
+
   const handleLogin = (u) => {
     // id is what every /api/portal route is keyed on; dropping it here is
     // what left the app talking to its own mock data.
@@ -3222,15 +3253,27 @@ function App() {
     setRoute("home");
   };
 
-  const handleSneakPeek = () => {
-    // Opens the whole app — every tab and every screen reachable. It stays on
-    // sample data and carries no customer id, because this page is public and a
-    // walkthrough must never be able to read or change a real customer record.
-    setUser({ name: tweaks.customerName, email: tweaks.customerEmail, peek: true, id: null });
-    // Live mode stays on. There is no customer id, so anything customer-specific
-    // has nothing to look up and falls back to samples on its own — but weather
-    // and the calendar are real, because neither needs an account.
+  // Signing in blank opens the real app on a real account.
+  //
+  // A walkthrough with no customer id could only ever show samples, because
+  // every portal route is keyed on that id. So this signs in as a standing
+  // account that genuinely exists in the database with its own weekly history
+  // and upcoming visits — live schedule, live billing, live everything. It is a
+  // stand-in identity rather than a real customer, because this page is public
+  // and nobody's actual address or billing should be one tap from the internet.
+  const DEMO_CUSTOMER_ID = "e0fc3832-0294-4ca7-be65-078cb2b18ed0";
+
+  const handleSneakPeek = async () => {
+    setUser({ id: DEMO_CUSTOMER_ID, name: tweaks.customerName, email: tweaks.customerEmail });
     setRoute("home");
+    try {
+      const me = await window.MLApi.me();
+      const c = (me && me.customer) || null;
+      if (c) setUser({ id: c.id, name: c.name || tweaks.customerName, email: c.email || tweaks.customerEmail });
+    } catch (e) {
+      // The id is already set, so every screen is live regardless — this call
+      // only sharpens the name on the account header.
+    }
   };
 
   const handleLogout = () => {
