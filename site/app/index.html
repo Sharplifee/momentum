@@ -1497,6 +1497,53 @@ function enrichWeather(raw) {
   };
 }
 
+/**
+ * Real next and last visit for the signed-in customer.
+ *
+ * The home card used to compute these locally: take today, jump to the next
+ * Thursday. That is arithmetic, not a schedule — a customer on a Tuesday route
+ * was told Thursday, confidently and wrongly. This asks the backend.
+ *
+ * With no customer signed in (the blank-login walkthrough) there is nobody to
+ * look up, so it falls back to the weekly guess and says so via `real: false`.
+ */
+function useSchedule(customerId) {
+  const [state, setState] = React.useState({ loading: true, next: null, last: null, real: false });
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!customerId) { setState({ loading: false, next: null, last: null, real: false }); return; }
+    setState((p) => ({ ...p, loading: true }));
+    (async () => {
+      try {
+        const [up, past] = await Promise.all([
+          window.MLApi.scheduleUpcoming(1),
+          window.MLApi.schedulePast(1),
+        ]);
+        if (cancelled) return;
+        const toDate = (v) => {
+          if (!v) return null;
+          // Dates arrive as plain YYYY-MM-DD. Parsing that directly gives UTC
+          // midnight, which reads as the previous day west of Greenwich.
+          const [y, m, d] = String(v).slice(0, 10).split("-").map(Number);
+          return y ? new Date(y, m - 1, d) : null;
+        };
+        const nextItem = (up && (up.items || up))[0] || null;
+        const lastItem = (past && (past.items || past))[0] || null;
+        const next = toDate(nextItem && nextItem.date);
+        const last = toDate(lastItem && lastItem.date);
+        setState({ loading: false, next, last, real: Boolean(next || last) });
+      } catch (e) {
+        if (cancelled) return;
+        setState({ loading: false, next: null, last: null, real: false });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [customerId]);
+
+  return state;
+}
+
 function useWeather(address, date) {
   const [state, setState] = React.useState({ loading: true, data: null, error: null });
   const key = `${address || ""}|${date ? date.toDateString() : ""}`;
@@ -1550,7 +1597,7 @@ window.MLData = {
   upcomingServices, pastServices,
   memberSinceDate, memberMonths, servicesCompleted,
   relativeWeek,
-  useWeather, weatherEmoji, weatherLabel, windLabel,
+  useWeather, useSchedule, weatherEmoji, weatherLabel, windLabel,
   crewReply,
 };
 
@@ -1750,7 +1797,11 @@ const Live = {
 const MLApi = new Proxy({}, {
   get(_, key) {
     return async (...args) => {
-      const wantLive = MODE() === "live";
+      // Weather is real in every mode. It is keyed on an address, not on a
+      // customer, so there is never a reason to serve a made-up forecast — and
+      // a walkthrough session switching the app to sample data was silently
+      // taking the forecast down with it.
+      const wantLive = MODE() === "live" || key === "weather";
       const liveFn = Live[key];
       const mockFn = Mock[key];
       if (wantLive && liveFn) {
@@ -2074,7 +2125,7 @@ window.LoginScreen = LoginScreen;
 </script>
 <script type="text/babel">
 /*src/screen-home.jsx*/
-function HomeScreen({ tweaks, customerName, onGetQuote, onNavigate, clientStatus = "active" }) {
+function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNavigate, clientStatus = "active" }) {
   const go = (r) => {if (typeof onNavigate === "function") onNavigate(r);};
   const initial = (customerName || "C").trim().charAt(0).toUpperCase() || "C";
   const scrollerRef = React.useRef(null);
@@ -2120,8 +2171,11 @@ function HomeScreen({ tweaks, customerName, onGetQuote, onNavigate, clientStatus
 
   // ── ACTIVE CLIENT HOME ──────────────────────────────────────────
   const today = MLData.todayLocal();
-  const nextDate = MLData.nextServiceDate();
-  const lastDate = MLData.lastServiceDate();
+  // Real dates from the schedule when somebody is signed in; the weekly guess
+  // only stands in when there is no account to look up.
+  const sched = MLData.useSchedule(customerId);
+  const nextDate = (sched && sched.next) || MLData.nextServiceDate();
+  const lastDate = (sched && sched.last) || MLData.lastServiceDate();
   const isToday = MLData.isSameDay(today, nextDate);
   const weekDates = MLData.currentWeek(nextDate);
   const weather = MLData.useWeather(tweaks.customerAddress || "South Jordan, UT", nextDate);
@@ -3132,7 +3186,9 @@ function App() {
     // sample data and carries no customer id, because this page is public and a
     // walkthrough must never be able to read or change a real customer record.
     setUser({ name: tweaks.customerName, email: tweaks.customerEmail, peek: true, id: null });
-    window.MLConfig = Object.assign(window.MLConfig || {}, { mode: "mock" });
+    // Live mode stays on. There is no customer id, so anything customer-specific
+    // has nothing to look up and falls back to samples on its own — but weather
+    // and the calendar are real, because neither needs an account.
     setRoute("home");
   };
 
@@ -3158,7 +3214,7 @@ function App() {
     screen = <LoginScreen mode={tweaks.apiMode} onLogin={handleLogin} onGetQuote={() => setRoute("quote")} onSneakPeek={handleSneakPeek} />;
     screenLabel = "00 login";
   } else if (route === "home") {
-    screen = <HomeScreen tweaks={tweaks} customerName={customerName} onGetQuote={() => setRoute("quote")} onNavigate={setRoute} clientStatus={tweaks.clientStatus} />;
+    screen = <HomeScreen tweaks={tweaks} customerName={customerName} customerId={user && user.id} onGetQuote={() => setRoute("quote")} onNavigate={setRoute} clientStatus={tweaks.clientStatus} />;
     screenLabel = "01 home";
   } else if (route === "schedule") {
     screen = <ScheduleScreen tweaks={tweaks} />;
