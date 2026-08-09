@@ -703,6 +703,118 @@ img, svg, video, canvas { max-width: 100%; height: auto }
   [60, 300, 900].forEach(function (t) { setTimeout(setVH, t); });
 })();
 </script>
+
+<style id="ml-fit-overrides">
+/* ── Fit-to-screen + logo sizing ────────────────────────────────────────────
+   Loaded last so it settles a cascade that had grown several competing rules
+   for the same logo. The hero image carried an inline height of 160px, which
+   one block overrode with `height:auto !important` and another with
+   `height:120px !important` — so which size you got depended on which rules had
+   applied by the time the screen painted. That is why the logo came up huge on
+   the very first render and correct after leaving a tab and coming back.
+   Sizing is stated once here, in one place, and no longer depends on order. */
+
+/* The logo shares the grid's box exactly, so its width matches the tiles. */
+.screen-home .home-hero {
+  flex: 0 1 auto;
+  min-height: 0 !important;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+.screen-home .home-hero .ml-logo {
+  width: 100%;
+  transform: none !important;   /* the scale() prop fought the width cap */
+  padding: 0;
+}
+.screen-home .home-hero .ml-logo-img,
+.screen-home .home-hero .ml-logo img {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: clamp(76px, 16dvh, 150px) !important;
+  object-fit: contain !important;
+  margin: 0 auto;
+}
+
+/* Home fits the frame. Nothing to scroll, no clipped card at the bottom, and
+   the breathing room that only appeared after a swipe is now simply there. */
+.screen-home {
+  height: calc(100dvh - var(--tabbar-h));
+  min-height: 0 !important;
+  overflow: hidden;
+  padding-top: clamp(6px, 1.6dvh, 20px);
+  gap: clamp(6px, 1.4dvh, 14px);
+}
+.screen-home .home-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-bottom: clamp(8px, 1.6dvh, 18px) !important;
+  gap: clamp(8px, 1.6dvh, 14px) !important;
+  justify-content: center;
+}
+/* Tiles give up their own padding before the layout gives up a whole card. */
+.screen-home .home-grid > * { flex: 0 1 auto; min-height: 0; }
+
+/* Quote screen fits too, at any height. */
+.screen-quote {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(4px, 1dvh, 12px);
+  padding: clamp(8px, 2dvh, 24px) 16px;
+  box-sizing: border-box;
+}
+.screen-quote .quote-hero { flex: 0 1 auto; min-height: 0; }
+.screen-quote .quote-hero .ml-logo-img,
+.screen-quote .quote-hero .ml-logo img {
+  height: auto !important;
+  max-height: clamp(56px, 11dvh, 116px) !important;
+  width: auto !important;
+  max-width: 78% !important;
+}
+.screen-quote .quote-title { font-size: clamp(26px, 5.4dvh, 44px); line-height: 1.05; }
+.screen-quote .quote-sub { font-size: clamp(13px, 2dvh, 17px); }
+.screen-quote .quote-form { flex: 0 1 auto; min-height: 0; gap: clamp(2px, 0.8dvh, 10px); }
+.screen-quote .qf-label { margin-top: clamp(2px, 0.9dvh, 10px); }
+.screen-quote .qf-input { padding-top: clamp(8px, 1.5dvh, 14px); padding-bottom: clamp(8px, 1.5dvh, 14px); }
+
+/* Preferred Visit Time — the website's two-by-two slot grid. */
+.qf-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 1.2dvh, 12px);
+  margin-top: 6px;
+}
+.qf-slot {
+  appearance: none;
+  border: 1.5px solid rgba(28,46,68,0.16);
+  background: rgba(255,255,255,0.92);
+  color: var(--navy, #1c2e44);
+  font-family: inherit;
+  font-size: clamp(14px, 2dvh, 17px);
+  font-weight: 600;
+  border-radius: 14px;
+  padding: clamp(10px, 1.8dvh, 16px) 8px;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.qf-slot.selected {
+  border-color: var(--teal, #4a8fb5);
+  background: rgba(74,143,181,0.14);
+}
+.qf-err { color: #b23b3b; font-size: 13px; margin-top: 6px; }
+
+/* Very short screens: drop the decorative wordmark rather than the content. */
+@media (max-height: 620px) {
+  .screen-quote .quote-sub { display: none; }
+}
+</style>
 </head>
 <body>
 <div id="root"></div>
@@ -2809,18 +2921,46 @@ function formatPhone(raw) {
 }
 
 function QuoteScreen({ onBack }) {
+  // Same form as the website's quote panel — same fields, same time slots, same
+  // wording, and the same POST to /api/leads. It was collecting a service
+  // dropdown the site never asks for and then submitting nowhere at all, so a
+  // request made in the app reached no one.
+  const SLOTS = ["12 PM – 2 PM", "2 PM – 4 PM", "4 PM – 6 PM", "6 PM – 8 PM"];
+
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [address, setAddress] = React.useState("");
-  const [service, setService] = React.useState("weekly");
+  const [slot, setSlot] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState("");
   const [submitted, setSubmitted] = React.useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (!slot) { setErr("Pick a time that works for you."); return; }
+    setErr(""); setBusy(true);
+    try {
+      const res = await fetch("https://crm.momentumlandscapingut.com/api/leads", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          full_name: name,
+          phone,
+          address,
+          requested_window: slot,
+          company: "",
+        }),
+      });
+      let data = {};
+      try { data = await res.json(); } catch (_) {}
+      if (!res.ok || data.error) throw new Error(data.error || "fail");
+      setSubmitted(true);
+    } catch (_) {
+      setErr("Something hiccuped — tap Request My Personal Quote again.");
+    } finally {
+      setBusy(false);
+    }
   };
-
-  const selectedLabel = SERVICE_OPTIONS.find((s) => s.value === service)?.label || "";
 
   return (
     <div className="screen screen-quote">
@@ -2834,7 +2974,6 @@ function QuoteScreen({ onBack }) {
         <MomentumLogo />
         {!submitted && (
           <React.Fragment>
-            <div className="quote-eyebrow">Free · No obligation</div>
             <div className="quote-title">Schedule a Quote</div>
             <div className="quote-sub">Your lawn, on autopilot.</div>
           </React.Fragment>
@@ -2844,66 +2983,51 @@ function QuoteScreen({ onBack }) {
       {!submitted && (
         <React.Fragment>
           <div className="quote-badges">
-            <span className="qb">{Icon.check} Licensed & Insured</span>
             <span className="qb">{Icon.check} No contracts</span>
+            <span className="qb">{Icon.check} No surprises</span>
           </div>
 
           <form className="quote-form" onSubmit={submit}>
             <label className="qf-label" htmlFor="qf-name">Full Name</label>
             <input
-              id="qf-name"
-              className="qf-input"
-              type="text"
-              required
+              id="qf-name" className="qf-input" type="text" required
               placeholder="Jane Anderson"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={name} onChange={(e) => setName(e.target.value)}
             />
 
             <label className="qf-label" htmlFor="qf-phone">Phone Number</label>
             <input
-              id="qf-phone"
-              className="qf-input"
-              type="tel"
-              required
-              inputMode="tel"
+              id="qf-phone" className="qf-input" type="tel" required inputMode="tel"
               placeholder="(555) 123-4567"
-              value={phone}
-              onChange={(e) => setPhone(formatPhone(e.target.value))}
+              value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))}
             />
 
             <label className="qf-label" htmlFor="qf-address">Property Address</label>
             <input
-              id="qf-address"
-              className="qf-input"
-              type="text"
-              required
+              id="qf-address" className="qf-input" type="text" required
               placeholder="1428 Cedar Lane, South Jordan UT"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              value={address} onChange={(e) => setAddress(e.target.value)}
             />
 
-            <label className="qf-label" htmlFor="qf-service">Service Interested In</label>
-            <div className="qf-select-wrap">
-              <select
-                id="qf-service"
-                className="qf-select"
-                value={service}
-                onChange={(e) => setService(e.target.value)}
-              >
-                {SERVICE_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
+            <label className="qf-label">Preferred Visit Time</label>
+            <div className="qf-slots">
+              {SLOTS.map((sl) => (
+                <button
+                  key={sl}
+                  type="button"
+                  className={"qf-slot" + (slot === sl ? " selected" : "")}
+                  onClick={() => { setSlot(sl); setErr(""); }}
+                >
+                  {sl}
+                </button>
+              ))}
             </div>
 
-            <button className="qf-cta" type="submit">
-              Schedule My Personal Quote {Icon.arrowRight}
+            {err && <div className="qf-err">{err}</div>}
+
+            <button className="qf-cta" type="submit" disabled={busy}>
+              {busy ? "Submitting…" : "Request My Personal Quote"}
             </button>
-            <div className="qf-hint">
-              We'll respond and confirm your scheduled quote.
-              <br />No spam. No upsells. No credit card.
-            </div>
           </form>
         </React.Fragment>
       )}
@@ -2913,33 +3037,12 @@ function QuoteScreen({ onBack }) {
           <div className="qs-check">{Icon.check}</div>
           <div className="qs-title">You're all set!</div>
           <div className="qs-sub">
-            We'll respond and confirm your scheduled quote.
+            Got it! Wayne, our AI assistant, will text you within a minute to lock
+            in your quote visit. 🌱
           </div>
-
-          <div className="qs-meta">
-            <div className="qs-meta-row">
-              <span>Name</span>
-              <span>{name || "—"}</span>
-            </div>
-            <div className="qs-meta-row">
-              <span>Phone</span>
-              <span>{phone || "—"}</span>
-            </div>
-            <div className="qs-meta-row">
-              <span>Address</span>
-              <span style={{ textAlign: "right", maxWidth: "60%" }}>{address || "—"}</span>
-            </div>
-            <div className="qs-meta-row">
-              <span>Service</span>
-              <span style={{ textAlign: "right", maxWidth: "60%" }}>{selectedLabel}</span>
-            </div>
-          </div>
-
           <button className="qs-secondary" onClick={onBack}>Back to app</button>
         </div>
       )}
-
-      <div style={{ height: 20 }} />
     </div>
   );
 }
@@ -3025,8 +3128,9 @@ function App() {
   };
 
   const handleSneakPeek = () => {
-    // peek: true keeps this session on sample data. There is no customer id, so
-    // every live call is skipped and nothing real can be read or changed.
+    // Opens the whole app — every tab and every screen reachable. It stays on
+    // sample data and carries no customer id, because this page is public and a
+    // walkthrough must never be able to read or change a real customer record.
     setUser({ name: tweaks.customerName, email: tweaks.customerEmail, peek: true, id: null });
     window.MLConfig = Object.assign(window.MLConfig || {}, { mode: "mock" });
     setRoute("home");
@@ -3070,8 +3174,10 @@ function App() {
     screenLabel = "05 account";
   }
 
-  // Sneak-peek mode: only Home is interactive; other tabs render frosted over
-  const peekVeiled = !!user?.peek && route !== "home" && route !== "quote";
+  // Every tab is open. A walkthrough session used to get Home only, with the
+  // rest frosted over behind a "Members only" card — that is what made the app
+  // feel locked when signing in blank.
+  const peekVeiled = false;
 
   return (
     <React.Fragment>
