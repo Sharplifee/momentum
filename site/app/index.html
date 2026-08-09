@@ -1839,6 +1839,10 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
 
   const signInEmail = async (e) => {
     e.preventDefault();
+    // Both fields empty means "just let me look around" — hand off to the same
+    // walkthrough the sneak peek link uses rather than complaining about a
+    // missing password. Anything typed in is treated as a real sign-in attempt.
+    if (!email.trim() && !password) { onSneakPeek(); return; }
     if (!email.trim() || !password) { setErr("Enter your email and password"); return; }
     setErr(""); setBusy(true);
     try { finish(await post({ email: email.trim(), password })); }
@@ -1853,6 +1857,7 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
   const sendCode = async (e) => {
     e.preventDefault();
     const d = phone.replace(/\D/g, "");
+    if (!d) { onSneakPeek(); return; }
     if (d.length !== 10) { setErr("Enter your 10-digit mobile number"); return; }
     setErr(""); setBusy(true);
     try { await post({ phone: d }); setSent(true); }
@@ -1898,6 +1903,7 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
             <button className="lf-submit" type="submit" disabled={busy}>
               {busy ? "Signing in…" : "Sign In"}
             </button>
+            <div className="lf-hint">Leave both blank and tap Sign In to look around.</div>
             <button type="button" className="login-quote-link" onClick={() => swap("phone")}>
               Text me a code instead →
             </button>
@@ -3019,13 +3025,20 @@ function App() {
   };
 
   const handleSneakPeek = () => {
-    setUser({ name: tweaks.customerName, email: tweaks.customerEmail, peek: true });
+    // peek: true keeps this session on sample data. There is no customer id, so
+    // every live call is skipped and nothing real can be read or changed.
+    setUser({ name: tweaks.customerName, email: tweaks.customerEmail, peek: true, id: null });
+    window.MLConfig = Object.assign(window.MLConfig || {}, { mode: "mock" });
     setRoute("home");
   };
 
   const handleLogout = () => {
     setUser(null);
     sessionStorage.removeItem("ml_msgs");
+    // A peek switched the app to sample data; put the real backend back.
+    window.MLConfig = Object.assign(window.MLConfig || {}, {
+      mode: tweaks.apiMode, apiBase: tweaks.apiBase,
+    });
     setRoute("home");
   };
 
