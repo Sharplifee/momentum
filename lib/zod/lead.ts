@@ -10,6 +10,7 @@ export const leadIntakeSchema = z.object({
   requested_window: z.string().max(80).optional(),
   fbclid: z.string().max(300).optional(),
   fbp: z.string().max(300).optional(),
+  fbc: z.string().max(300).optional(),
   utm: z
     .object({
       source: z.string().optional(),

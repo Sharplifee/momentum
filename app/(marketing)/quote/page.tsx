@@ -100,7 +100,7 @@ export default function QuotePage() {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [addr, setAddr] = useState<{ address: string; city: string | null }>({ address: "", city: null });
-  const [tracking, setTracking] = useState<{ fbclid?: string; fbp?: string; utm?: Record<string, string>; landing_page?: string; referrer?: string }>({});
+  const [tracking, setTracking] = useState<{ fbclid?: string; fbp?: string; fbc?: string; utm?: Record<string, string>; landing_page?: string; referrer?: string }>({});
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -109,9 +109,13 @@ export default function QuotePage() {
       const v = params.get(`utm_${k}`);
       if (v) utm[k] = v;
     }
+    // The _fbc cookie only exists if the Pixel has already seen an fbclid on a
+    // prior page. Reading it directly (rather than only rebuilding from the URL)
+    // preserves click attribution for people who land, browse, then quote later.
     setTracking({
       fbclid: params.get("fbclid") ?? undefined,
       fbp: readCookie("_fbp"),
+      fbc: readCookie("_fbc"),
       utm: Object.keys(utm).length ? utm : undefined,
       landing_page: window.location.href,
       referrer: document.referrer || undefined,

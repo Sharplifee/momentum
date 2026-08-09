@@ -21,7 +21,19 @@ export type CapiEventInput = {
   job_id?: string | null;
   client_ip?: string;
   client_user_agent?: string;
+  external_id?: string | null;
 };
+
+/** Graph API version. v26.0 shipped 2026-07-29; v21.0 deprecates 2027-01-21.
+ *  Env-overridable so the next bump is a config change, not a redeploy. */
+export const GRAPH_VERSION = process.env.META_GRAPH_VERSION ?? "v26.0";
+
+/** Meta wants fbc in the form fb.<subdomainIndex>.<creationTime>.<fbclid>. */
+export function deriveFbc(fbc?: string | null, fbclid?: string | null): string | null {
+  if (fbc) return fbc;
+  if (!fbclid) return null;
+  return `fb.1.${Math.floor(Date.now() / 1000)}.${fbclid}`;
+}
 
 /**
  * Sends a server-side event to Meta's Conversions API, hashing PII per spec,
@@ -39,11 +51,10 @@ export async function sendMetaCapiEvent(input: CapiEventInput) {
   if (input.fbp) userData.fbp = input.fbp;
   if (input.client_ip) userData.client_ip_address = input.client_ip;
   if (input.client_user_agent) userData.client_user_agent = input.client_user_agent;
-  let fbc = input.fbc;
-  if (!fbc && input.fbclid) {
-    fbc = `fb.1.${Math.floor(Date.now() / 1000)}.${input.fbclid}`;
-  }
+  const fbc = deriveFbc(input.fbc, input.fbclid);
   if (fbc) userData.fbc = fbc;
+  // external_id is a free, high-weight match signal — a stable hashed id we own.
+  if (input.external_id) userData.external_id = [sha256(input.external_id)];
 
   const payload = {
     data: [
@@ -68,7 +79,7 @@ export async function sendMetaCapiEvent(input: CapiEventInput) {
       throw new Error("META_PIXEL_ID or META_CAPI_TOKEN not configured");
     }
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${token}`,
+      `https://graph.facebook.com/${GRAPH_VERSION}/${pixelId}/events?access_token=${token}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -4,7 +4,7 @@ import { leadIntakeSchema } from "@/lib/zod/lead";
 import { toE164 } from "@/lib/phone";
 import { getAvailability } from "@/lib/availability";
 import { sendSms, renderTemplate } from "@/lib/sms";
-import { sendMetaCapiEvent } from "@/lib/meta";
+import { sendMetaCapiEvent, deriveFbc } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
 import { corsHeaders } from "@/lib/cors";
 
@@ -53,6 +53,12 @@ export async function POST(req: NextRequest) {
   const db = supabaseAdmin();
   const isTest = req.headers.get("x-momentum-test") === "1";
 
+  // Attribution signals. These were being read for the CAPI call but never stored,
+  // which capped est_emq at 2.5 no matter how many ad-sourced leads arrived —
+  // v_attribution_quality scores fbc, client_ip and user_agent off the leads row.
+  const userAgent = req.headers.get("user-agent") ?? null;
+  const derivedFbc = deriveFbc(input.fbc ?? null, input.fbclid ?? null);
+
   // dedupe: same phone within 24h -> append a lead_event on the existing lead instead of creating a new one
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: existing } = await db
@@ -100,6 +106,9 @@ export async function POST(req: NextRequest) {
         source: isTest ? "test" : "website",
         fbclid: input.fbclid ?? null,
         fbp: input.fbp ?? null,
+        fbc: derivedFbc,
+        client_ip: ip !== "unknown" ? ip : null,
+        user_agent: userAgent,
         utm: input.utm ?? null,
         landing_page: input.landing_page ?? null,
         referrer: input.referrer ?? null,
@@ -123,17 +132,23 @@ export async function POST(req: NextRequest) {
   }
 
   // Meta CAPI Lead event (event_id = lead id so pixel-side Lead event dedupes against this)
+  // external_id doubles as a match signal; store it so the same value is reused
+  // by later Purchase/Schedule events for this lead.
+  await db.from("leads").update({ external_id: leadId }).eq("id", leadId).is("external_id", null);
+
   await sendMetaCapiEvent({
     event_name: "Lead",
     event_id: leadId,
     email: input.email || null,
     phone,
     fbp: input.fbp,
+    fbc: derivedFbc,
     fbclid: input.fbclid,
+    external_id: leadId,
     lead_id: leadId,
     event_source_url: input.landing_page,
-    client_ip: ip,
-    client_user_agent: req.headers.get("user-agent") ?? undefined,
+    client_ip: ip !== "unknown" ? ip : undefined,
+    client_user_agent: userAgent ?? undefined,
   });
 
   // availability -> 2 real days
