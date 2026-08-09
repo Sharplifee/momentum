@@ -831,6 +831,9 @@ img, svg, video, canvas { max-width: 100%; height: auto }
 }
 .setting-row .switch.is-on .switch-knob { transform: translateX(21px) !important; }
 
+/* Date held until the schedule answers; same type size so nothing jumps. */
+.ns-headline-wait { opacity: 0.45; }
+
 /* Very short screens: drop the decorative wordmark rather than the content. */
 @media (max-height: 620px) {
   .screen-quote .quote-sub { display: none; }
@@ -1883,7 +1886,19 @@ const Live = {
   getAutopay:       ()          => call("/payments/autopay"),
   setAutopay:       (enabled, payment_method_id) =>
                       call("/payments/autopay", { method: "POST", body: { enabled, payment_method_id } }),
-  calendarStatus:      ()          => call("/calendar/status"),
+  calendarStatus:      async ()    => {
+    const r = await call("/calendar/status");
+    // The route answers { providers: [...] }; the screen reads status.google
+    // and status.apple. Key it here rather than at every call site — indexing
+    // the array by name gave undefined, and reading .connected off that threw,
+    // which took the whole app down to a white screen.
+    if (r && Array.isArray(r.providers)) {
+      const keyed = {};
+      for (const p of r.providers) if (p && p.id) keyed[p.id] = p;
+      return { ...r, ...keyed };
+    }
+    return r;
+  },
   calendarConnectUrl:  (provider)  => call(`/calendar/${provider}/connect`),
   calendarMockConnect: (provider, email) => call(`/calendar/${provider}/mock-connect`, { method: "POST", body: { email } }),
   calendarDisconnect:  (provider)  => call(`/calendar/${provider}/disconnect`, { method: "POST" }),
@@ -2128,7 +2143,7 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
     e.preventDefault();
     const d = phone.replace(/\D/g, "");
     if (!d) { onSneakPeek(); return; }
-    if (d.length !== 10) { setErr("Enter your 10-digit mobile number"); return; }
+    if (d.length !== 10) { setErr("Enter your 10-digit phone number"); return; }
     setErr(""); setBusy(true);
     try { await post({ phone: d }); setSent(true); }
     catch (ex) { setErr(ex.message); }
@@ -2183,7 +2198,7 @@ function LoginScreen({ onLogin, onGetQuote, onSneakPeek, mode }) {
           </form>
         ) : !sent ? (
           <form className="login-form" onSubmit={sendCode}>
-            <label className="lf-label">Mobile number</label>
+            <label className="lf-label">Phone number</label>
             <input
               className="lf-input" type="tel" inputMode="numeric" autoComplete="tel"
               placeholder="(801) 555-0134"
@@ -2281,6 +2296,9 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
   // Real dates from the schedule when somebody is signed in; the weekly guess
   // only stands in when there is no account to look up.
   const sched = MLData.useSchedule(customerId);
+  // Hold the card until the schedule answers, so the date lands once instead of
+  // showing the local weekly guess, correcting itself, then reloading weather.
+  const schedPending = Boolean(customerId && sched && sched.loading);
   const nextDate = (sched && sched.next) || MLData.nextServiceDate();
   const lastDate = (sched && sched.last) || MLData.lastServiceDate();
   const isToday = MLData.isSameDay(today, nextDate);
@@ -2307,15 +2325,19 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
                   <span className="ns-eyebrow-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3.5v4M16 3.5v4" /></svg>
                   </span>
-                  <span>{isToday ? "Today" : "Next Service"}</span>
+                  <span>{schedPending ? "Next Service" : isToday ? "Today" : "Next Service"}</span>
                 </span>
-                <span className="ns-eyebrow-r">{nextDate.getFullYear()}</span>
+                <span className="ns-eyebrow-r">{schedPending ? "" : nextDate.getFullYear()}</span>
               </div>
 
-              <div className="ns-headline">{MLData.fmtDay(nextDate)}, {MLData.fmtMonthDay(nextDate)}</div>
+              <div className="ns-headline">
+                {schedPending
+                  ? <span className="ns-headline-wait">Checking your schedule…</span>
+                  : `${MLData.fmtDay(nextDate)}, ${MLData.fmtMonthDay(nextDate)}`}
+              </div>
 
               <div className="ns-weather" role="group" aria-label="Forecast">
-                {weather.loading ?
+                {schedPending || weather.loading ?
                   <span className="nw-loading">Loading forecast…</span> :
 
                   <React.Fragment>
@@ -2865,9 +2887,12 @@ function CalendarSyncGroup({ customerEmail }) {
 
   // Google and Apple only. Outlook was listed but is not something we offer,
   // so it promised a connection that goes nowhere.
+  // Apple needs no sign-in — it is a subscription link — so it belongs here
+  // whenever the backend offers it. Outlook is not built.
   const providers = [
     { key: "google", name: "Google Calendar", tone: "google", letter: "G" },
-  ];
+    { key: "apple", name: "Apple Calendar", tone: "apple", letter: "A" },
+  ].filter((p) => status[p.key]);
 
   return (
     <React.Fragment>
@@ -3231,6 +3256,38 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "apiBase": "https://crm.momentumlandscapingut.com/api/portal"
 }/*EDITMODE-END*/;
 
+class AppErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err) { try { console.error("Momentum app error:", err); } catch (e) {} }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div style={{
+        minHeight: "100dvh", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", gap: 14, padding: 32,
+        background: "#0F1720", color: "#fff", textAlign: "center", fontFamily: "inherit",
+      }}>
+        <div style={{ fontSize: 20, fontWeight: 700 }}>That screen hit a snag</div>
+        <div style={{ fontSize: 15, opacity: 0.7, maxWidth: 320, lineHeight: 1.5 }}>
+          Nothing was lost. Reload and you'll be right back where you were.
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          aria-label="Reload the app"
+          style={{
+            marginTop: 8, background: "#7FB8BE", color: "#0F1720", border: 0,
+            borderRadius: 14, padding: "13px 28px", fontSize: 16, fontWeight: 700,
+            fontFamily: "inherit", minHeight: 44, cursor: "pointer",
+          }}
+        >
+          Reload
+        </button>
+      </div>
+    );
+  }
+}
+
 function App() {
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [route, setRoute] = React.useState("home");
@@ -3399,7 +3456,9 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <AppErrorBoundary><App /></AppErrorBoundary>
+);
 
 </script>
 
