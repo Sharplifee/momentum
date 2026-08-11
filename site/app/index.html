@@ -3370,6 +3370,29 @@ function App() {
   const customerName = user?.name || tweaks.customerName;
   const customerEmail = user?.email || tweaks.customerEmail;
 
+  /**
+   * Notification taps from the iOS shell.
+   *
+   * The shell was setting window.location.hash, but this page keeps its screen
+   * in React state and never reads location.hash — grep returns zero. So every
+   * notification tap landed on whatever screen was already showing. The shell
+   * calls this instead.
+   *
+   * A tap can also arrive before the page has mounted, so anything the shell
+   * parked on __momentumPendingRoute gets drained here.
+   */
+  React.useEffect(() => {
+    const ROUTES = ["home", "schedule", "messages", "services", "account", "quote"];
+    const open = (r) => {
+      const target = String(r || "").replace(/^#/, "").trim().toLowerCase();
+      if (ROUTES.includes(target)) setRoute(target);
+    };
+    window.momentumOpen = open;
+    const pending = window.__momentumPendingRoute;
+    if (pending) { window.__momentumPendingRoute = null; open(pending); }
+    return () => { delete window.momentumOpen; };
+  }, []);
+
   // Every portal request reads the id from the session, so it is written the
   // moment anyone signs in — real account or walkthrough.
   React.useEffect(() => {

@@ -18,7 +18,23 @@ const WMO: Record<string, number> = {
   Thunderstorms: 95, ScatteredThunderstorms: 95, IsolatedThunderstorms: 95, Hail: 96,
   Breezy: 1, Windy: 1, Hot: 0, Frigid: 3,
 };
-const toCode = (c?: string | null) => (c && WMO[c] !== undefined ? WMO[c] : 2);
+/**
+ * Upstream speaks two dialects. WeatherKit names its conditions ("Rain"); Open-Meteo
+ * already answers in WMO codes, and they arrive as strings ("55"). Running a number
+ * through a name map missed every time and fell to the default 2 — so with WeatherKit
+ * returning 401 and everything falling through to Open-Meteo, every forecast in the
+ * app read "partly cloudy" regardless of the actual sky. Temps, rain and wind were
+ * right the whole time, which is why it went unnoticed.
+ *
+ * Numbers pass through untouched; names still map; anything else falls back to 2.
+ */
+const toCode = (c?: string | number | null) => {
+  if (c === null || c === undefined || c === "") return 2;
+  const n = typeof c === "number" ? c : Number(String(c).trim());
+  if (Number.isFinite(n)) return n;
+  const name = String(c).trim();
+  return WMO[name] !== undefined ? WMO[name] : 2;
+};
 
 export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req.headers.get("origin")) });
