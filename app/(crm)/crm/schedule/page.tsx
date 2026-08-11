@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ m?: string; d?: string }> }) {
   // Auth and the URL params do not depend on each other, so waiting for one
   // then the other cost a round trip for nothing.
-  const [{ profile, role, db }, sp] = await Promise.all([
+  const [{ profile, role, realRole, previewing, db }, sp] = await Promise.all([
     requireStaff(["owner", "manager", "crew"]),
     searchParams,
   ]);
@@ -81,7 +81,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const util = Math.round((svcWeek.length / capacity) * 100);
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
         <h1 className="mb-1 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Schedule</h1>
         <p className="mb-5 text-sm text-[color:var(--body)]">

@@ -16,9 +16,9 @@ const GRADE_LABEL: Record<string, string> = {
 };
 
 export default async function CustomerDetail({ params }: { params: { id: string } }) {
-  const { profile, role, db } = await requireStaff(["owner", "manager"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   const { data: c } = await db.from("customers").select("*").eq("id", params.id).single();
-  if (!c) return <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}><p>Not found.</p></Shell>;
+  if (!c) return <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}><p>Not found.</p></Shell>;
 
   const [{ data: props }, { data: ags }, { data: jobs }, { data: thread }] = await Promise.all([
     db.from("properties").select("*").eq("customer_id", c.id),
@@ -34,7 +34,7 @@ export default async function CustomerDetail({ params }: { params: { id: string 
   const minGateIn = 30; // system_config.equipment.min_gate_width_in — see v_gate_blockers
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold">{c.full_name}</h1>
         <Chip className={GRADE_STYLE[effectiveGrade]}>

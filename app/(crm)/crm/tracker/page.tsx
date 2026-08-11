@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * this page only surfaces it.
  */
 export default async function Tracker() {
-  const { profile, role, db } = await requireStaff(["owner", "manager"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
 
   const [ex, crew, devices, health, today] = await Promise.all([
     db.from("v_open_exceptions").select("*"),
@@ -43,7 +43,7 @@ export default async function Tracker() {
   const needsAttention = (devices.data ?? []).filter((d: any) => d.health !== "healthy").length;
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <PageHeader title="Tracker" />
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">

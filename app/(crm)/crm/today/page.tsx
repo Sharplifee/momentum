@@ -5,7 +5,7 @@ import { TodayStops } from "@/components/crm/TodayStops";
 export const dynamic = "force-dynamic";
 
 export default async function Today() {
-  const { profile, role, db } = await requireStaff(["owner", "manager", "crew"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager", "crew"]);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
 
   // crew: own crew's jobs (RLS also enforces); staff: all
@@ -19,7 +19,7 @@ export default async function Today() {
   const { data: jobs } = await q;
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Today — {today}</h1>
       <TodayStops jobs={(jobs ?? []) as any} />
     </Shell>

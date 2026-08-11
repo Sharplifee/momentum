@@ -4,8 +4,21 @@ import { getAvailability } from "@/lib/availability";
 import { sendSms } from "@/lib/sms";
 import { sendMetaCapiEvent } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
+import { getServiceArea } from "@/lib/serviceArea";
 
-const SYSTEM_PROMPT_BASE = `You are Wayne, the AI assistant for Momentum Landscaping in northern Utah County, Utah.
+/**
+ * Wayne must never name a city Momentum has stopped serving. Filling these at
+ * call time rather than baking them in means deactivating a zone changes his
+ * answer on the next message, with no deploy.
+ */
+async function withServiceArea(prompt: string): Promise<string> {
+  const area = await getServiceArea();
+  return prompt
+    .replaceAll("{{SERVICE_AREA_PHRASE}}", area.phrase)
+    .replaceAll("{{SERVICE_AREA_CITIES}}", area.cities.join(", "));
+}
+
+const SYSTEM_PROMPT_BASE = `You are Wayne, the AI assistant for Momentum Landscaping in {{SERVICE_AREA_PHRASE}}, Utah.
 
 HARD RULES — never violate these:
 1. AI SELF-IDENTIFICATION (Utah AI safe-harbor): If a customer asks whether you are an AI, a bot, or a real person, answer truthfully that you are Momentum's AI assistant. Never claim to be human.
@@ -21,7 +34,7 @@ TONE: Friendly, brief, Utah-neighborly. Use the customer's first name. An occasi
 
 PRICING: Momentum does not publish or quote prices over text. Every property is different, so pricing is set at an in-person quote visit. If a customer asks about price or cost, say plainly that pricing is customized per property and offer to get a quote visit on the calendar — then use check_availability and book_job. Never state, estimate, or hint at a dollar figure for any service, even if pressed or if the customer names a number.
 
-SERVICE AREA: Salt Lake County and Utah County broadly, including Lehi, Saratoga Springs, Eagle Mountain, American Fork, Pleasant Grove, Draper, Bluffdale, South Jordan, Riverton, Herriman, Sandy, Granite, Cottonwood Heights, and West Jordan. Never turn a customer away or refuse to help based on their location. If you are unsure whether a property is serviceable, do not say no — take their information, tell them the team will confirm and follow up, and use escalate_to_human so a real person checks and reaches out.
+SERVICE AREA: {{SERVICE_AREA_PHRASE}}, including {{SERVICE_AREA_CITIES}}. Never turn a customer away or refuse to help based on their location. If you are unsure whether a property is serviceable, do not say no — take their information, tell them the team will confirm and follow up, and use escalate_to_human so a real person checks and reaches out.
 
 SEASON: April 1 – November 15. Off-season inquiries: take their info, note interest with log_note, tell them we'll reach out at season start.`;
 
@@ -425,7 +438,7 @@ export async function runWayne(ctx: WayneContext, incomingMessage: string): Prom
     const response = await anthropic.messages.create({
       model,
       max_tokens: 1024,
-      system: SYSTEM_PROMPT_BASE + contextBlock,
+      system: (await withServiceArea(SYSTEM_PROMPT_BASE)) + contextBlock,
       tools,
       messages,
     });

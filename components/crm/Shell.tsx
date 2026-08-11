@@ -72,7 +72,38 @@ function useBlockers() {
   return n;
 }
 
-export function Shell({ role, name, email, children }: { role: string; name: string; email?: string; children: React.ReactNode }) {
+/**
+ * `role` is the EFFECTIVE role — crew while previewing — so the nav and page
+ * guards behave exactly as they would on a crew phone. `realRole` is who the
+ * person actually is, and is what the banner and the account menu show.
+ */
+
+function PreviewBanner() {
+  return (
+    <div className="fixed inset-x-0 top-0 z-[60] flex items-center gap-3 bg-gold px-4 py-1.5 text-[13px] font-medium text-[#1B2A3A]">
+      <span>Viewing as crew</span>
+      <button
+        onClick={async () => {
+          await fetch("/api/crm/view-as", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ view: null }),
+          });
+          window.location.href = "/crm";
+        }}
+        className="ml-auto min-h-[30px] rounded-lg bg-[#1B2A3A]/12 px-3 font-semibold transition hover:bg-[#1B2A3A]/20"
+      >
+        Back to admin
+      </button>
+    </div>
+  );
+}
+
+export function Shell({ role, name, email, realRole, previewing, children }: {
+  role: string; name: string; email?: string;
+  realRole?: string; previewing?: boolean;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const blockerCount = useBlockers();
   const [drawer, setDrawer] = useState(false);
@@ -80,10 +111,16 @@ export function Shell({ role, name, email, children }: { role: string; name: str
   const isActive = (href: string) => (href === "/crm" ? pathname === "/crm" : pathname === href || pathname.startsWith(href + "/"));
   const mobileTabs = MOBILE_TABS.filter(can);
 
+  const topOffset = previewing ? 30 : 0;
+
   return (
     <div className="min-h-screen">
-      {/* top bar */}
-      <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--bg)]/80 backdrop-blur">
+      {previewing && <PreviewBanner />}
+      {/* top bar — shifts below the preview banner when it is showing */}
+      <header
+        className="sticky z-30 border-b border-[color:var(--border)] bg-[color:var(--bg)]/80 backdrop-blur"
+        style={{ top: topOffset }}
+      >
         <div className="flex items-center gap-3 px-4 py-2.5 md:px-6">
           <button onClick={() => setDrawer(!drawer)} className="rounded-lg p-1.5 text-slate hover:bg-ice/15 md:hidden" aria-label="Menu">☰</button>
           <Link href={role === "crew" ? "/crm/today" : "/crm"} className="flex items-center gap-2">
@@ -91,7 +128,7 @@ export function Shell({ role, name, email, children }: { role: string; name: str
             <span className="hidden font-display text-lg font-bold text-navy dark:text-ice sm:block">Momentum</span>
           </Link>
           <div className="mx-auto w-full max-w-md"><GlobalSearch /></div>
-          <AccountMenu name={name} email={email} role={role} />
+          <AccountMenu name={name} email={email} role={realRole ?? role} previewing={previewing} />
         </div>
       </header>
 

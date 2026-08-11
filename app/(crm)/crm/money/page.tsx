@@ -8,7 +8,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function Money({ searchParams }: { searchParams: { status?: string } }) {
-  const { profile, role, db } = await requireStaff(["owner"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner"]);
   let q = db.from("invoices").select("id, number, total, subtotal, tax, status, due_date, sent_at, created_at, reminders_sent, line_items, customers(full_name, phone)").order("created_at", { ascending: false }).limit(100);
   if (searchParams.status) q = q.eq("status", searchParams.status);
   const { data: invoices } = await q;
@@ -18,7 +18,7 @@ export default async function Money({ searchParams }: { searchParams: { status?:
   const paidMonth = (allInv ?? []).filter((i: any) => i.status === "paid" && new Date(i.created_at) >= monthStart).reduce((s: number, i: any) => s + Number(i.total), 0);
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Money</h1>
         <Link href="/crm/money/pnl" className="rounded-lg bg-teal px-3 py-2 text-sm text-white">P&L →</Link>

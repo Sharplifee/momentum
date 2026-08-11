@@ -3,7 +3,20 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-export function AccountMenu({ name, email, role }: { name: string; email?: string; role: string }) {
+export function AccountMenu({ name, email, role, previewing }: {
+  name: string; email?: string; role: string; previewing?: boolean;
+}) {
+  // The crew view is a UI preview, not a lower account tier — so this shows the
+  // real role and says plainly when a preview is on.
+  const setView = async (view: "crew" | null) => {
+    await fetch("/api/crm/view-as", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ view }),
+    });
+    window.location.href = view === "crew" ? "/crm/today" : "/crm";
+  };
+  const canPreview = role === "owner" || role === "manager";
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const initials = (name || "?").split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase();
@@ -35,6 +48,14 @@ export function AccountMenu({ name, email, role }: { name: string; email?: strin
             <div className="mt-1 inline-flex rounded-full bg-ice/25 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-navy dark:text-ice">{role}</div>
           </div>
           <Link href="/crm/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate hover:bg-ice/15">⚙️ My account</Link>
+          {canPreview && (
+            <button
+              onClick={() => setView(previewing ? null : "crew")}
+              className="block w-full px-4 py-2.5 text-left text-sm text-slate hover:bg-ice/15"
+            >
+              {previewing ? "↩︎ Back to admin view" : "☀️ View as crew"}
+            </button>
+          )}
           <button onClick={toggleTheme} className="block w-full px-4 py-2.5 text-left text-sm text-slate hover:bg-ice/15">🌗 Toggle light / dark</button>
           <form action="/crm/logout" method="post" className="border-t border-[color:var(--border)]">
             <button className="block w-full px-4 py-2.5 text-left text-sm text-red hover:bg-red/10">↩︎ Sign out</button>

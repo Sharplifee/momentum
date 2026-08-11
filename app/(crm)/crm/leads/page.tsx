@@ -16,7 +16,7 @@ function ageLabel(iso: string): string {
 }
 
 export default async function LeadsPage({ searchParams }: { searchParams: { q?: string; stage?: string; view?: string } }) {
-  const { profile, role, db } = await requireStaff(["owner", "manager"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   let query = db.from("leads").select("id, full_name, phone, city, zone_id, stage, score, service_interest, quote_amount, created_at").neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%").order("created_at", { ascending: false }).limit(200);
   if (searchParams.stage) query = query.eq("stage", searchParams.stage);
   if (searchParams.q) query = query.or(`full_name.ilike.%${searchParams.q}%,phone.ilike.%${searchParams.q}%,address.ilike.%${searchParams.q}%`);
@@ -40,7 +40,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { q?: 
   const kanban = searchParams.view === "kanban";
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Pipeline</div>
       <PageHeader title="Leads" action={<LinkButton href="/crm/leads?new=1">+ New lead</LinkButton>} />
 

@@ -2,18 +2,22 @@ import type { Metadata } from "next";
 import { DM_Sans, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { MetaPixel } from "@/components/MetaPixel";
+import { getServiceArea, citiesSentence } from "@/lib/serviceArea";
 
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-display", display: "swap" });
 const instrument = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-body", display: "swap" });
 
-export const metadata: Metadata = {
-  title: "Momentum Landscaping | Lawn Care in Northern Utah County",
+export async function generateMetadata(): Promise<Metadata> {
+  const area = await getServiceArea();
+  return {
+  title: `Momentum Landscaping | Lawn Care in the ${area.short}`,
   description:
-    "Weekly and biweekly lawn maintenance, aeration, and cleanups across Lehi, Saratoga Springs, Eagle Mountain, and surrounding cities.",
+    `Weekly and biweekly lawn maintenance, aeration, and cleanups across ${citiesSentence(area, 4)}.`,
   other: {
     "facebook-domain-verification": process.env.NEXT_PUBLIC_META_DOMAIN_VERIFICATION ?? "",
   },
-};
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

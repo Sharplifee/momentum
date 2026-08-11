@@ -6,7 +6,7 @@ import { DeltaTile } from "@/components/crm/Charts";
 export const dynamic = "force-dynamic";
 
 export default async function Customers({ searchParams }: { searchParams: { q?: string } }) {
-  const { profile, role, db } = await requireStaff(["owner", "manager"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   let q = db.from("customers").select("id, full_name, phone, status, lifetime_value, created_at").neq("status", "opted_out").order("full_name").limit(300);
   if (searchParams.q) q = q.ilike("full_name", `%${searchParams.q}%`);
   const { data: customers } = await q;
@@ -22,7 +22,7 @@ export default async function Customers({ searchParams }: { searchParams: { q?: 
   }
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
         <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Accounts</div>
         <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Customers</h1>

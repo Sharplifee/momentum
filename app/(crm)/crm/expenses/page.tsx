@@ -5,7 +5,7 @@ import { ExpenseForm } from "@/components/crm/ExpenseForm";
 export const dynamic = "force-dynamic";
 
 export default async function Expenses() {
-  const { profile, role, db } = await requireStaff(["owner"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner"]);
   const { data: expenses } = await db
     .from("expenses")
     .select("id, category, amount, vendor, expense_date, receipt_url, job_id")
@@ -15,7 +15,7 @@ export default async function Expenses() {
     .from("jobs").select("id, scheduled_date, customers(full_name)").order("scheduled_date", { ascending: false }).limit(30);
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 text-2xl font-bold">Expenses</h1>
       <ExpenseForm jobs={(recentJobs ?? []).map((j: any) => ({ id: j.id, label: `${j.scheduled_date} — ${j.customers?.full_name ?? "?"}` }))} />
       <div className="mt-6 overflow-x-auto mo-card">

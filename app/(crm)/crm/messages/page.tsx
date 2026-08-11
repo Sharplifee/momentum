@@ -24,7 +24,7 @@ const humanizeWorkflow = (raw: string) => {
 };
 
 export default async function WaynePage({ searchParams }: { searchParams: { thread?: string; test?: string } }) {
-  const { profile, role, db } = await requireStaff(["owner", "manager"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   const showTest = searchParams.test === "1";
   const dayAgo = new Date(Date.now() - 86400_000).toISOString();
   const twoWeeksAgo = new Date(Date.now() - 14 * 86400_000).toISOString();
@@ -80,7 +80,7 @@ export default async function WaynePage({ searchParams }: { searchParams: { thre
   ];
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       {/* ===== Wayne, the person ===== */}
       <div className="mo-card aiv-glow mb-6 flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
         <div className="relative shrink-0">

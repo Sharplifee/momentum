@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Account({ searchParams }: { searchParams: { first?: string } }) {
   // allowMustChange=true so a temp-password user can actually reach this page to fix it
-  const { profile, role } = await requireStaff(["owner", "manager", "crew"], true);
+  const { profile, role, realRole, previewing } = await requireStaff(["owner", "manager", "crew"], true);
   const first = searchParams.first === "1" && profile.must_change_password;
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <AccountPanel
         profile={{
           full_name: profile.full_name ?? "",

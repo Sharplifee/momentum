@@ -6,7 +6,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function Accounting() {
-  const { profile, role, db } = await requireStaff(["owner"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner"]);
   const [{ data: customers }, { data: jobs }, { data: invoices }, { data: payments }, { data: expenses }, { data: proofs }, { data: margins }, { data: payroll }] = await Promise.all([
     db.from("customers").select("id, full_name, phone, created_at").neq("status", "opted_out").order("full_name"),
     db.from("jobs").select("customer_id, status, scheduled_date"),
@@ -39,7 +39,7 @@ export default async function Accounting() {
   const invStatus = (st: string) => st === "paid" ? "bg-green/15 text-green ring-green/30" : st === "overdue" ? "bg-red/15 text-red ring-red/30" : st === "void" ? "bg-white/10 text-[color:var(--body)] ring-white/10" : "bg-gold/15 text-gold ring-gold/30";
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
         <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Bookkeeping</div>
         <h1 className="mb-1 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Accounting</h1>

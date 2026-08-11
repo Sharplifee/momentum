@@ -13,6 +13,20 @@ export type Role = "customer" | "crew" | "manager" | "owner";
  * request rather than once per component that asks — pages and the nav shell
  * both need the profile, and that was two extra network hops on every tap.
  */
+/** Cookie that puts an admin into the crew view. UI only — never an API grant. */
+export const VIEW_AS_COOKIE = "mo_view_as";
+/** Who may preview. A crew member cannot preview anything. */
+export const CAN_PREVIEW: Role[] = ["owner", "manager"];
+
+/**
+ * All three principals are owners; nobody holds a crew account. The Today
+ * screen was therefore unreachable — Shell gates it to roles:["crew"].
+ *
+ * This returns an EFFECTIVE role, so previewing genuinely redirects out of
+ * /crm/accounting the way a crew phone would be. staffFromSession in
+ * lib/apiAuth.ts deliberately keeps the REAL role, so a preview can never
+ * downgrade a write or grant access it should not have.
+ */
 export const requireStaff = cache(async function requireStaff(minRoles: Role[] = ["crew", "manager", "owner"], allowMustChange = false) {
   const db = supabaseServer();
   const { data: { user } } = await db.auth.getUser();
@@ -22,8 +36,14 @@ export const requireStaff = cache(async function requireStaff(minRoles: Role[] =
     .select("id, role, full_name, email, phone, must_change_password, theme_pref, notif_prefs")
     .eq("id", user.id)
     .single();
-  const role = (profile?.role ?? "customer") as Role;
+  const realRole = (profile?.role ?? "customer") as Role;
+
+  const { cookies } = await import("next/headers");
+  const viewAs = (await cookies()).get(VIEW_AS_COOKIE)?.value;
+  const previewing = viewAs === "crew" && CAN_PREVIEW.includes(realRole);
+  const role: Role = previewing ? "crew" : realRole;
+
   if (!minRoles.includes(role)) redirect(role === "crew" ? "/crm/today" : "/crm/login");
   if (!allowMustChange && profile?.must_change_password) redirect("/crm/account?first=1");
-  return { user, profile: profile!, role, db };
+  return { user, profile: profile!, role, realRole, previewing, db };
 });

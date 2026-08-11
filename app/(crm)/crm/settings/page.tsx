@@ -5,7 +5,7 @@ import { SettingsPanel } from "@/components/crm/SettingsPanel";
 export const dynamic = "force-dynamic";
 
 export default async function Settings() {
-  const { profile, role, db } = await requireStaff(["owner"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner"]);
   const { data: cl } = await db.from("system_config").select("value").eq("key", "launch_checklist").single();
   const clItems = ((cl?.value as any)?.items ?? []) as { label: string; done: boolean }[];
   const blockers = clItems.filter((i) => !i.done);
@@ -17,7 +17,7 @@ export default async function Settings() {
     db.from("crews").select("*").order("id"),
   ]);
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Settings</h1>
         {blockers.length > 0 && (
           <div className="mb-4 flex items-start gap-3 rounded-2xl border border-gold/50 bg-gold/10 p-4 text-sm">

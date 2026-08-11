@@ -57,7 +57,7 @@ function humanize(row: { trigger?: string; type?: string; detail?: any; actor?: 
 }
 
 export default async function Dashboard() {
-  const { profile, role, db } = await requireStaff(["owner", "manager"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
   const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
   const weekEnd = new Date(new Date(todayIso + "T12:00:00").getTime() + 7 * 86400_000).toLocaleDateString("en-CA");
@@ -127,7 +127,7 @@ export default async function Dashboard() {
   ];
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Dashboard</div>
       <PageHeader title={`Welcome back, ${(profile.full_name ?? "").split(" ")[0]}`} action={<Link href="/crm/leads" className="mo-primary rounded-xl px-4 py-2 text-sm font-medium shadow-card">View pipeline →</Link>} />
 

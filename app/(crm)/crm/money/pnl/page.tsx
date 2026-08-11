@@ -5,7 +5,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function Pnl({ searchParams }: { searchParams: { month?: string } }) {
-  const { profile, role, db } = await requireStaff(["owner"]);
+  const { profile, role, realRole, previewing, db } = await requireStaff(["owner"]);
   const month = searchParams.month ?? new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" }).slice(0, 7);
   const monthStart = `${month}-01`;
   const nextMonth = new Date(new Date(monthStart).getTime() + 32 * 86400_000).toISOString().slice(0, 7) + "-01";
@@ -30,7 +30,7 @@ export default async function Pnl({ searchParams }: { searchParams: { month?: st
   const nextMonthLink = nextMonth.slice(0, 7);
 
   return (
-    <Shell role={role} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <h1 className="mb-1 text-2xl font-bold">P&L — {month}</h1>
       <p className="mb-4 text-sm">
         <Link className="underline" href={`/crm/money/pnl?month=${prevMonth}`}>← {prevMonth}</Link>

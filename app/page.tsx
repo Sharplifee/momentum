@@ -1,3 +1,4 @@
+import { getServiceArea } from "@/lib/serviceArea";
 import Link from "next/link";
 
 /**
@@ -5,12 +6,13 @@ import Link from "next/link";
  * Connor's Claude Design site (project momentum-site) — this page only
  * shows on the app's own vercel.app URL / crm+portal subdomains.
  */
-export default function Home() {
+export default async function Home() {
+  const area = await getServiceArea();
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-6 p-8 text-center">
       <h1 className="text-4xl font-bold text-moss">Momentum Landscaping</h1>
       <p className="text-lg text-stone-600">
-        Lawn care that shows up. Serving northern Utah County.
+        Lawn care that shows up. Serving {area.phrase}.
       </p>
       <Link
         href="/quote"
