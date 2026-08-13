@@ -839,6 +839,29 @@ img, svg, video, canvas { max-width: 100%; height: auto }
 .chat-empty-title { font-size: 17px; font-weight: 700; color: rgba(28,46,68,0.75); margin-bottom: 6px; }
 .chat-empty-sub { font-size: 14px; line-height: 1.5; color: rgba(28,46,68,0.5); max-width: 300px; margin: 0 auto; }
 
+/* Day strip: the day you are reading is filled, a service day carries a dot.
+   Filling the service day made it look selected on a day it was not. */
+.calstrip .cs-day {
+  appearance: none; background: transparent; border: 0; font: inherit;
+  color: inherit; cursor: pointer; position: relative; padding: 6px 0 10px;
+  border-radius: 14px; min-height: 44px;
+}
+.calstrip .cs-day .cs-dot { display: none; }
+.calstrip .cs-day.has-service .cs-dot {
+  display: block; position: absolute; left: 50%; bottom: 3px;
+  transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%;
+  background: var(--teal, #4a8fb5);
+}
+.calstrip .cs-day.is-active.has-service .cs-dot { background: #fff; }
+
+/* Is this a reading or a forecast, and when is the visit. */
+.ns-context {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-top: 2px; font-size: 12px;
+}
+.ns-now { color: rgba(28,46,68,0.5); }
+.ns-nextvisit { color: rgba(28,46,68,0.62); font-weight: 600; }
+
 /* Very short screens: drop the decorative wordmark rather than the content. */
 @media (max-height: 620px) {
   .screen-quote .quote-sub { display: none; }
@@ -2325,8 +2348,24 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
   const nextDate = (sched && sched.next) || MLData.nextServiceDate();
   const lastDate = (sched && sched.last) || MLData.lastServiceDate();
   const isToday = MLData.isSameDay(today, nextDate);
-  const weekDates = MLData.currentWeek(nextDate);
-  const weather = MLData.useWeather(tweaks.customerAddress || "South Jordan, UT", nextDate);
+
+  /**
+   * The card opens on TODAY, not on the next service date.
+   *
+   * It used to anchor everything to the next visit, so the headline, the
+   * weather and the week strip all jumped forward — on a Wednesday you were
+   * shown Friday's forecast with Friday filled in and today merely outlined,
+   * which reads as the wrong temperature for the wrong day. Weather is the
+   * live report for the day you are looking at, and by default that is now.
+   *
+   * Tapping a day in the strip moves the card to that day and back again.
+   */
+  const [pickedDate, setPickedDate] = React.useState(null);
+  const shownDate = pickedDate || today;
+  const showingToday = MLData.isSameDay(today, shownDate);
+  const shownIsService = MLData.isSameDay(shownDate, nextDate);
+  const weekDates = MLData.currentWeek(today);
+  const weather = MLData.useWeather(tweaks.customerAddress || "South Jordan, UT", shownDate);
   const w = weather.data;
 
   return (
@@ -2348,19 +2387,17 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
                   <span className="ns-eyebrow-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3.5v4M16 3.5v4" /></svg>
                   </span>
-                  <span>{schedPending ? "Next Service" : isToday ? "Today" : "Next Service"}</span>
+                  <span>{showingToday ? "Today" : shownIsService ? "Next Service" : MLData.fmtDay(shownDate)}</span>
                 </span>
-                <span className="ns-eyebrow-r">{schedPending ? "" : nextDate.getFullYear()}</span>
+                <span className="ns-eyebrow-r">{shownDate.getFullYear()}</span>
               </div>
 
               <div className="ns-headline">
-                {schedPending
-                  ? <span className="ns-headline-wait">Checking your schedule…</span>
-                  : `${MLData.fmtDay(nextDate)}, ${MLData.fmtMonthDay(nextDate)}`}
+                {`${MLData.fmtDay(shownDate)}, ${MLData.fmtMonthDay(shownDate)}`}
               </div>
 
               <div className="ns-weather" role="group" aria-label="Forecast">
-                {schedPending || weather.loading ?
+                {weather.loading ?
                   <span className="nw-loading">Loading forecast…</span> :
 
                   <React.Fragment>
@@ -2369,7 +2406,7 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
                         <span className="nw-emoji" aria-hidden="true">{w.emoji}</span>
                         <span className="nw-condition">{w.label}</span>
                       </span>
-                      <span className="nw-val">{w.high}°</span>
+                      <span className="nw-val">{Math.round(w.high)}°</span>
                     </span>
                     <span className="nw-div" aria-hidden="true" />
                     <span className="nw-cell nw-rain">
@@ -2383,7 +2420,24 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
                   }
               </div>
 
-              <CalendarStrip dates={weekDates} activeDate={nextDate} today={today} />
+              <div className="ns-context">
+                {showingToday
+                  ? <span className="ns-now">Right now in {(w && w.city) || "South Jordan"}</span>
+                  : <span className="ns-now">Forecast</span>}
+                {!schedPending && nextDate && (
+                  <span className="ns-nextvisit">
+                    {isToday ? "Service today" : `Next visit ${MLData.fmtDay(nextDate)}, ${MLData.fmtMonthDay(nextDate)}`}
+                  </span>
+                )}
+              </div>
+
+              <CalendarStrip
+                dates={weekDates}
+                activeDate={shownDate}
+                today={today}
+                serviceDate={nextDate}
+                onPick={(d) => setPickedDate(MLData.isSameDay(d, today) ? null : d)}
+              />
             </section>
 
             {/* Combined lower card — Today's Plan + Last Service */}
@@ -2426,18 +2480,31 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
 
 }
 
-function CalendarStrip({ dates, activeDate, today }) {
+function CalendarStrip({ dates, activeDate, today, serviceDate, onPick }) {
   const letters = ["M", "T", "W", "T", "F", "S", "S"];
   return (
     <div className="calstrip">
       {dates.map((d, i) => {
         const isActive = MLData.isSameDay(d, activeDate);
         const isToday = MLData.isSameDay(d, today);
+        // A service day gets a dot rather than a fill. Filling it made the
+        // visit look like the day you were reading, which is what made Friday
+        // appear selected on a Wednesday.
+        const isService = serviceDate && MLData.isSameDay(d, serviceDate);
+        const label = `${MLData.fmtDay(d)}, ${MLData.fmtMonthDay(d)}${isService ? " — service day" : ""}`;
         return (
-          <div key={i} className={`cs-day ${isActive ? "is-active" : ""} ${isToday && !isActive ? "is-today" : ""}`}>
+          <button
+            key={i}
+            type="button"
+            className={`cs-day ${isActive ? "is-active" : ""} ${isToday && !isActive ? "is-today" : ""} ${isService ? "has-service" : ""}`}
+            aria-label={label}
+            aria-current={isActive ? "date" : undefined}
+            onClick={() => onPick && onPick(d)}
+          >
             <div className="cs-letter">{letters[i]}</div>
             <div className="cs-num">{d.getDate()}</div>
-          </div>);
+            <span className="cs-dot" aria-hidden="true" />
+          </button>);
 
       })}
     </div>);

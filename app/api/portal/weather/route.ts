@@ -96,12 +96,12 @@ export async function GET(req: NextRequest) {
     code: toCode(liveCode ?? day?.condition),
     // `high` is what the card prints. For today that is the temperature outside
     // now; for any other day it is that day's high.
-    high: liveTemp ?? day?.highF ?? null,
+    high: liveTemp ?? (day?.highF != null ? Math.round(day.highF) : null),
     forecastHigh: day?.highF ?? null,
     observedNow: liveTemp,
     isToday,
     observedAt: isToday ? new Date().toISOString() : null,
-    low: day?.lowF ?? null,
+    low: day?.lowF != null ? Math.round(day.lowF) : null,
     rain: day?.precipitationChance != null ? Math.round(day.precipitationChance * 100) : null,
     wind: day?.windSpeedMax != null ? Math.round(day.windSpeedMax) : null,
     city: (address.split(",")[0] || "South Jordan").trim(),
