@@ -221,13 +221,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "lat and lng out of range" }, { status: 400 });
   }
 
-  // Three independent providers, tried in order. WeatherKit is preferred when
-  // its credentials are present; Open-Meteo and met.no are free, keyless and
-  // run by different organisations, so one outage cannot take the card down.
+  // Three independent providers, run by different organisations, so one outage
+  // cannot take the card down.
+  //
+  // Open-Meteo leads. WeatherKit was first until 2026-08-13, when it turned out
+  // to reject every request with 401 NOT_ENABLED — two separate keys, both
+  // endpoints, every JWT variant, while Apple's own console showed the service
+  // provisioned at 100% with zero calls recorded in thirty days. Not a key, a
+  // token or a capability fault; something only Apple can see.
+  //
+  // Trying it first cost a guaranteed failed round trip on every single
+  // request. It is now last, so if Apple ever resolves the ticket it starts
+  // working again on its own with no code change — and until then it costs
+  // nothing.
   const data =
-    (await fromWeatherKit(lat, lng)) ??
     (await fromOpenMeteo(lat, lng)) ??
-    (await fromMetNo(lat, lng));
+    (await fromMetNo(lat, lng)) ??
+    (await fromWeatherKit(lat, lng));
 
   if (!data) return NextResponse.json({ error: "weather unavailable" }, { status: 503 });
   return NextResponse.json(data, {
