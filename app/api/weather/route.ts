@@ -63,7 +63,7 @@ async function fromWeatherKit(lat: number, lng: number) {
   if (!token) return null;
   const url =
     `https://weatherkit.apple.com/api/v1/weather/en_US/${lat}/${lng}` +
-    `?dataSets=currentWeather,forecastDaily&timezone=America/Denver`;
+    `?dataSets=currentWeather,forecastDaily`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
     next: { revalidate: 900 },
@@ -94,7 +94,7 @@ async function fromOpenMeteo(lat: number, lng: number) {
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
     `&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,` +
     `precipitation_probability_max,wind_speed_10m_max,weather_code` +
-    `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FDenver&forecast_days=7`;
+    `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=7`;
   const res = await fetch(url, { next: { revalidate: 900 } }).catch(() => null);
   if (!res?.ok) return null;
   const d = await res.json();
@@ -108,6 +108,7 @@ async function fromOpenMeteo(lat: number, lng: number) {
   }));
   return {
     source: "open-meteo",
+    timezone: d?.timezone ?? null,
     current: { tempF: d?.current?.temperature_2m, condition: String(d?.current?.weather_code ?? "") },
     days,
     today: days[0] ? { precipitationChance: days[0].precipitationChance, windSpeedMax: days[0].windSpeedMax } : null,
@@ -122,10 +123,12 @@ export async function GET(req: NextRequest) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return NextResponse.json({ error: "lat and lng required" }, { status: 400 });
   }
-  // Service area only. A valid coordinate on the other side of the world is
-  // either a mistake or someone poking at the endpoint.
-  if (lat < 39.5 || lat > 41.5 || lng < -113 || lng > -110.5) {
-    return NextResponse.json({ error: "outside service area" }, { status: 400 });
+  // Anywhere on Earth. This used to fence to the Salt Lake valley and reject
+  // everything else as "outside service area" — but weather is about where the
+  // person is standing, not where we mow. A customer travelling, or one whose
+  // property sits just outside the box, got a 400 and an empty panel.
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return NextResponse.json({ error: "lat and lng out of range" }, { status: 400 });
   }
 
   const data = (await fromWeatherKit(lat, lng)) ?? (await fromOpenMeteo(lat, lng));

@@ -1633,6 +1633,46 @@ function useSchedule(customerId) {
   return state;
 }
 
+/**
+ * Where the phone is.
+ *
+ * Weather is about where the person is standing, not where we mow. The card
+ * used to be pinned to the service area and told a customer in another state
+ * that it was "right now in South Jordan". This asks the browser once; if the
+ * customer declines, or the device cannot say, everything falls back to the
+ * address on file and nothing breaks.
+ *
+ * Cached for the session so the permission prompt appears once, not on every
+ * refresh tick.
+ */
+function useDeviceCoords() {
+  const [coords, setCoords] = React.useState(() => {
+    try { return JSON.parse(sessionStorage.getItem("ml_coords") || "null"); }
+    catch (e) { return null; }
+  });
+
+  React.useEffect(() => {
+    if (coords || !navigator.geolocation) return;
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        const c = {
+          lat: Number(pos.coords.latitude.toFixed(3)),   // ~100m: enough for weather,
+          lng: Number(pos.coords.longitude.toFixed(3)),  // not enough to find a house
+        };
+        try { sessionStorage.setItem("ml_coords", JSON.stringify(c)); } catch (e) {}
+        setCoords(c);
+      },
+      () => { /* declined or unavailable — the address on file still works */ },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+    );
+    return () => { cancelled = true; };
+  }, [coords]);
+
+  return coords;
+}
+
 function useWeather(address, date) {
   // Weather is the one thing on this card that changes while you are looking at
   // it. Re-ask every ten minutes, and immediately when the app returns to the
@@ -1653,7 +1693,8 @@ function useWeather(address, date) {
   }, []);
 
   const [state, setState] = React.useState({ loading: true, data: null, error: null });
-  const key = `${address || ""}|${date ? date.toDateString() : ""}`;
+  const coords = useDeviceCoords();
+  const key = `${address || ""}|${date ? date.toDateString() : ""}|${coords ? `${coords.lat},${coords.lng}` : ""}`;
   React.useEffect(() => {
     let cancelled = false;
     setState((prev) => (prev.data ? prev : { loading: true, data: null, error: null }));
@@ -1665,8 +1706,8 @@ function useWeather(address, date) {
         // are asked at once. The backend answer replaces the other if it lands
         // second, so what you end up looking at is always the authoritative one.
         const addr = address || "South Jordan, UT";
-        const authoritative = (window.MLLive ? window.MLLive.weather(addr, date) : Promise.resolve(null)).catch(() => null);
-        const quick = (window.MLMock ? window.MLMock.weather(addr, date) : Promise.resolve(null)).catch(() => null);
+        const authoritative = (window.MLLive ? window.MLLive.weather(addr, date, coords) : Promise.resolve(null)).catch(() => null);
+        const quick = (window.MLMock ? window.MLMock.weather(addr, date, coords) : Promise.resolve(null)).catch(() => null);
 
         let shown = false;
         const show = (raw) => {
@@ -1918,8 +1959,9 @@ const Live = {
   scheduleUpcoming: (limit = 3) => call(`/schedule/upcoming?limit=${limit}`),
   schedulePast:     (limit = 3) => call(`/schedule/past?limit=${limit}`),
   scheduleMonth:    (y, m)      => call(`/schedule/month?year=${y}&month=${m}`),
-  weather:          (address, date) =>
-                      call(`/weather?address=${encodeURIComponent(address)}&date=${date.toISOString().slice(0, 10)}`),
+  weather:          (address, date, coords) =>
+                      call(`/weather?address=${encodeURIComponent(address)}&date=${date.toISOString().slice(0, 10)}` +
+                           (coords ? `&lat=${coords.lat}&lng=${coords.lng}` : "")),
   messagesList:     (since)     => call(`/messages${since ? `?since=${since.toISOString()}` : ""}`),
   messagesSend:     (body)      => call("/messages", { method: "POST", body: { body } }),
   servicesCatalog:  ()          => call("/services/catalog"),
@@ -2422,7 +2464,9 @@ function HomeScreen({ tweaks, customerName, customerId = null, onGetQuote, onNav
 
               <div className="ns-context">
                 {showingToday
-                  ? <span className="ns-now">Right now in {(w && w.city) || "South Jordan"}</span>
+                  ? <span className="ns-now">
+                      {w && w.city ? `Right now in ${w.city}` : "Right now"}
+                    </span>
                   : <span className="ns-now">Forecast</span>}
                 {!schedPending && nextDate && (
                   <span className="ns-nextvisit">

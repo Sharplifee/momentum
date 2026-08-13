@@ -47,13 +47,37 @@ export async function GET(req: NextRequest) {
   const origin = req.headers.get("origin");
   const address = req.nextUrl.searchParams.get("address") ?? "";
   const date = req.nextUrl.searchParams.get("date") ?? "";
-  let lat = 40.5622, lng = -111.9297; // service-area centre
+  const qLat = Number(req.nextUrl.searchParams.get("lat"));
+  const qLng = Number(req.nextUrl.searchParams.get("lng"));
 
-  if (address) {
+  let lat = 40.5622, lng = -111.9297; // last resort only: service-area centre
+  let place: string | null = null;
+
+  // Where the person actually is wins over anything on file. The app sends
+  // these when the phone has granted location; a customer three states away
+  // should see their own sky, not ours.
+  const haveDeviceFix =
+    Number.isFinite(qLat) && Number.isFinite(qLng) &&
+    qLat >= -90 && qLat <= 90 && qLng >= -180 && qLng <= 180;
+
+  if (haveDeviceFix) {
+    lat = qLat; lng = qLng;
+  } else if (address) {
     const { data } = await supabaseAdmin()
       .from("properties").select("lat, lng").ilike("address", `${address.split(",")[0]}%`)
       .not("lat", "is", null).limit(1).maybeSingle();
     if (data?.lat && data?.lng) { lat = data.lat; lng = data.lng; }
+    place = address.split(",")[0].trim() || null;
+  }
+
+  // Name the spot from its coordinates so the card can say where the reading is
+  // from. Failure here is cosmetic — the forecast still stands on its own.
+  if (haveDeviceFix) {
+    const geo = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+      { cache: "no-store" }
+    ).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    place = geo?.city || geo?.locality || geo?.principalSubdivision || null;
   }
 
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://crm.momentumlandscapingut.com";
@@ -79,7 +103,9 @@ export async function GET(req: NextRequest) {
   // a daily summary does not change through the day. When the requested day IS
   // today, the live observation is the honest number, and it moves every fifteen
   // minutes. Future days keep the forecast, which is all that exists for them.
-  const todayLocal = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
+  // Their today, not ours — at 11pm in Utah it is already tomorrow in London.
+  const tz = w.timezone || "America/Denver";
+  const todayLocal = new Date().toLocaleDateString("en-CA", { timeZone: tz });
   const isToday = (day?.date ?? null) === todayLocal;
   const cur = w.current ?? null;
   const liveTemp = isToday && typeof cur?.tempF === "number" ? Math.round(cur.tempF) : null;
@@ -104,7 +130,10 @@ export async function GET(req: NextRequest) {
     low: day?.lowF != null ? Math.round(day.lowF) : null,
     rain: day?.precipitationChance != null ? Math.round(day.precipitationChance * 100) : null,
     wind: day?.windSpeedMax != null ? Math.round(day.windSpeedMax) : null,
-    city: (address.split(",")[0] || "South Jordan").trim(),
+    city: place || (address.split(",")[0] || "South Jordan").trim(),
+    // Says whether the reading is from the phone or from the address on file,
+    // so the card never claims a place the customer is not standing in.
+    located: haveDeviceFix ? "device" : address ? "address" : "default",
 
     // Original WeatherKit names kept so nothing already reading them breaks.
     highF: day?.highF ?? null,
