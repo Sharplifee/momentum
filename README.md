@@ -28,3 +28,14 @@ See `.env.example`. All secrets live in the Corpus HQ credentials registry.
 - All outbound SMS goes through `lib/sms.ts` (opt-out + quiet hours enforced once)
 - Wayne never invents prices/dates; bookings only via `book_job`
 - Test rows are `source='test'` and excluded from nudges/stats
+
+## Two repos, not one
+
+The customer app was split out on 2026-08-13 to **Sharplifee/momentum-app**.
+It owns the public site, the app at `/app`, and the seventeen endpoints the app
+calls. This repo is the CRM only.
+
+They talk through the shared Supabase database — a job booked here appears in a
+customer's schedule because both read the same tables, not because one calls the
+other. The two deliberate exceptions are the quote form, which posts to
+`/api/leads` here, and Wayne, who lives here and is reached over HTTP.

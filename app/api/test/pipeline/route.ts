@@ -162,21 +162,21 @@ export async function POST(req: NextRequest) {
   try {
     const testPhone3 = "+15555550103";
     await db.from("customers").insert({ full_name: "OTP Tester", phone: testPhone3, status: "active" });
-    const otpRes = await fetch(`${base}/api/portal/otp/send`, {
+    const otpRes = await fetch("https://momentumlandscapingut.com/api/portal/otp/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: testPhone3 }),
     });
     const { data: otpRow } = await db.from("otp_codes").select("id, expires_at").eq("phone", testPhone3).order("created_at", { ascending: false }).limit(1).maybeSingle();
     steps.push({ step: "otp_send_dry", pass: otpRes.ok && Boolean(otpRow), detail: { status: otpRes.status, code_row: Boolean(otpRow) } });
     // wrong-code attempt increments attempts
-    const badRes = await fetch(`${base}/api/portal/otp/verify`, {
+    const badRes = await fetch("https://momentumlandscapingut.com/api/portal/otp/verify", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: testPhone3, code: "000000" }),
     });
     const { data: otpAfter } = await db.from("otp_codes").select("attempts").eq("id", otpRow!.id).single();
     steps.push({ step: "otp_wrong_code_rejected", pass: badRes.status === 401 && (otpAfter?.attempts ?? 0) === 1, detail: { status: badRes.status, attempts: otpAfter?.attempts } });
     // unknown phone → 404 no-enumeration
-    const unkRes = await fetch(`${base}/api/portal/otp/send`, {
+    const unkRes = await fetch("https://momentumlandscapingut.com/api/portal/otp/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: "+15555559999" }),
     });
