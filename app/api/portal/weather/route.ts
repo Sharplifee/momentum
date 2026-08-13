@@ -47,8 +47,13 @@ export async function GET(req: NextRequest) {
   const origin = req.headers.get("origin");
   const address = req.nextUrl.searchParams.get("address") ?? "";
   const date = req.nextUrl.searchParams.get("date") ?? "";
-  const qLat = Number(req.nextUrl.searchParams.get("lat"));
-  const qLng = Number(req.nextUrl.searchParams.get("lng"));
+  // Read as raw strings first. Number("") and Number(null) are both 0, and 0,0
+  // is a real coordinate in the Atlantic — so an absent location was being
+  // treated as a device fix in the middle of the ocean.
+  const rawLat = req.nextUrl.searchParams.get("lat");
+  const rawLng = req.nextUrl.searchParams.get("lng");
+  const qLat = rawLat !== null && rawLat.trim() !== "" ? Number(rawLat) : NaN;
+  const qLng = rawLng !== null && rawLng.trim() !== "" ? Number(rawLng) : NaN;
 
   let lat = 40.5622, lng = -111.9297; // last resort only: service-area centre
   let place: string | null = null;
