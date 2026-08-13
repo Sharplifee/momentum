@@ -88,24 +88,27 @@ export async function POST(req: NextRequest) {
       }, origin);
     }
 
+    // Password checking off does NOT mean anyone with an email address gets in.
+    //
+    // This branch used to look the customer up by email and hand back their
+    // account without examining the password at all — so knowing a customer's
+    // email address was enough to open their schedule, their address and their
+    // billing. Nobody has set a password yet, so the honest answer is to send
+    // them to the code, which proves they hold the phone on the account.
     const { data: c } = await db
       .from("customers")
-      .select("id, full_name, status, onboarding_complete")
+      .select("id, phone")
       .eq("email", String(email).trim().toLowerCase())
       .maybeSingle();
-    if (!c) {
-      return withCors({ error: "We don't recognize that email and password." }, origin, 401);
-    }
-    const first = (c.full_name ?? "").trim().split(" ")[0] || null;
+
+    // Same answer either way. Telling a stranger which addresses are on file
+    // turns this into a way to enumerate the customer list.
     return withCors({
-      ok: true,
-      customer_id: c.id,
-      name: c.full_name,
-      first_name: first,
-      known: Boolean(c.full_name),
-      needs: needsFrom(c),
-      greeting: first ? `Welcome back, ${first}` : "You're in",
-    }, origin);
+      error: c
+        ? "Passwords aren't set up yet — sign in with your phone number and we'll text you a code."
+        : "We don't recognize that email and password.",
+      use_phone: Boolean(c),
+    }, origin, c ? 409 : 401);
   }
 
   if (!phone) return withCors({ error: "Enter your phone number." }, origin, 400);
