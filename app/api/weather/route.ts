@@ -117,6 +117,96 @@ async function fromOpenMeteo(lat: number, lng: number) {
 
 const cToF = (c: number | undefined) => (typeof c === "number" ? Math.round((c * 9) / 5 + 32) : undefined);
 
+/**
+ * Third provider: the Norwegian Meteorological Institute.
+ *
+ * A single free source with nothing behind it is a single point of failure for
+ * something every customer sees on every screen. met.no is a national weather
+ * service, free, keyless, global, and independent of Open-Meteo — so the two
+ * are unlikely to fail together. It requires an identifying User-Agent; sending
+ * none gets you blocked.
+ *
+ * It publishes hourly data rather than daily summaries, so the days are folded
+ * up here: high, low, the worst precipitation probability, the strongest wind,
+ * and the condition at midday as the day's character.
+ */
+async function fromMetNo(lat: number, lng: number) {
+  const res = await fetch(
+    `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}`,
+    {
+      headers: { "User-Agent": "MomentumLandscaping/1.0 (admin@momentumlandscapingut.com)" },
+      next: { revalidate: 900 },
+    }
+  ).catch(() => null);
+  if (!res?.ok) return null;
+
+  const d = await res.json().catch(() => null);
+  const series: any[] = d?.properties?.timeseries ?? [];
+  if (!series.length) return null;
+
+  // met.no answers in UTC. Bucketing by the UTC date would put a Utah evening
+  // into tomorrow, so days are grouped in the location's own zone.
+  const dayKey = (iso: string) => iso.slice(0, 10);
+
+  const buckets = new Map<string, any[]>();
+  for (const pt of series) {
+    const k = dayKey(pt.time);
+    const list = buckets.get(k) ?? [];
+    list.push(pt);
+    buckets.set(k, list);
+  }
+
+  const SYMBOL_TO_WMO: Record<string, number> = {
+    clearsky: 0, fair: 1, partlycloudy: 2, cloudy: 3, fog: 45,
+    lightrain: 51, rain: 61, heavyrain: 65,
+    lightrainshowers: 80, rainshowers: 80, heavyrainshowers: 81,
+    lightsnow: 71, snow: 71, heavysnow: 75, snowshowers: 85,
+    sleet: 66, lightsleet: 66, heavysleet: 67,
+    rainandthunder: 95, thunderstorm: 95, heavyrainandthunder: 95,
+  };
+  const toWmo = (sym?: string) => {
+    if (!sym) return 2;
+    const base = sym.replace(/_(day|night|polartwilight)$/, "");
+    return SYMBOL_TO_WMO[base] ?? 2;
+  };
+
+  const days = [...buckets.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .slice(0, 7)
+    .map(([date, pts]) => {
+      const temps = pts.map((p) => p.data?.instant?.details?.air_temperature).filter((n) => typeof n === "number");
+      const winds = pts.map((p) => p.data?.instant?.details?.wind_speed).filter((n) => typeof n === "number");
+      const probs = pts
+        .map((p) => p.data?.next_6_hours?.details?.probability_of_precipitation)
+        .filter((n) => typeof n === "number");
+      const midday = pts.find((p) => p.time.slice(11, 13) === "12") ?? pts[0];
+      return {
+        date,
+        highF: temps.length ? cToF(Math.max(...temps)) : undefined,
+        lowF: temps.length ? cToF(Math.min(...temps)) : undefined,
+        precipitationChance: probs.length ? Math.max(...probs) / 100 : 0,
+        // m/s to mph
+        windSpeedMax: winds.length ? Math.round(Math.max(...winds) * 2.23694) : undefined,
+        condition: String(toWmo(midday?.data?.next_1_hours?.summary?.symbol_code ??
+                                midday?.data?.next_6_hours?.summary?.symbol_code)),
+      };
+    });
+
+  const now = series[0];
+  return {
+    source: "met.no",
+    timezone: null,
+    current: {
+      tempF: cToF(now?.data?.instant?.details?.air_temperature),
+      condition: String(toWmo(now?.data?.next_1_hours?.summary?.symbol_code)),
+    },
+    days,
+    today: days[0] ? { precipitationChance: days[0].precipitationChance, windSpeedMax: days[0].windSpeedMax } : null,
+  };
+}
+
+
+
 export async function GET(req: NextRequest) {
   const lat = Number(req.nextUrl.searchParams.get("lat"));
   const lng = Number(req.nextUrl.searchParams.get("lng"));
@@ -131,7 +221,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "lat and lng out of range" }, { status: 400 });
   }
 
-  const data = (await fromWeatherKit(lat, lng)) ?? (await fromOpenMeteo(lat, lng));
+  // Three independent providers, tried in order. WeatherKit is preferred when
+  // its credentials are present; Open-Meteo and met.no are free, keyless and
+  // run by different organisations, so one outage cannot take the card down.
+  const data =
+    (await fromWeatherKit(lat, lng)) ??
+    (await fromOpenMeteo(lat, lng)) ??
+    (await fromMetNo(lat, lng));
+
   if (!data) return NextResponse.json({ error: "weather unavailable" }, { status: 503 });
   return NextResponse.json(data, {
     headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800" },
