@@ -57,8 +57,10 @@ export async function GET(req: NextRequest) {
   }
 
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://crm.momentumlandscapingut.com";
+  // The upstream route already caches for 15 minutes; caching again here only
+  // stacks lag on top of it, so a customer could see a reading half an hour old.
   const res = await fetch(`${base.replace(/\/$/, "")}/api/weather?lat=${lat}&lng=${lng}`, {
-    next: { revalidate: 900 },
+    cache: "no-store",
   }).catch(() => null);
   if (!res?.ok) return withCors({ error: "Weather isn't available right now." }, origin, 503);
   const w = await res.json();
@@ -69,6 +71,20 @@ export async function GET(req: NextRequest) {
   const days = w.days ?? [];
   const day = (date ? days.find((d: any) => d.date === date) : null) ?? days[0] ?? null;
 
+  // Right now, versus the day's forecast.
+  //
+  // The card was always served the daily HIGH and the daily condition, even when
+  // the day being shown is today — so at 7pm on an 87-degree day it still read
+  // 87 and whatever the afternoon had been, which looks frozen because it is:
+  // a daily summary does not change through the day. When the requested day IS
+  // today, the live observation is the honest number, and it moves every fifteen
+  // minutes. Future days keep the forecast, which is all that exists for them.
+  const todayLocal = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
+  const isToday = (day?.date ?? null) === todayLocal;
+  const cur = w.current ?? null;
+  const liveTemp = isToday && typeof cur?.tempF === "number" ? Math.round(cur.tempF) : null;
+  const liveCode = isToday && cur?.condition != null && cur.condition !== "" ? cur.condition : null;
+
   return withCors({
     source: w.source,
     date: day?.date ?? null,
@@ -77,8 +93,14 @@ export async function GET(req: NextRequest) {
 
     // The app reads these five. They were missing entirely, so every live
     // forecast arrived as undefined and the home card showed nothing real.
-    code: toCode(day?.condition),
-    high: day?.highF ?? null,
+    code: toCode(liveCode ?? day?.condition),
+    // `high` is what the card prints. For today that is the temperature outside
+    // now; for any other day it is that day's high.
+    high: liveTemp ?? day?.highF ?? null,
+    forecastHigh: day?.highF ?? null,
+    observedNow: liveTemp,
+    isToday,
+    observedAt: isToday ? new Date().toISOString() : null,
     low: day?.lowF ?? null,
     rain: day?.precipitationChance != null ? Math.round(day.precipitationChance * 100) : null,
     wind: day?.windSpeedMax != null ? Math.round(day.windSpeedMax) : null,

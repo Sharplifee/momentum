@@ -1611,11 +1611,29 @@ function useSchedule(customerId) {
 }
 
 function useWeather(address, date) {
+  // Weather is the one thing on this card that changes while you are looking at
+  // it. Re-ask every ten minutes, and immediately when the app returns to the
+  // foreground — a phone parked on this screen was otherwise still showing
+  // whatever it fetched at launch, hours earlier.
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const bump = () => setTick((t) => t + 1);
+    const id = setInterval(bump, 600000);
+    const onVisible = () => { if (!document.hidden) bump(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", bump);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", bump);
+    };
+  }, []);
+
   const [state, setState] = React.useState({ loading: true, data: null, error: null });
   const key = `${address || ""}|${date ? date.toDateString() : ""}`;
   React.useEffect(() => {
     let cancelled = false;
-    setState({ loading: true, data: null, error: null });
+    setState((prev) => (prev.data ? prev : { loading: true, data: null, error: null }));
     (async () => {
       try {
         // The backend is authoritative but can be slow on a cold start, and a
@@ -1652,7 +1670,7 @@ function useWeather(address, date) {
       }
     })();
     return () => { cancelled = true; };
-  }, [key]);
+  }, [key, tick]);
   return state;
 }
 
