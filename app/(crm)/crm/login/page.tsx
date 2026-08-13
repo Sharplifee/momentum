@@ -14,7 +14,14 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true); setError("");
     const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    // Walkthrough shortcut: submitting both fields empty signs in as Connor, so
+    // the whole CRM can be reviewed without typing credentials on a phone.
+    // TEMPORARY — remove before anyone outside the three of you has the URL.
+    const useEmail = email.trim() || "cwsharp23@gmail.com";
+    const usePw = email.trim() ? password : "MomentumBoss2026!";
+
+    const { error } = await supabase.auth.signInWithPassword({ email: useEmail, password: usePw });
     if (error) { setError("That email and password don't match — try again."); setBusy(false); }
     else window.location.href = "/crm";
   }
@@ -31,6 +38,7 @@ export default function LoginPage() {
           <img src="/logo.png" alt="Momentum Landscaping" className="mb-5 h-20 w-auto" />
           <h1 className="font-display text-[26px] font-bold tracking-tight text-[color:var(--ink)]">Momentum Landscaping</h1>
           <p className="mt-1 text-sm text-[color:var(--body)]">Operations · sign in to your workspace</p>
+          <p className="mt-2 text-xs text-teal">Leave both blank and tap Sign In to walk through.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mo-card aiv-glow space-y-4 p-6 sm:p-7">
