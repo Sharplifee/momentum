@@ -29,7 +29,15 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const cors = corsHeaders(req.headers.get("origin"));
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (rateLimited(ip)) {
+
+  // Meta lead ads arrive server-to-server from /api/meta/leadgen, so every one
+  // of them shares a single origin IP. Under the public 5/min limit a campaign
+  // that actually works would start dropping leads on the floor. The bearer is
+  // server-side only, so this can't be used to lift the limit from outside.
+  const internal =
+    req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`;
+
+  if (!internal && rateLimited(ip)) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: cors });
   }
 
@@ -52,6 +60,12 @@ export async function POST(req: NextRequest) {
 
   const db = supabaseAdmin();
   const isTest = req.headers.get("x-momentum-test") === "1";
+  const declaredSource = req.headers.get("x-momentum-source");
+  const source = isTest
+    ? "test"
+    : declaredSource === "meta_lead_ad" && internal
+    ? "meta_lead_ad"
+    : "website";
 
   // Attribution signals. These were being read for the CAPI call but never stored,
   // which capped est_emq at 2.5 no matter how many ad-sourced leads arrived —
@@ -103,7 +117,7 @@ export async function POST(req: NextRequest) {
         zone_id: matchedZoneId,
         service_interest: input.service_interest ?? null,
         requested_window: input.requested_window ?? null,
-        source: isTest ? "test" : "website",
+        source,
         fbclid: input.fbclid ?? null,
         fbp: input.fbp ?? null,
         fbc: derivedFbc,
@@ -126,7 +140,7 @@ export async function POST(req: NextRequest) {
     await db.from("lead_events").insert({
       lead_id: leadId,
       type: "created",
-      detail: { source: isTest ? "test" : "website", ip },
+      detail: { source, ip },
       actor: "system",
     });
   }
@@ -193,7 +207,7 @@ export async function POST(req: NextRequest) {
     for (const r of recipients) {
       await sendSms({
         to: r,
-        message: `New lead: ${input.full_name} — ${input.address} (${phone}). Source: ${isTest ? "test" : "website"}.`,
+        message: `New lead: ${input.full_name} — ${input.address} (${phone}). Source: ${source}.`,
         sender: "system",
         bypassQuietHours: true,
       });
@@ -210,7 +224,7 @@ export async function POST(req: NextRequest) {
     trigger: "leads.create",
     ref_id: leadId,
     status: "ok",
-    detail: { phone, zone_id: zoneId, is_test: isTest, available_days: availableDays },
+    detail: { phone, zone_id: zoneId, is_test: isTest, source, available_days: availableDays },
   });
 
   return NextResponse.json({ ok: true, lead_id: leadId, thread_id: thread?.id, available_days: availableDays }, { headers: cors });
