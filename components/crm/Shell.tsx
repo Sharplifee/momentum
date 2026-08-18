@@ -78,6 +78,55 @@ function useBlockers() {
  * person actually is, and is what the banner and the account menu show.
  */
 
+
+/**
+ * Admin ⇄ Crew, always on screen.
+ *
+ * This was a line inside the account dropdown, which meant it was effectively
+ * invisible — you had to already know it existed to find it. It is a segmented
+ * control in the header now, so an owner can see which side they are on without
+ * opening anything, and switch in one tap.
+ *
+ * Only owners and managers see it. A crew account has nothing to switch to.
+ */
+function ModeSwitch({ previewing }: { previewing?: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const go = async (view: "crew" | null) => {
+    if (busy) return;
+    setBusy(true);
+    await fetch("/api/crm/view-as", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ view }),
+    }).catch(() => null);
+    // Full reload: the role is resolved server-side, so a client route change
+    // would leave the old navigation on screen.
+    window.location.href = view === "crew" ? "/crm/today" : "/crm";
+  };
+
+  const base =
+    "min-h-[36px] rounded-lg px-3 text-[13px] font-semibold transition disabled:opacity-60";
+  const on = "bg-teal text-white shadow-sm";
+  const off = "text-[color:var(--body)] hover:text-[color:var(--ink)]";
+
+  return (
+    <div
+      className="flex shrink-0 items-center gap-0.5 rounded-xl border border-[color:var(--border)] bg-[color:var(--bg)] p-0.5"
+      role="group"
+      aria-label="Switch between admin and crew"
+    >
+      <button disabled={busy} onClick={() => go(null)}
+        className={`${base} ${previewing ? off : on}`}>
+        Admin
+      </button>
+      <button disabled={busy} onClick={() => go("crew")}
+        className={`${base} ${previewing ? on : off}`}>
+        Crew
+      </button>
+    </div>
+  );
+}
+
 function PreviewBanner() {
   return (
     <div className="fixed inset-x-0 top-0 z-[60] flex items-center gap-3 bg-gold px-4 py-1.5 text-[13px] font-medium text-[#1B2A3A]">
@@ -128,6 +177,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
             <span className="hidden font-display text-lg font-bold text-navy dark:text-ice sm:block">Momentum</span>
           </Link>
           <div className="mx-auto w-full max-w-md"><GlobalSearch /></div>
+          {(realRole === "owner" || realRole === "manager") && <ModeSwitch previewing={previewing} />}
           <AccountMenu name={name} email={email} role={realRole ?? role} previewing={previewing} />
         </div>
       </header>
@@ -159,6 +209,14 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
           <div className="fixed inset-0 z-40 md:hidden" onClick={() => setDrawer(false)}>
             <div className="absolute inset-0 bg-navy/40" />
             <aside className="absolute inset-y-0 left-0 w-64 overflow-y-auto bg-[color:var(--bg)] px-3 py-4 shadow-pop" onClick={(e) => e.stopPropagation()}>
+              {/* The header is cramped on a phone, so the switch lives here too —
+                  the drawer is where a phone user looks for anything not a tab. */}
+              {(realRole === "owner" || realRole === "manager") && (
+                <div className="mb-5 px-1">
+                  <div className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">View</div>
+                  <ModeSwitch previewing={previewing} />
+                </div>
+              )}
               {NAV.map((g) => {
                 const items = g.items.filter(can);
                 if (!items.length) return null;
