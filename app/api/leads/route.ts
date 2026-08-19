@@ -190,10 +190,10 @@ export async function POST(req: NextRequest) {
         day_1: day1 ? new Date(day1.date).toLocaleDateString("en-US", { weekday: "long" }) : "this week",
         day_2: day2 ? new Date(day2.date).toLocaleDateString("en-US", { weekday: "long" }) : "next week",
       })
-    : `Hi ${input.full_name.split(" ")[0]}, this is Wayne from Momentum Landscaping — got your request for ${input.address}. What day works best?`;
+    : `Hi ${input.full_name.split(" ")[0]}, this is Nora from Momentum Landscaping — got your request for ${input.address}. What day works best?`;
 
   if (!isTest) {
-    await sendSms({ to: phone, message: confirmationBody, thread_id: thread?.id, sender: "wayne" });
+    await sendSms({ to: phone, message: confirmationBody, thread_id: thread?.id, sender: "nora" });
   } else {
     await logAutomation({ trigger: "sms.send.skipped_test_lead", ref_id: leadId, status: "skipped" });
   }

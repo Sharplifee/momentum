@@ -7,7 +7,7 @@ import { logAutomation } from "@/lib/automation";
 import { getServiceArea } from "@/lib/serviceArea";
 
 /**
- * Wayne must never name a city Momentum has stopped serving. Filling these at
+ * Nora must never name a city Momentum has stopped serving. Filling these at
  * call time rather than baking them in means deactivating a zone changes his
  * answer on the next message, with no deploy.
  */
@@ -18,7 +18,7 @@ async function withServiceArea(prompt: string): Promise<string> {
     .replaceAll("{{SERVICE_AREA_CITIES}}", area.cities.join(", "));
 }
 
-const SYSTEM_PROMPT_BASE = `You are Wayne, the AI assistant for Momentum Landscaping in {{SERVICE_AREA_PHRASE}}, Utah.
+const SYSTEM_PROMPT_BASE = `You are Nora, the AI assistant for Momentum Landscaping in {{SERVICE_AREA_PHRASE}}, Utah.
 
 HARD RULES — never violate these:
 1. AI SELF-IDENTIFICATION (Utah AI safe-harbor): If a customer asks whether you are an AI, a bot, or a real person, answer truthfully that you are Momentum's AI assistant. Never claim to be human.
@@ -122,7 +122,7 @@ const tools: Anthropic.Tool[] = [
   },
 ];
 
-export type WayneContext = {
+export type NoraContext = {
   thread_id: string;
   phone: string;
   lead_id?: string | null;
@@ -133,7 +133,7 @@ export type WayneContext = {
 async function executeTool(
   name: string,
   input: Record<string, unknown>,
-  ctx: WayneContext
+  ctx: NoraContext
 ): Promise<string> {
   const db = supabaseAdmin();
 
@@ -218,7 +218,7 @@ async function executeTool(
         lead_id: ctx.lead_id,
         type: "job_booked",
         detail: { job_id: job.id, date, service: serviceSlug },
-        actor: "wayne",
+        actor: "nora",
       });
       await db.from("leads").update({ stage: "closed_won", last_contact_at: new Date().toISOString() }).eq("id", ctx.lead_id);
     }
@@ -231,7 +231,7 @@ async function executeTool(
         .replace("{day}", dayName)
         .replace("{window}", "")
         .replace("{address}", leadAddress);
-      await sendSms({ to: ctx.phone, message: bodyTxt, thread_id: ctx.thread_id, sender: "wayne" });
+      await sendSms({ to: ctx.phone, message: bodyTxt, thread_id: ctx.thread_id, sender: "nora" });
     }
 
     // team alert
@@ -242,7 +242,7 @@ async function executeTool(
     for (const r of recipients ?? []) {
       await sendSms({
         to: r,
-        message: `Wayne booked: ${leadName} — ${service.name} on ${dayName} at ${leadAddress}.`,
+        message: `Nora booked: ${leadName} — ${service.name} on ${dayName} at ${leadAddress}.`,
         sender: "system",
         bypassQuietHours: true,
       });
@@ -260,7 +260,7 @@ async function executeTool(
     });
 
     await logAutomation({
-      trigger: "wayne.book_job",
+      trigger: "nora.book_job",
       ref_id: job.id,
       detail: { date, service: serviceSlug, lead_id: ctx.lead_id },
     });
@@ -274,7 +274,7 @@ async function executeTool(
         lead_id: ctx.lead_id,
         type: "note",
         detail: { note: String(input.note) },
-        actor: "wayne",
+        actor: "nora",
       });
     }
     return JSON.stringify({ ok: true });
@@ -289,13 +289,13 @@ async function executeTool(
     for (const r of recipients ?? []) {
       await sendSms({
         to: r,
-        message: `⚠️ Wayne escalated a conversation (${ctx.phone}). Reason: ${String(input.reason)}. Reply to the customer directly.`,
+        message: `⚠️ Nora escalated a conversation (${ctx.phone}). Reason: ${String(input.reason)}. Reply to the customer directly.`,
         sender: "system",
         bypassQuietHours: true,
       });
     }
     await logAutomation({
-      trigger: "wayne.escalate",
+      trigger: "nora.escalate",
       ref_id: ctx.thread_id,
       detail: { reason: String(input.reason) },
     });
@@ -315,9 +315,9 @@ async function executeTool(
     const booked = Math.max(cap?.slots_booked ?? 0, jobsThatDay ?? 0);
     if (booked >= total) return JSON.stringify({ error: "day_full", message: "That day is full — offer another." });
     await db.from("jobs").update({ scheduled_date: newDate, weather_flag: false }).eq("id", jobId);
-    await db.from("job_events").insert({ job_id: jobId, type: "rescheduled", note: `→ ${newDate}`, actor: "wayne" });
-    await sendSms({ to: ctx.phone, message: `Done — your visit is moved to ${new Date(newDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}. 🌱`, thread_id: ctx.thread_id, sender: "wayne" });
-    await logAutomation({ trigger: "wayne.reschedule_job", ref_id: jobId, detail: { new_date: newDate } });
+    await db.from("job_events").insert({ job_id: jobId, type: "rescheduled", note: `→ ${newDate}`, actor: "nora" });
+    await sendSms({ to: ctx.phone, message: `Done — your visit is moved to ${new Date(newDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}. 🌱`, thread_id: ctx.thread_id, sender: "nora" });
+    await logAutomation({ trigger: "nora.reschedule_job", ref_id: jobId, detail: { new_date: newDate } });
     return JSON.stringify({ ok: true, job_id: jobId, new_date: newDate });
   }
 
@@ -329,7 +329,7 @@ async function executeTool(
     const items = services.filter((s) => s.base_price != null).map((s) => ({ service: s.name, qty: 1, price: Number(s.base_price) }));
     const total = items.reduce((sum, i) => sum + i.price, 0);
     const { data: quote } = await db.from("quotes").insert({ lead_id: ctx.lead_id, customer_id: ctx.customer_id, line_items: items, total, status: "draft" }).select("id").single();
-    await logAutomation({ trigger: "wayne.create_quote", ref_id: quote?.id, detail: { total, slugs } });
+    await logAutomation({ trigger: "nora.create_quote", ref_id: quote?.id, detail: { total, slugs } });
     return JSON.stringify({ ok: true, quote_id: quote?.id, total, items, needs_visit: unpriced.map((s) => s.slug) });
   }
 
@@ -348,16 +348,16 @@ async function executeTool(
 }
 
 /**
- * Runs the Wayne agent loop for a thread and returns the final text reply
- * (or null if Wayne ended on a tool call with nothing to say — rare).
+ * Runs the Nora agent loop for a thread and returns the final text reply
+ * (or null if Nora ended on a tool call with nothing to say — rare).
  */
-export async function runWayne(ctx: WayneContext, incomingMessage: string): Promise<string | null> {
+export async function runNora(ctx: NoraContext, incomingMessage: string): Promise<string | null> {
   const db = supabaseAdmin();
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   // model from system_config (fallback to a safe default)
-  const { data: wayneCfg } = await db.from("system_config").select("value").eq("key", "wayne").single();
-  const model = (wayneCfg?.value?.model as string) ?? "claude-sonnet-4-5";
+  const { data: noraCfg } = await db.from("system_config").select("value").eq("key", "nora").single();
+  const model = (noraCfg?.value?.model as string) ?? "claude-sonnet-4-5";
 
   // context: lead + property + last 20 messages + knowledge
   let contextBlock = "";
@@ -379,7 +379,7 @@ export async function runWayne(ctx: WayneContext, incomingMessage: string): Prom
     }
   }
 
-  // naive keyword knowledge lookup (v1 per plan — ilike over wayne_knowledge)
+  // naive keyword knowledge lookup (v1 per plan — ilike over nora_knowledge)
   const keywords = incomingMessage
     .toLowerCase()
     .replace(/[^a-z0-9 ]/g, "")
@@ -389,7 +389,7 @@ export async function runWayne(ctx: WayneContext, incomingMessage: string): Prom
   if (keywords.length) {
     const orFilter = keywords.map((k) => `content.ilike.%${k}%`).join(",");
     const { data: knowledge } = await db
-      .from("wayne_knowledge")
+      .from("nora_knowledge")
       .select("content")
       .or(orFilter)
       .limit(5);
@@ -467,7 +467,7 @@ export async function runWayne(ctx: WayneContext, incomingMessage: string): Prom
   }
 
   await logAutomation({
-    trigger: "wayne.run",
+    trigger: "nora.run",
     ref_id: ctx.thread_id,
     detail: { model, input_tokens: totalIn, output_tokens: totalOut },
   });

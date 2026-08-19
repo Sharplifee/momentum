@@ -18,7 +18,7 @@ const NAV: NavGroup[] = [
     { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
     { href: "/crm/tracker", label: "Tracker", icon: "🧭", roles: ["owner", "manager"] },
     { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
-    { href: "/crm/messages", label: "Wayne", icon: "💬", roles: ["owner", "manager", "crew"] },
+    { href: "/crm/messages", label: "Nora", icon: "💬", roles: ["owner", "manager", "crew"] },
     { href: "/crm/customers", label: "Customers", icon: "👥", roles: ["owner", "manager"] },
     { href: "/crm/accounting", label: "Accounting", icon: "💵", roles: ["owner"] },
   ]},
@@ -34,7 +34,7 @@ const MOBILE_TABS: NavItem[] = [
   { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
   { href: "/crm/tracker", label: "Tracker", icon: "🧭", roles: ["owner", "manager"] },
   { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
-  { href: "/crm/messages", label: "Wayne", icon: "💬", roles: ["owner", "manager", "crew"] },
+  { href: "/crm/messages", label: "Nora", icon: "💬", roles: ["owner", "manager", "crew"] },
 ];
 
 

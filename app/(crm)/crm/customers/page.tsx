@@ -57,7 +57,7 @@ export default async function Customers({ searchParams }: { searchParams: { q?: 
         ))}
         {!customers?.length && (
           <div className="mo-card flex flex-col items-center gap-2 py-12 text-center">
-            <p className="text-sm text-[color:var(--body)]">No customers{searchParams.q ? " matched" : " yet"} — leads become customers when Wayne closes them.</p>
+            <p className="text-sm text-[color:var(--body)]">No customers{searchParams.q ? " matched" : " yet"} — leads become customers when Nora closes them.</p>
           </div>
         )}
       </div>

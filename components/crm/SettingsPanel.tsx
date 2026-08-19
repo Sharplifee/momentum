@@ -18,7 +18,7 @@ export function SettingsPanel({ services, zones, config, templates, crews }: any
 
   const sandboxCfg = config.find((c: any) => c.key === "sms_sandbox")?.value;
   const alertsCfg = config.find((c: any) => c.key === "team_alerts")?.value;
-  const wayneCfg = config.find((c: any) => c.key === "wayne")?.value;
+  const noraCfg = config.find((c: any) => c.key === "nora")?.value;
 
   return (
     <div className="space-y-6">
@@ -47,8 +47,8 @@ export function SettingsPanel({ services, zones, config, templates, crews }: any
       </section>
 
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">Wayne</h2>
-        <p className="text-sm">Model: <strong>{wayneCfg?.model}</strong> · prompt version {wayneCfg?.version}</p>
+        <h2 className="mb-2 font-semibold">Nora</h2>
+        <p className="text-sm">Model: <strong>{noraCfg?.model}</strong> · prompt version {noraCfg?.version}</p>
       </section>
 
       <section className="mo-card p-4">

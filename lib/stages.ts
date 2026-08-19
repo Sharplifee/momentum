@@ -138,7 +138,7 @@ export async function runStageAutomation(leadId: string, newStage: string, actor
     await sendSms({
       to: lead.phone,
       message: `Welcome to Momentum, ${(lead.full_name ?? "friend").split(" ")[0]}! 🌱 You're on the schedule — you'll get a text the evening before each visit. Reply here anytime.`,
-      sender: "wayne",
+      sender: "nora",
     });
     await sendSms({
       to: "+13853076535",
@@ -153,7 +153,7 @@ export async function runStageAutomation(leadId: string, newStage: string, actor
       await sendSms({
         to: lead.phone,
         message: `Thanks for reaching out to Momentum Landscaping! We're not able to take this one on right now, but we'd love to help in the future. 🌱`,
-        sender: "wayne",
+        sender: "nora",
       });
       await db.from("lead_events").insert({ lead_id: leadId, type: "polite_close_sent", actor: "system" });
     }

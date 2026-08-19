@@ -9,7 +9,7 @@ type Profile = { full_name: string; email: string; phone: string; theme_pref: st
 const NOTIF_ROWS: { key: string; label: string; roles: string[] }[] = [
   { key: "new_lead", label: "New lead comes in", roles: ["owner", "manager"] },
   { key: "job_exception", label: "A crew flags a job exception", roles: ["owner", "manager", "crew"] },
-  { key: "escalation", label: "Wayne escalates a conversation", roles: ["owner", "manager"] },
+  { key: "escalation", label: "Nora escalates a conversation", roles: ["owner", "manager"] },
   { key: "daily_digest", label: "Evening digest", roles: ["owner"] },
 ];
 

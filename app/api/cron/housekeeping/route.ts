@@ -9,7 +9,7 @@ export const maxDuration = 120;
 
 /**
  * Daily 9:00 MT: (a) overdue invoice sweep — mark overdue, ≤2 gentle reminders,
- * then escalate to Connor (never Wayne collections); (b) backup verification —
+ * then escalate to Connor (never Nora collections); (b) backup verification —
  * row counts + last ids per money table logged for drift detection (Phase 4 §5.2).
  */
 export async function GET(req: NextRequest) {

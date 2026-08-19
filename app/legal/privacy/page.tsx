@@ -8,7 +8,7 @@ export default function Privacy() {
       <h2>What we collect</h2>
       <ul>
         <li><strong>Contact and property info</strong>: name, phone, email, service address, property access notes you choose to share (gate codes, pets).</li>
-        <li><strong>Messages</strong>: SMS and portal conversations with our team and our AI assistant Wayne, kept so we can serve you and maintain quality.</li>
+        <li><strong>Messages</strong>: SMS and portal conversations with our team and our AI assistant Nora, kept so we can serve you and maintain quality.</li>
         <li><strong>Website analytics and advertising data</strong>: we use the Meta Pixel and Meta&apos;s Conversions API, which collect page views and form submissions (including hashed email/phone) to measure our advertising. Ad-click identifiers (fbclid) and browser identifiers (fbp cookie) are captured when present.</li>
         <li><strong>Payment information</strong> is processed by Stripe; we never store full card numbers.</li>
       </ul>

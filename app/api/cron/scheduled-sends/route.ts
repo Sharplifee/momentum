@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       to: row.phone,
       message: row.body ?? "",
       thread_id: row.thread_id,
-      sender: (row.sender as "wayne" | "staff" | "system") ?? "system",
+      sender: (row.sender as "nora" | "staff" | "system") ?? "system",
       skipQueue: true,
     });
     if (result.ok) {

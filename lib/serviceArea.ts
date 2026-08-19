@@ -10,7 +10,7 @@ export { SERVICE_AREA_FALLBACK };
  *
  * Nine surfaces used to state this independently and they disagreed — five
  * still said "northern Utah County", the territory Momentum left on
- * 2026-08-01, and Wayne was telling customers we serve Lehi, Saratoga Springs
+ * 2026-08-01, and Nora was telling customers we serve Lehi, Saratoga Springs
  * and Eagle Mountain. Deactivating a zone must be the only action needed to
  * change what every surface says.
  *

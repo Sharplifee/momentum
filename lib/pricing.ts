@@ -11,7 +11,7 @@ export type PricingModifier = { label: string; price: number; blocked?: boolean 
 /**
  * Pricing modifiers from the on-site personal-quote checklist. Quotes are
  * in-person only (HARD RULE) — this only ever runs against staff-captured
- * property/lead flags, never from something Wayne or a customer said over text.
+ * property/lead flags, never from something Nora or a customer said over text.
  */
 export async function pricingModifiers(db: SupabaseClient, flags: ChecklistFlags): Promise<PricingModifier[]> {
   const { data: cfg } = await db.from("system_config").select("value").eq("key", "pricing").single();

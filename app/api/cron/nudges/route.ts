@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       window: lead.requested_window ?? "your requested time",
     });
 
-    const sent = await sendSms({ to: lead.phone, message, thread_id: thread.id, sender: "wayne" });
+    const sent = await sendSms({ to: lead.phone, message, thread_id: thread.id, sender: "nora" });
     if (sent.ok) {
       await db.from("lead_events").insert({
         lead_id: lead.id,

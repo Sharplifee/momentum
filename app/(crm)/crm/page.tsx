@@ -47,10 +47,10 @@ function humanize(row: { trigger?: string; type?: string; detail?: any; actor?: 
   if (t === "created" || t === "leads.create") return `New lead came in${d.zone_id ? ` in zone ${d.zone_id}` : ""}`;
   if (t.startsWith("stage.")) return `Lead moved to ${STAGE_LABEL[(t.split(".")[1] as keyof typeof STAGE_LABEL)] ?? t.split(".")[1]}`;
   if (t === "stage_change") return `Stage → ${STAGE_LABEL[(d.to as keyof typeof STAGE_LABEL)] ?? d.to}`;
-  if (t === "wayne.book_job" || t === "job_booked") return `Wayne booked a visit${d.date ? ` for ${new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}` : ""}`;
+  if (t === "nora.book_job" || t === "job_booked") return `Nora booked a visit${d.date ? ` for ${new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}` : ""}`;
   if (t === "invoice.drafted") return `Invoice drafted${d.total ? ` — $${d.total}` : ""}`;
   if (t === "invoice.mark_paid" || t === "payments.paid") return `Payment received${d.amount ? ` — $${d.amount}` : ""}`;
-  if (t === "wayne.escalate") return `Wayne handed a conversation to the team`;
+  if (t === "nora.escalate") return `Nora handed a conversation to the team`;
   if (t === "note") return `Note: ${(d.note ?? "").slice(0, 60)}`;
   if (t === "reminder_sent") return `Day-before reminder sent`;
   return t.replace(/[._]/g, " ");

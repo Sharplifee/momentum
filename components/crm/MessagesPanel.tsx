@@ -44,14 +44,14 @@ export function MessagesPanel({ threads, activeThread, messages, templates }: an
             <div className="mb-2 flex items-center justify-between">
               <span className="font-semibold">{activeThread.phone}</span>
               <button onClick={toggleTakeover} className={`rounded-full px-3 py-1 text-xs ${activeThread.escalated ? "bg-red/15 text-red" : "bg-ice/15 dark:bg-white/10"}`}>
-                {activeThread.escalated ? "Human has thread — hand back to Wayne" : "Take over from Wayne"}
+                {activeThread.escalated ? "Human has thread — hand back to Nora" : "Take over from Nora"}
               </button>
             </div>
             <div className="mb-3 max-h-[45vh] space-y-2 overflow-y-auto">
               {messages.map((m: any) => (
                 <div key={m.id} className={`max-w-[76%] ${m.direction === "inbound" ? "" : "ml-auto"}`}>
                   <div className={`rounded-2xl px-3 py-2 text-sm leading-relaxed ${m.direction === "inbound" ? "rounded-bl-md bg-white/[0.08] text-[color:var(--ink)]" : "rounded-br-md bg-teal text-white"}`}>{m.body}</div>
-                  <div className={`mt-0.5 text-[10px] text-[color:var(--body)]/70 ${m.direction === "inbound" ? "" : "text-right"}`}>{m.sender === "wayne" ? "Wayne" : m.sender} · {new Date(m.created_at).toLocaleString("en-US", { timeZone: "America/Denver", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
+                  <div className={`mt-0.5 text-[10px] text-[color:var(--body)]/70 ${m.direction === "inbound" ? "" : "text-right"}`}>{m.sender === "nora" ? "Nora" : m.sender} · {new Date(m.created_at).toLocaleString("en-US", { timeZone: "America/Denver", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
                 </div>
               ))}
             </div>

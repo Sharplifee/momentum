@@ -160,7 +160,7 @@ export default function QuotePage() {
       <main className="mx-auto max-w-lg p-8 text-center">
         <h1 className="mb-4 text-3xl font-bold text-moss">You're all set 🌱</h1>
         <p className="text-stone-600">
-          Wayne, our scheduling assistant, is texting you now to get a personal quote visit on the
+          Nora, our scheduling assistant, is texting you now to get a personal quote visit on the
           calendar. Keep an eye on your phone!
         </p>
       </main>
@@ -205,7 +205,7 @@ export default function QuotePage() {
         {status === "error" && <p className="text-sm text-red-600">{errorMsg}</p>}
         <p className="text-xs text-stone-400">
           By submitting you agree to receive texts from Momentum Landscaping (incl. our AI assistant
-          Wayne). Msg&nbsp;&amp;&nbsp;data rates may apply. Reply STOP to opt out. See our{" "}
+          Nora). Msg&nbsp;&amp;&nbsp;data rates may apply. Reply STOP to opt out. See our{" "}
           <a href="/legal/sms-terms" className="underline">SMS Terms</a> and{" "}
           <a href="/legal/privacy" className="underline">Privacy Policy</a>.
         </p>

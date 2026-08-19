@@ -10,7 +10,7 @@ export const runtime = "nodejs";
  *
  * GPS is the primary record. When it fails — phone off, app closed, signal lost,
  * accuracy discarded — the day would otherwise end with a scheduled visit and no
- * outcome. Wayne checks the calendar himself and asks the crew who were assigned.
+ * outcome. Nora checks the calendar himself and asks the crew who were assigned.
  */
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
         : `Hey — closing out today's books and these don't have a record yet:\n${list}\nWhich ones got done? Reply with the names, or "all" if you finished them.`;
 
     if (group.phone) {
-      await sendSms({ to: group.phone, message, sender: "wayne" });
+      await sendSms({ to: group.phone, message, sender: "nora" });
       sent.push(group.name);
     }
 
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
   // Owner summary so nothing silently rots.
   await sendSms({
     to: "+13853076535",
-    message: `End of day: ${unresolved.length} visit${unresolved.length > 1 ? "s" : ""} on ${todayIso} had no GPS record. Wayne asked ${sent.length ? sent.join(", ") : "nobody — no crew phone on file"}.`,
+    message: `End of day: ${unresolved.length} visit${unresolved.length > 1 ? "s" : ""} on ${todayIso} had no GPS record. Nora asked ${sent.length ? sent.join(", ") : "nobody — no crew phone on file"}.`,
     sender: "system",
   });
 

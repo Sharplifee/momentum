@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runWayne } from "@/lib/wayne";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
-/** Direct Wayne invocation — used by the inbound SMS webhook and (later) the portal/CRM.
- *  Guarded: internal callers only (CRON_SECRET). The SMS webhook calls runWayne()
- *  in-process, so nothing public ever needs this route. */
-export async function POST(req: NextRequest) {
-  if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  const body = await req.json().catch(() => null);
-  if (!body?.thread_id || !body?.phone || !body?.message) {
-    return NextResponse.json({ error: "thread_id, phone, message required" }, { status: 400 });
-  }
-  const reply = await runWayne(
-    {
-      thread_id: body.thread_id,
-      phone: body.phone,
-      lead_id: body.lead_id ?? null,
-      customer_id: body.customer_id ?? null,
-    },
-    String(body.message)
-  );
-  return NextResponse.json({ ok: true, reply });
+/**
+ * The assistant is Nora now. This path stays alive because the customer app
+ * calls it from a separate repo, and renaming a route someone else depends on
+ * without warning is how you break production on a Friday.
+ *
+ * Forwards to /api/nora. Remove once the customer app points at the new path.
+ */
+async function forward(req: NextRequest) {
+  const url = new URL(req.url);
+  const target = `${url.origin}/api/nora${url.search}`;
+  const res = await fetch(target, {
+    method: req.method,
+    headers: req.headers,
+    body: req.method === "GET" || req.method === "HEAD" ? undefined : await req.text(),
+  });
+  return new NextResponse(res.body, { status: res.status, headers: res.headers });
 }
+
+export const GET = forward;
+export const POST = forward;

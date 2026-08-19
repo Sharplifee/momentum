@@ -23,7 +23,7 @@ const humanizeWorkflow = (raw: string) => {
   return { label: cleaned.charAt(0).toUpperCase() + cleaned.slice(1), blurb: "Runs on a schedule" };
 };
 
-export default async function WaynePage({ searchParams }: { searchParams: { thread?: string; test?: string } }) {
+export default async function NoraPage({ searchParams }: { searchParams: { thread?: string; test?: string } }) {
   const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   const showTest = searchParams.test === "1";
   const dayAgo = new Date(Date.now() - 86400_000).toISOString();
@@ -32,10 +32,10 @@ export default async function WaynePage({ searchParams }: { searchParams: { thre
   const [{ data: allThreads }, { data: templates }, cfg, { data: runs }, { data: recentMsgs }, know] = await Promise.all([
     db.from("threads").select("id, phone, escalated, last_message_at, leads(full_name), customers(full_name)").order("last_message_at", { ascending: false, nullsFirst: false }).limit(80),
     db.from("sms_templates").select("id, name, body, sequence_order, delay_minutes, active").order("id"),
-    db.from("system_config").select("key, value").in("key", ["wayne", "sms_sandbox"]),
+    db.from("system_config").select("key, value").in("key", ["nora", "sms_sandbox"]),
     db.from("automation_runs").select("*").order("created_at", { ascending: false }).limit(80),
     db.from("messages").select("created_at, direction, sender").gte("created_at", twoWeeksAgo).order("created_at"),
-    db.from("wayne_knowledge").select("id", { count: "exact", head: true }),
+    db.from("nora_knowledge").select("id", { count: "exact", head: true }),
   ]);
 
   const conf: Record<string, any> = {};
@@ -53,7 +53,7 @@ export default async function WaynePage({ searchParams }: { searchParams: { thre
   const escalated = (threads ?? []).filter((t) => t.escalated).length;
   const msgs24 = (recentMsgs ?? []).filter((m) => m.created_at >= dayAgo).length;
   const openConvos = (threads ?? []).filter((t) => t.last_message_at && Date.now() - new Date(t.last_message_at).getTime() < 3 * 86400_000);
-  const wayneReplies = (recentMsgs ?? []).filter((m) => m.sender === "wayne").length;
+  const noraReplies = (recentMsgs ?? []).filter((m) => m.sender === "nora").length;
 
   const dayCounts = Array.from({ length: 14 }, () => 0);
   for (const m of recentMsgs ?? []) {
@@ -81,7 +81,7 @@ export default async function WaynePage({ searchParams }: { searchParams: { thre
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      {/* ===== Wayne, the person ===== */}
+      {/* ===== Nora, the person ===== */}
       <div className="mo-card aiv-glow mb-6 flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
         <div className="relative shrink-0">
           <div className="grid h-20 w-20 place-items-center rounded-3xl bg-gradient-to-br from-teal to-teal-hover font-display text-3xl font-bold text-white shadow-glow ring-1 ring-white/20">W</div>
@@ -90,10 +90,10 @@ export default async function WaynePage({ searchParams }: { searchParams: { thre
           </span>
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[30px] font-bold leading-tight tracking-tight text-[color:var(--ink)]">Wayne</h1>
+          <h1 className="font-display text-[30px] font-bold leading-tight tracking-tight text-[color:var(--ink)]">Nora</h1>
           <p className="text-sm font-medium text-teal">Customer relations · answers every text within seconds</p>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--body)]">
-            Wayne is the voice customers meet first. He&apos;s friendly, brief, and Utah-neighborly — asks one question at a time,
+            Nora is the voice customers meet first. He&apos;s friendly, brief, and Utah-neighborly — asks one question at a time,
             uses first names, and never sends a wall of text. He tells the truth about being an AI if asked, never invents a day or a price,
             and hands the conversation to a real person the moment something needs a human touch.
           </p>
@@ -103,13 +103,13 @@ export default async function WaynePage({ searchParams }: { searchParams: { thre
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <DeltaTile label="Messages (24h)" value={msgs24} delta="both directions" icon="✉" seed={4} points={dayCounts} />
         <DeltaTile label="Open Conversations" value={openConvos.length} delta="active < 72h" icon="◎" seed={9} />
-        <DeltaTile label="Replies He Sent" value={wayneReplies} delta="last 14 days" icon="⚡" seed={13} />
+        <DeltaTile label="Replies He Sent" value={noraReplies} delta="last 14 days" icon="⚡" seed={13} />
         <DeltaTile label="Needs a Human" value={escalated} delta={escalated ? "waiting on you" : "all handled"} up={!escalated} icon="🙋" seed={6} />
       </div>
 
       {/* ===== Who he is: rules, abilities ===== */}
       <div className="mb-6 grid gap-5 lg:grid-cols-2">
-        <BandCard title="What Wayne can do on his own" sub="real actions, not chat">
+        <BandCard title="What Nora can do on his own" sub="real actions, not chat">
           <div className="grid gap-2.5 sm:grid-cols-2">
             {ABILITIES.map((a) => (
               <div key={a.name} className="rounded-xl border border-[color:var(--border)] bg-white/[0.02] p-3">
@@ -149,7 +149,7 @@ export default async function WaynePage({ searchParams }: { searchParams: { thre
         <BandCard title="Conversation volume" sub="last 14 days" className="lg:col-span-3">
           <AreaChart points={dayCounts} height={110} label={`${dayCounts.reduce((a, b) => a + b, 0)} messages exchanged`} />
         </BandCard>
-        <BandCard title="What Wayne's been doing" sub="his routines, running now" className="lg:col-span-2">
+        <BandCard title="What Nora's been doing" sub="his routines, running now" className="lg:col-span-2">
           <div className="space-y-2.5">
             {Object.entries(groups).slice(0, 6).map(([raw, g]) => {
               const h = humanizeWorkflow(raw);

@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
       const extras = [p?.gate_code ? `gate ${p.gate_code}` : null, p?.pets ? `pets: ${p.pets}` : null, j.weather_flag ? "⚠️ weather" : null].filter(Boolean).join(", ");
       return `${i + 1}. ${p?.address ?? "?"}${p?.city ? ", " + p.city : ""} — ${j.services?.name ?? ""}${extras ? ` (${extras})` : ""}`;
     });
-    const msg = `Momentum dispatch ${today} — ${crew.name}:\n${lines.join("\n")}\nReply to Wayne with any issues.`;
+    const msg = `Momentum dispatch ${today} — ${crew.name}:\n${lines.join("\n")}\nReply to Nora with any issues.`;
     const r = await sendSms({ to: crew.phone, message: msg, sender: "system", bypassQuietHours: true });
     if (r.ok) sent[crew.name] = jobs.length;
   }

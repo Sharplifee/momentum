@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       job_id,
       type: "crew_reported",
       detail: note ?? null,
-      wayne_summary: note ? `Crew reported: ${note}` : "Crew flagged an exception.",
+      nora_summary: note ? `Crew reported: ${note}` : "Crew flagged an exception.",
     });
     await sendSms({
       to: "+13853076535",

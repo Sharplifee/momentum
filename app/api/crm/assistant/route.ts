@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * Wayne CRM assistant mode (build plan 5): staff chat, read-everything,
+ * Nora CRM assistant mode (build plan 5): staff chat, read-everything,
  * DRAFTS ONLY — this endpoint never sends anything. Drafts come back to the
  * UI for one-tap approval through the normal send paths.
  */
@@ -37,22 +37,22 @@ export async function POST(req: NextRequest) {
   context += `\nPIPELINE COUNTS: ${JSON.stringify(counts)}`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const { data: wayneCfg } = await db.from("system_config").select("value").eq("key", "wayne").single();
-  const model = (wayneCfg?.value as any)?.model ?? "claude-sonnet-4-5";
+  const { data: noraCfg } = await db.from("system_config").select("value").eq("key", "nora").single();
+  const model = (noraCfg?.value as any)?.model ?? "claude-sonnet-4-5";
 
   try {
     const response = await anthropic.messages.create({
       model,
       max_tokens: 1500,
-      system: `You are Wayne in CRM assistant mode, helping Momentum Landscaping staff. You can see business data provided below. You DRAFT messages and quotes when asked — you never send anything; a human taps send. Be concise and practical. Business context:${context}`,
+      system: `You are Nora in CRM assistant mode, helping Momentum Landscaping staff. You can see business data provided below. You DRAFT messages and quotes when asked — you never send anything; a human taps send. Be concise and practical. Business context:${context}`,
       messages: [{ role: "user", content: String(question) }],
     });
     const text = response.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("\n");
-    await logAutomation({ trigger: "wayne.assistant", detail: { by: staff.full_name, tokens_out: response.usage.output_tokens } });
+    await logAutomation({ trigger: "nora.assistant", detail: { by: staff.full_name, tokens_out: response.usage.output_tokens } });
     return NextResponse.json({ ok: true, draft: text });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await logAutomation({ trigger: "wayne.assistant", status: "error", error: msg });
+    await logAutomation({ trigger: "nora.assistant", status: "error", error: msg });
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

@@ -5,7 +5,7 @@ export default function SmsTerms() {
       <h1>SMS Messaging Terms</h1>
       <p>Effective date: July 22, 2026</p>
       <h2>Program description</h2>
-      <p>When you submit a quote request or become a customer, Momentum Landscaping sends you service-related text messages: quote scheduling, booking confirmations, day-before reminders, follow-ups, and replies to your questions. Many messages are sent by Wayne, our AI assistant (see <a href="/legal/ai-disclosure">AI Disclosure</a>).</p>
+      <p>When you submit a quote request or become a customer, Momentum Landscaping sends you service-related text messages: quote scheduling, booking confirmations, day-before reminders, follow-ups, and replies to your questions. Many messages are sent by Nora, our AI assistant (see <a href="/legal/ai-disclosure">AI Disclosure</a>).</p>
       <h2>Opt-in</h2>
       <p>You opt in by submitting our quote form with your mobile number or by texting us first. Consent is not a condition of purchase.</p>
       <h2>Message frequency</h2>

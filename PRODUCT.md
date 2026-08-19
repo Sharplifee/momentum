@@ -28,7 +28,7 @@ SL band"* — Lehi, Saratoga Springs, Eagle Mountain, American Fork, Pleasant
 Grove.
 
 Every surface derives from this through `lib/serviceArea.ts`: the public page,
-site metadata, the legal footer, the SMS HELP reply and Wayne's system prompt.
+site metadata, the legal footer, the SMS HELP reply and Nora's system prompt.
 Switching a zone on or off is the only action needed to change all of them.
 **Do not reintroduce a hardcoded city list.** Nine surfaces used to carry one and
 they disagreed; five still named the territory Momentum had left.
@@ -44,14 +44,14 @@ pricing surcharges exist too. These are **internal invoicing defaults that stamp
 customer copy. Equally, nobody should delete them believing they shouldn't
 exist.
 
-The customer-facing rule is absolute and lives in `lib/wayne.ts`: never state,
+The customer-facing rule is absolute and lives in `lib/nora.ts`: never state,
 estimate or hint at a figure, even if pressed, even if the customer names one.
 Every property is quoted in person. The CTA is always "personal quote", never
 "free quote".
 
-## Wayne
+## Nora
 
-The SMS concierge. `lib/wayne.ts`. Hard rules, all enforced in the prompt:
+The SMS concierge. `lib/nora.ts`. Hard rules, all enforced in the prompt:
 
 - **Utah AI self-identification.** Asked if he is an AI, a bot, or a person, he
   answers truthfully. Never claims to be human.

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
-import { runWayne } from "@/lib/wayne";
+import { runNora } from "@/lib/nora";
 import { toE164 } from "@/lib/phone";
 import { logAutomation } from "@/lib/automation";
 
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
           body: JSON.stringify({
-            type: "wayne_reply",
+            type: "nora_reply",
             to: { id: phone, number: phone },
             sms: { message: "You've been unsubscribed from Momentum Landscaping texts. Reply START to re-subscribe." },
           }),
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       await sendSms({ to: phone, message: "You're re-subscribed to Momentum Landscaping texts. 🌱", thread_id: thread.id, sender: "system", bypassQuietHours: true });
       return NextResponse.json({ ok: true, action: "opt_in" });
     }
-    // fall through to Wayne if they weren't opted out (a "YES" mid-conversation is a real reply)
+    // fall through to Nora if they weren't opted out (a "YES" mid-conversation is a real reply)
   }
 
   // HELP
@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // link customer by phone if not yet linked (Wayne v2: existing customers text in)
+  // link customer by phone if not yet linked (Nora v2: existing customers text in)
   let customerId = thread.customer_id;
   if (!customerId) {
     const { data: cust } = await db.from("customers").select("id").eq("phone", phone).maybeSingle();
@@ -199,19 +199,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // invoke Wayne and reply
-  const reply = await runWayne(
+  // invoke Nora and reply
+  const reply = await runNora(
     { thread_id: thread.id, phone, lead_id: leadId, customer_id: customerId, channel: "sms" },
     text
   ).catch(async (err) => {
-    // Wayne failure (e.g. model API down/out of credits) must never 500 the webhook —
+    // Nora failure (e.g. model API down/out of credits) must never 500 the webhook —
     // message is already stored; escalate so a human follows up.
-    await logAutomation({ trigger: "wayne.sms_error", status: "error", ref_id: thread.id, error: String(err) });
+    await logAutomation({ trigger: "nora.sms_error", status: "error", ref_id: thread.id, error: String(err) });
     await db.from("threads").update({ escalated: true }).eq("id", thread.id);
     return null;
   });
   if (reply) {
-    await sendSms({ to: phone, message: reply, thread_id: thread.id, sender: "wayne" });
+    await sendSms({ to: phone, message: reply, thread_id: thread.id, sender: "nora" });
   }
 
   return NextResponse.json({ ok: true, replied: Boolean(reply) });

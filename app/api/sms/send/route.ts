@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 /**
  * The only outbound SMS HTTP door (build plan 3.3). Internal server code
- * (leads route, Wayne tools, cron) calls lib/sms.ts's sendSms() directly
+ * (leads route, Nora tools, cron) calls lib/sms.ts's sendSms() directly
  * for reliability; this route exists for anything that needs to trigger a
  * send over HTTP (CRM UI "quick SMS", Flow Tester, future staff tools).
  */
