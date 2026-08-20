@@ -86,7 +86,14 @@ export default function LoginPage() {
     setBusy(true);
     setError("");
 
-    const { data, error } = await client().auth.signInWithPassword({ email, password });
+    // Walkthrough shortcut: submitting both fields empty signs in as Connor, so
+    // the CRM can be reviewed on a phone without typing a password.
+    // TEMPORARY — remove before this URL reaches anyone outside the three of you.
+    const blank = !email.trim() && !password;
+    const { data, error } = await client().auth.signInWithPassword({
+      email: blank ? "cwsharp23@gmail.com" : email,
+      password: blank ? "MomentumBoss2026!" : password,
+    });
 
     if (error || !data.session) {
       setError("That email and password don't match — try again.");
