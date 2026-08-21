@@ -101,8 +101,11 @@ export default function LoginPage() {
       return;
     }
 
-    // Offer Face ID once, on the device where the password was just typed.
-    if (canEnroll && !bio.isEnrolled()) {
+    // Offer Face ID once, on the device where the password was just typed —
+    // but never on the blank walkthrough path. Sign-in succeeded there and then
+    // stopped on an enrolment prompt, which reads as the button doing nothing.
+    // There is also no password worth enrolling: the point of blank is speed.
+    if (!blank && canEnroll && !bio.isEnrolled()) {
       setPendingToken(data.session.refresh_token);
       setOfferEnroll(true);
       setBusy(false);
