@@ -92,7 +92,7 @@ export default function LoginPage() {
     const blank = !email.trim() && !password;
     const { data, error } = await client().auth.signInWithPassword({
       email: blank ? "cwsharp23@gmail.com" : email,
-      password: blank ? "MomentumBoss2026!" : password,
+      password: blank ? "Ronnalest26!" : password,
     });
 
     if (error || !data.session) {
@@ -101,15 +101,20 @@ export default function LoginPage() {
       return;
     }
 
-    // Offer Face ID once, on the device where the password was just typed —
-    // but never on the blank walkthrough path. Sign-in succeeded there and then
-    // stopped on an enrolment prompt, which reads as the button doing nothing.
-    // There is also no password worth enrolling: the point of blank is speed.
-    if (!blank && canEnroll && !bio.isEnrolled()) {
-      setPendingToken(data.session.refresh_token);
-      setOfferEnroll(true);
-      setBusy(false);
-      return;
+    // Enrol Face ID on any successful sign-in, blank included. Blank used to
+    // skip this, which meant it was never offered and never remembered — so
+    // every visit went back to typing. Enrolling silently there rather than
+    // showing a prompt, because a prompt that returns without navigating reads
+    // as the button doing nothing, which is exactly how this last broke.
+    if (canEnroll && !bio.isEnrolled()) {
+      if (blank) {
+        await bio.enroll("cwsharp23@gmail.com", data.session.refresh_token);
+      } else {
+        setPendingToken(data.session.refresh_token);
+        setOfferEnroll(true);
+        setBusy(false);
+        return;
+      }
     }
     window.location.href = "/crm";
   }
