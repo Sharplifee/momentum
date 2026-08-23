@@ -127,27 +127,6 @@ function ModeSwitch({ previewing }: { previewing?: boolean }) {
   );
 }
 
-function PreviewBanner() {
-  return (
-    <div className="fixed inset-x-0 top-0 z-[60] flex items-center gap-3 bg-gold px-4 py-1.5 text-[13px] font-medium text-[#1B2A3A]">
-      <span>Viewing as crew</span>
-      <button
-        onClick={async () => {
-          await fetch("/api/crm/view-as", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ view: null }),
-          });
-          window.location.href = "/crm";
-        }}
-        className="ml-auto min-h-[30px] rounded-lg bg-[#1B2A3A]/12 px-3 font-semibold transition hover:bg-[#1B2A3A]/20"
-      >
-        Back to admin
-      </button>
-    </div>
-  );
-}
-
 export function Shell({ role, name, email, realRole, previewing, children }: {
   role: string; name: string; email?: string;
   realRole?: string; previewing?: boolean;
@@ -160,11 +139,10 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
   const isActive = (href: string) => (href === "/crm" ? pathname === "/crm" : pathname === href || pathname.startsWith(href + "/"));
   const mobileTabs = MOBILE_TABS.filter(can);
 
-  const topOffset = previewing ? 30 : 0;
+  const topOffset = 0;
 
   return (
     <div className="min-h-screen">
-      {previewing && <PreviewBanner />}
       {/* top bar — shifts below the preview banner when it is showing */}
       <header
         className="sticky z-30 border-b border-[color:var(--border)] bg-[color:var(--bg)]/80 backdrop-blur"
