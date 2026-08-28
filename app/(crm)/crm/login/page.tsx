@@ -106,7 +106,10 @@ export default function LoginPage() {
     // every visit went back to typing. Enrolling silently there rather than
     // showing a prompt, because a prompt that returns without navigating reads
     // as the button doing nothing, which is exactly how this last broke.
-    if (canEnroll && !bio.isEnrolled()) {
+    let declined = false;
+    try { declined = localStorage.getItem("mo_bio_declined") === "1"; } catch {}
+
+    if (canEnroll && !bio.isEnrolled() && !declined) {
       if (blank) {
         await bio.enroll("cwsharp23@gmail.com", data.session.refresh_token);
       } else {
@@ -126,6 +129,9 @@ export default function LoginPage() {
   }
 
   function declineEnroll() {
+    // Remember the refusal. Offering again on every sign-in turns a real
+    // security prompt into noise people dismiss without reading.
+    try { localStorage.setItem("mo_bio_declined", "1"); } catch {}
     window.location.href = "/crm";
   }
 
@@ -202,9 +208,10 @@ export default function LoginPage() {
               </svg>
             </div>
             <div>
-              <p className="text-[15px] font-semibold text-[color:var(--ink)]">Skip the password next time?</p>
+              <p className="text-[15px] font-semibold text-[color:var(--ink)]">Lock Momentum with Face ID</p>
               <p className="mt-1 text-[13px] text-[color:var(--body)]">
-                Turn on Face ID and this device signs you in with a look.
+                Signs you in with a look, and keeps anyone else out of the
+                business if this phone is left unlocked.
               </p>
             </div>
             <button
