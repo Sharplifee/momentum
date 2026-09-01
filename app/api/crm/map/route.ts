@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     db.from("jobs")
       .select(`id, scheduled_date, status,
                customers!inner ( id, full_name ),
-               properties!inner ( id, address, city, lat, lng, parcel_ring, geofence_m )`)
+               properties!inner ( id, address, city, lat, lng, parcel_ring, geofence_radius_m )`)
       .gte("scheduled_date", from).lte("scheduled_date", to)
       .order("scheduled_date"),
     db.from("leads")
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       lng: j.properties.lng,
       // The real lot, not an approximation of it.
       ring: j.properties.parcel_ring ?? null,
-      radius_m: j.properties.parcel_ring ? null : (j.properties.geofence_m ?? 45),
+      radius_m: j.properties.parcel_ring ? null : (j.properties.geofence_radius_m ?? 45),
     }));
 
   const quote = (quotes ?? [])
