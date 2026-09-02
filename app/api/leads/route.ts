@@ -3,7 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { leadIntakeSchema } from "@/lib/zod/lead";
 import { toE164 } from "@/lib/phone";
 import { getAvailability } from "@/lib/availability";
-import { sendSms, renderTemplate } from "@/lib/sms";
+import { sendSms } from "@/lib/sms";
+import { composeNoraOpener } from "@/lib/noraOpener";
 import { sendMetaCapiEvent, deriveFbc } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
 import { corsHeaders } from "@/lib/cors";
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
         zone_id: matchedZoneId,
         service_interest: input.service_interest ?? null,
         requested_window: input.requested_window ?? null,
+        requested_days: input.requested_days?.length ? input.requested_days : null,
         source,
         fbclid: input.fbclid ?? null,
         fbp: input.fbp ?? null,
@@ -175,22 +177,20 @@ export async function POST(req: NextRequest) {
     .select("id")
     .single();
 
-  const { data: template } = await db
-    .from("sms_templates")
-    .select("body")
-    .eq("name", "lead_confirmation")
-    .single();
-
-  const [day1, day2] = availableDays;
-  const confirmationBody = template
-    ? renderTemplate(template.body, {
-        first_name: input.full_name.split(" ")[0],
-        address: input.address,
-        window: input.requested_window ?? "your preferred window",
-        day_1: day1 ? new Date(day1.date).toLocaleDateString("en-US", { weekday: "long" }) : "this week",
-        day_2: day2 ? new Date(day2.date).toLocaleDateString("en-US", { weekday: "long" }) : "next week",
-      })
-    : `Hi ${input.full_name.split(" ")[0]}, this is Nora from Momentum Landscaping — got your request for ${input.address}. What day works best?`;
+  // The old path rendered sms_templates.lead_confirmation, so every lead got a
+  // byte-identical text. Identical texts read as a blast and get ignored, and an
+  // ignored opener is exactly how a quote visit turns into a no-show. Compose it
+  // instead, reading back the window and days the person actually picked, seeded
+  // off the lead id so a retry re-sends the same words rather than new ones.
+  const confirmationBody = composeNoraOpener({
+    firstName: input.full_name.split(" ")[0],
+    window: input.requested_window ?? null,
+    days: input.requested_days ?? null,
+    fallbackDays: availableDays
+      .slice(0, 2)
+      .map((d) => new Date(d.date).toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Denver" })),
+    seed: leadId,
+  });
 
   if (!isTest) {
     await sendSms({ to: phone, message: confirmationBody, thread_id: thread?.id, sender: "nora" });
@@ -224,7 +224,15 @@ export async function POST(req: NextRequest) {
     trigger: "leads.create",
     ref_id: leadId,
     status: "ok",
-    detail: { phone, zone_id: zoneId, is_test: isTest, source, available_days: availableDays },
+    detail: {
+      phone,
+      zone_id: zoneId,
+      is_test: isTest,
+      source,
+      available_days: availableDays,
+      requested_window: input.requested_window ?? null,
+      requested_days: input.requested_days ?? null,
+    },
   });
 
   return NextResponse.json({ ok: true, lead_id: leadId, thread_id: thread?.id, available_days: availableDays }, { headers: cors });
