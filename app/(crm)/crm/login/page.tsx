@@ -8,6 +8,7 @@ type Mode = "checking" | "biometric" | "password";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [resolvedEmail, setResolvedEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
@@ -86,13 +87,16 @@ export default function LoginPage() {
     setBusy(true);
     setError("");
 
-    // Walkthrough shortcut: submitting both fields empty signs in as Connor, so
-    // the CRM can be reviewed on a phone without typing a password.
-    // TEMPORARY — remove before this URL reaches anyone outside the three of you.
-    const blank = !email.trim() && !password;
+    // A crew member can sign in with just their name ("Peter Zaragoza"):
+    // anything without an @ maps to name@momentumlandscapingut.com, which is
+    // how name-only crew accounts are created. Real emails pass through as-is.
+    const id = email.trim();
+    const loginEmail = id.includes("@")
+      ? id
+      : `${id.toLowerCase().replace(/[^a-z0-9]/g, "")}@momentumlandscapingut.com`;
     const { data, error } = await client().auth.signInWithPassword({
-      email: blank ? "cwsharp23@gmail.com" : email,
-      password: blank ? "Ronnalest26!" : password,
+      email: loginEmail,
+      password,
     });
 
     if (error || !data.session) {
@@ -101,30 +105,23 @@ export default function LoginPage() {
       return;
     }
 
-    // Enrol Face ID on any successful sign-in, blank included. Blank used to
-    // skip this, which meant it was never offered and never remembered — so
-    // every visit went back to typing. Enrolling silently there rather than
-    // showing a prompt, because a prompt that returns without navigating reads
-    // as the button doing nothing, which is exactly how this last broke.
+    // Offer Face ID on any successful sign-in so the next visit is one tap.
     let declined = false;
     try { declined = localStorage.getItem("mo_bio_declined") === "1"; } catch {}
 
     if (canEnroll && !bio.isEnrolled() && !declined) {
-      if (blank) {
-        await bio.enroll("cwsharp23@gmail.com", data.session.refresh_token);
-      } else {
-        setPendingToken(data.session.refresh_token);
-        setOfferEnroll(true);
-        setBusy(false);
-        return;
-      }
+      setPendingToken(data.session.refresh_token);
+      setResolvedEmail(loginEmail);
+      setOfferEnroll(true);
+      setBusy(false);
+      return;
     }
     window.location.href = "/crm";
   }
 
   async function acceptEnroll() {
     setBusy(true);
-    if (pendingToken) await bio.enroll(email, pendingToken);
+    if (pendingToken) await bio.enroll(resolvedEmail || email, pendingToken);
     window.location.href = "/crm";
   }
 
@@ -239,7 +236,7 @@ export default function LoginPage() {
             className="mo-card aiv-glow space-y-4 p-6 sm:p-7"
           >
             <label className="block" htmlFor="email">
-              <span className="mb-1.5 block text-[12px] font-medium text-[color:var(--body)]">Email</span>
+              <span className="mb-1.5 block text-[12px] font-medium text-[color:var(--body)]">Email or name</span>
               <div className="flex items-center gap-2.5 rounded-2xl border border-[color:var(--border)] bg-white/[0.05] px-4 transition focus-within:border-teal focus-within:bg-white/[0.07] focus-within:shadow-glow">
                 <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[color:var(--body)]/60" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m3 7 9 6 9-6"/></svg>
                 <input
@@ -247,11 +244,12 @@ export default function LoginPage() {
                   name="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  type="email"
+                  type="text"
                   required
                   autoComplete="username"
-                  inputMode="email"
-                  placeholder="you@momentumlandscapingut.com"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  placeholder="Email or first and last name"
                   spellCheck={false}
                   className="h-12 w-full bg-transparent text-[15px] text-[color:var(--ink)] outline-none placeholder:text-[color:var(--body)]/40"
                 />
