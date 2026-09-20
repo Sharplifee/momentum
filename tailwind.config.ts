@@ -1,6 +1,10 @@
 import type { Config } from "tailwindcss";
 
-/** Colors mirror lib/theme.ts (brand tokens). darkMode via class on <html>. */
+/**
+ * The palette. This file and app/globals.css are where color lives — nothing
+ * mirrors anything else. (lib/theme.ts holds only status→class mappings; its
+ * old `brand` token object was dead and is gone.) darkMode via class on <html>.
+ */
 const config: Config = {
   darkMode: "class",
   content: ["./app/**/*.{js,ts,jsx,tsx,mdx}", "./components/**/*.{js,ts,jsx,tsx,mdx}"],

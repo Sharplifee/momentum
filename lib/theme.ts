@@ -1,32 +1,23 @@
 /**
- * Momentum brand tokens — the SINGLE source of truth for CRM + portal color.
- * Mirrors momentumlandscapingut.com. No screen may hardcode a hex outside this file
- * (Tailwind classes reference these via tailwind.config.ts; CSS vars in globals.css
- * drive light/dark). Gold is reserved for WINS only (Closed Won, Paid).
+ * Status → Tailwind class mappings. This file holds NO color values.
+ *
+ * Color lives in two places, and neither of them is here:
+ *   • `tailwind.config.ts` — the palette behind class names like `bg-teal/20`
+ *   • `app/globals.css`    — the CSS custom properties (`--bg`, `--ink`, …)
+ *
+ * This file used to export a `brand` object claiming to be "the SINGLE source
+ * of truth for CRM + portal color." It stopped being true at the violet
+ * repaint on 2026-07-22 and was dead code by the time it was removed on
+ * 2026-08-03 — nothing imported it, and its light teal/navy hexes described a
+ * UI that no longer existed. A second set of color values that nothing reads
+ * is worse than none: it reads as authoritative and quietly misleads.
+ *
+ * What remains is the semantic layer — which status gets which treatment.
+ * The class strings resolve through tailwind.config.ts, so a repaint of the
+ * palette repaints these automatically and correctly.
+ *
+ * Gold is reserved for WINS only (Closed Won, Paid).
  */
-export const brand = {
-  // surfaces (light)
-  bg: "#fbfcfd",
-  bgAlt: "#f3f7f9",
-  card: "rgba(255,255,255,0.78)",
-  cardSolid: "#ffffff",
-  border: "#e3ebef",
-  // surfaces (dark)
-  bgDark: "#14202f",
-  bgAltDark: "#1c2e44",
-  cardDark: "rgba(28,46,68,0.72)",
-  borderDark: "#2b3f57",
-  // ink
-  navy: "#1c2e44", // headings
-  slate: "#5c7280", // body
-  // brand
-  teal: "#4a8fb5", // primary action
-  tealHover: "#2f6c8e",
-  ice: "#96b2be", // accent
-  gold: "oklch(0.78 0.10 70)", // WINS ONLY
-  // status
-  red: "#c4573e",
-} as const;
 
 export type StageKey = "new" | "contacted" | "quote_sent" | "closed_won" | "not_qualified" | "stale";
 
