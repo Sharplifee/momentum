@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { GRAPH_VERSION } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
+import { fetchMetaLead, ingestMetaLead } from "@/lib/metaLeadIntake";
 
 export const runtime = "nodejs";
 
@@ -72,49 +72,6 @@ function signatureValid(raw: string, header: string | null, appSecret: string): 
   return crypto.timingSafeEqual(Buffer.from(got, "hex"), Buffer.from(expected, "hex"));
 }
 
-/** Meta's field_data is a list of {name, values[]} — flatten to a plain object. */
-function flatten(fieldData: Array<{ name: string; values: string[] }>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const f of fieldData ?? []) {
-    const v = (f.values ?? []).filter(Boolean).join(" ").trim();
-    if (v) out[f.name] = v;
-  }
-  return out;
-}
-
-/**
- * Meta prefixes or renames keys depending on how the question was built, so
- * match on intent rather than an exact key we might not get.
- */
-function pick(fields: Record<string, string>, candidates: string[]): string | undefined {
-  for (const c of candidates) if (fields[c]) return fields[c];
-  const keys = Object.keys(fields);
-  for (const c of candidates) {
-    const hit = keys.find((k) => k.toLowerCase().includes(c));
-    if (hit) return fields[hit];
-  }
-  return undefined;
-}
-
-async function fetchLead(leadgenId: string, token: string) {
-  const url =
-    `https://graph.facebook.com/${GRAPH_VERSION}/${leadgenId}` +
-    `?fields=field_data,created_time,ad_id,adset_id,campaign_id,form_id,platform` +
-    `&access_token=${encodeURIComponent(token)}`;
-  const res = await fetch(url, { cache: "no-store" });
-  const json = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(json?.error?.message ?? `graph_${res.status}`);
-  return json as {
-    field_data: Array<{ name: string; values: string[] }>;
-    ad_id?: string;
-    adset_id?: string;
-    campaign_id?: string;
-    form_id?: string;
-    platform?: string;
-    created_time?: string;
-  };
-}
-
 export async function POST(req: NextRequest) {
   const raw = await req.text();
   const cfg = await loadConfig();
@@ -137,71 +94,11 @@ export async function POST(req: NextRequest) {
 
       try {
         if (!cfg.page_access_token) throw new Error("no_page_access_token");
-        const lead = await fetchLead(leadgenId, cfg.page_access_token);
-        const fields = flatten(lead.field_data);
-
-        const full_name =
-          pick(fields, ["full_name", "name"]) ??
-          [pick(fields, ["first_name"]), pick(fields, ["last_name"])].filter(Boolean).join(" ").trim();
-        const phone = pick(fields, ["phone_number", "phone"]);
-        const address = pick(fields, ["address", "street"]);
-        const requested_window = pick(fields, ["requested_window", "window", "time"]);
-        const email = pick(fields, ["email"]);
-
-        if (!full_name || !phone || !address) {
-          await logAutomation({
-            trigger: "meta.leadgen.incomplete",
-            ref_id: leadgenId,
-            status: "error",
-            detail: { fields },
-          });
-          results.push({ leadgen_id: leadgenId, ok: false, reason: "missing_required_fields" });
-          continue;
-        }
-
-        // Hand off to the one true intake path. CRON_SECRET marks it internal so
-        // the public rate limiter doesn't throttle a campaign that's working.
+        if (!cfg.page_access_token) throw new Error("no_page_access_token");
+        const lead = await fetchMetaLead(leadgenId, cfg.page_access_token);
         const base = process.env.APP_BASE_URL ?? `https://${req.headers.get("host")}`;
-        const res = await fetch(`${base}/api/leads`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${process.env.CRON_SECRET}`,
-            "x-momentum-source": "meta_lead_ad",
-          },
-          body: JSON.stringify({
-            full_name,
-            phone,
-            address,
-            email: email ?? undefined,
-            requested_window,
-            utm: {
-              source: "meta",
-              medium: "paid_social",
-              campaign: lead.campaign_id,
-              content: lead.ad_id,
-              term: lead.adset_id,
-            },
-            landing_page: `meta:${lead.platform ?? "facebook"}/form/${lead.form_id ?? "unknown"}`,
-            referrer: "meta_lead_ad",
-          }),
-        });
-
-        const out = await res.json().catch(() => ({}));
-        results.push({ leadgen_id: leadgenId, ok: res.ok, lead_id: out?.lead_id });
-
-        await logAutomation({
-          trigger: "meta.leadgen.received",
-          ref_id: out?.lead_id ?? leadgenId,
-          status: res.ok ? "ok" : "error",
-          detail: {
-            leadgen_id: leadgenId,
-            form_id: lead.form_id,
-            ad_id: lead.ad_id,
-            campaign_id: lead.campaign_id,
-            platform: lead.platform,
-          },
-        });
+        const r = await ingestMetaLead(lead, { base, via: "webhook" });
+        results.push({ leadgen_id: leadgenId, ok: r.ok, lead_id: r.lead_id, reason: r.skipped });
       } catch (err) {
         await logAutomation({
           trigger: "meta.leadgen.error",

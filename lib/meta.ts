@@ -22,6 +22,10 @@ export type CapiEventInput = {
   client_ip?: string;
   client_user_agent?: string;
   external_id?: string | null;
+  /** Meta instant-form lead id. When present the event is tied to the ad that produced it. */
+  meta_lead_id?: string | null;
+  /** unix seconds; defaults to now. Meta accepts up to 7 days back. */
+  event_time?: number;
 };
 
 /** Graph API version. v26.0 shipped 2026-07-29; v21.0 deprecates 2027-01-21.
@@ -45,12 +49,23 @@ export async function sendMetaCapiEvent(input: CapiEventInput) {
   const pixelId = process.env.META_PIXEL_ID;
   const token = process.env.META_CAPI_TOKEN;
 
+  // Instant-form leads: look up Meta's own lead id so every downstream event
+  // (Lead, Schedule, Purchase) attaches to the ad, not just to a hashed phone.
+  let metaLeadId = input.meta_lead_id ?? null;
+  if (!metaLeadId && input.lead_id) {
+    const { data: l } = await db.from("leads").select("meta_lead_id").eq("id", input.lead_id).maybeSingle();
+    metaLeadId = (l?.meta_lead_id as string | null) ?? null;
+  }
+  const isFormLead = !!metaLeadId;
+
   const userData: Record<string, unknown> = {};
+  if (metaLeadId) userData.lead_id = Number(metaLeadId);
   if (input.email) userData.em = [sha256(input.email)];
   if (input.phone) userData.ph = [sha256(input.phone.replace(/[^\d]/g, ""))];
   if (input.fbp) userData.fbp = input.fbp;
-  if (input.client_ip) userData.client_ip_address = input.client_ip;
-  if (input.client_user_agent) userData.client_user_agent = input.client_user_agent;
+  // A form lead never touched a browser of ours — the IP/UA here would be our server's.
+  if (input.client_ip && !isFormLead) userData.client_ip_address = input.client_ip;
+  if (input.client_user_agent && !isFormLead) userData.client_user_agent = input.client_user_agent;
   const fbc = deriveFbc(input.fbc, input.fbclid);
   if (fbc) userData.fbc = fbc;
   // external_id is a free, high-weight match signal — a stable hashed id we own.
@@ -60,14 +75,15 @@ export async function sendMetaCapiEvent(input: CapiEventInput) {
     data: [
       {
         event_name: input.event_name,
-        event_time: Math.floor(Date.now() / 1000),
+        event_time: input.event_time ?? Math.floor(Date.now() / 1000),
         event_id: input.event_id,
-        event_source_url: input.event_source_url,
-        action_source: input.action_source ?? "website",
+        event_source_url: isFormLead ? undefined : input.event_source_url,
+        action_source: isFormLead ? "system_generated" : input.action_source ?? "website",
         user_data: userData,
-        custom_data: input.value
-          ? { value: input.value, currency: input.currency ?? "USD" }
-          : undefined,
+        custom_data: {
+          ...(input.value ? { value: input.value, currency: input.currency ?? "USD" } : {}),
+          ...(isFormLead ? { event_source: "crm", lead_event_source: "Momentum CRM" } : {}),
+        },
       },
     ],
   };

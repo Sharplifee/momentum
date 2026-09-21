@@ -22,6 +22,9 @@ export const leadIntakeSchema = z.object({
       term: z.string().optional(),
     })
     .optional(),
+  // Meta instant-form lead id (15-17 digits) — dedupe key and CAPI user_data.lead_id
+  meta_lead_id: z.string().regex(/^\d{10,20}$/).optional(),
+  meta_created_time: z.string().max(40).optional(),
   landing_page: z.string().max(500).optional(),
   referrer: z.string().max(500).optional(),
   // honeypot — real users never fill this in; bots that autofill every field do

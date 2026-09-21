@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Instrument_Sans } from "next/font/google";
 import "./globals.css";
-import { MetaPixel } from "@/components/MetaPixel";
 import { getServiceArea, citiesSentence } from "@/lib/serviceArea";
 
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-display", display: "swap" });
@@ -31,7 +30,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen font-sans antialiased">
-        <MetaPixel />
         {children}
       </body>
     </html>

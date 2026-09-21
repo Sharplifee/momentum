@@ -61,6 +61,9 @@ export async function POST(req: NextRequest) {
 
   const db = supabaseAdmin();
   const isTest = req.headers.get("x-momentum-test") === "1";
+  // Backfill = an old Meta form lead being recorded after the fact: land it in the
+  // CRM and report it to Meta, but never text the person or page the team.
+  const isBackfill = internal && req.headers.get("x-momentum-backfill") === "1";
   const declaredSource = req.headers.get("x-momentum-source");
   const source = isTest
     ? "test"
@@ -73,6 +76,15 @@ export async function POST(req: NextRequest) {
   // v_attribution_quality scores fbc, client_ip and user_agent off the leads row.
   const userAgent = req.headers.get("user-agent") ?? null;
   const derivedFbc = deriveFbc(input.fbc ?? null, input.fbclid ?? null);
+
+  if (input.meta_lead_id) {
+    const { data: already } = await db.from("leads").select("id").eq("meta_lead_id", input.meta_lead_id).maybeSingle();
+    if (already) return NextResponse.json({ ok: true, lead_id: already.id, deduped: true }, { headers: cors });
+  }
+  const metaCreated = input.meta_created_time ? new Date(input.meta_created_time) : null;
+  const metaEventTime = metaCreated && !isNaN(metaCreated.getTime())
+    ? Math.max(Math.floor(metaCreated.getTime() / 1000), Math.floor(Date.now() / 1000) - 6 * 86400)
+    : undefined;
 
   // dedupe: same phone within 24h -> append a lead_event on the existing lead instead of creating a new one
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -128,6 +140,8 @@ export async function POST(req: NextRequest) {
         utm: input.utm ?? null,
         landing_page: input.landing_page ?? null,
         referrer: input.referrer ?? null,
+        meta_lead_id: input.meta_lead_id ?? null,
+        ...(isBackfill && metaCreated && !isNaN(metaCreated.getTime()) ? { created_at: metaCreated.toISOString() } : {}),
       })
       .select("id, zone_id")
       .single();
@@ -162,6 +176,8 @@ export async function POST(req: NextRequest) {
     fbclid: input.fbclid,
     external_id: leadId,
     lead_id: leadId,
+    meta_lead_id: input.meta_lead_id ?? null,
+    event_time: metaEventTime,
     event_source_url: input.landing_page,
     client_ip: ip !== "unknown" ? ip : undefined,
     client_user_agent: userAgent ?? undefined,
@@ -192,10 +208,10 @@ export async function POST(req: NextRequest) {
     seed: leadId,
   });
 
-  if (!isTest) {
+  if (!isTest && !isBackfill) {
     await sendSms({ to: phone, message: confirmationBody, thread_id: thread?.id, sender: "nora" });
   } else {
-    await logAutomation({ trigger: "sms.send.skipped_test_lead", ref_id: leadId, status: "skipped" });
+    await logAutomation({ trigger: isBackfill ? "sms.send.skipped_backfill" : "sms.send.skipped_test_lead", ref_id: leadId, status: "skipped" });
   }
 
   // team alert per system_config.team_alerts mode
@@ -203,7 +219,7 @@ export async function POST(req: NextRequest) {
   const recipients = (alertCfg?.value?.mode === "launch"
     ? alertCfg.value.launch_recipients
     : alertCfg?.value?.recipients) as string[] | undefined;
-  if (recipients?.length && !isTest) {
+  if (recipients?.length && !isTest && !isBackfill) {
     for (const r of recipients) {
       await sendSms({
         to: r,
@@ -214,7 +230,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await db
+  if (!isBackfill) await db
     .from("leads")
     .update({ first_response_at: new Date().toISOString() })
     .eq("id", leadId)
@@ -228,6 +244,7 @@ export async function POST(req: NextRequest) {
       phone,
       zone_id: zoneId,
       is_test: isTest,
+      backfill: isBackfill,
       source,
       available_days: availableDays,
       requested_window: input.requested_window ?? null,
