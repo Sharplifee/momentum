@@ -1,5 +1,5 @@
 /**
- * Nora's opening text on a fresh lead.
+ * Norma's opening text on a fresh lead.
  *
  * The old path rendered one row out of sms_templates, so every person on the
  * list got a byte-identical message. That reads as a blast, and a blast gets
@@ -9,7 +9,7 @@
  * lead always produces the same text (a retry is not a second, different text),
  * different leads read differently.
  *
- * Every variant does the same three jobs — identify Nora and Momentum, read
+ * Every variant does the same three jobs — identify Norma and Momentum, read
  * back what the person actually picked, and end on a question that is cheap to
  * answer. The read-back is the whole point: a confirmed slot does not no-show.
  *
@@ -68,11 +68,11 @@ export function humanizeDays(days?: string[] | null, conj = "or"): string | null
 export const OPEN_WEEK = "__OPEN_WEEK__";
 
 const INTROS = [
-  (n: string) => `Hi ${n} — Nora here, Momentum Landscaping's AI assistant.`,
-  (n: string) => `Hey ${n}, this is Nora, the AI assistant over at Momentum Landscaping.`,
-  (n: string) => `${n} — it's Nora from Momentum Landscaping (their AI assistant).`,
-  (n: string) => `Hi ${n}, Nora with Momentum Landscaping here — I'm their AI assistant.`,
-  (n: string) => `Hey ${n} — Nora from Momentum Landscaping, their AI assistant.`,
+  (n: string) => `Hi ${n} — Norma here, Momentum Landscaping's AI assistant.`,
+  (n: string) => `Hey ${n}, this is Norma, the AI assistant over at Momentum Landscaping.`,
+  (n: string) => `${n} — it's Norma from Momentum Landscaping (their AI assistant).`,
+  (n: string) => `Hi ${n}, Norma with Momentum Landscaping here — I'm their AI assistant.`,
+  (n: string) => `Hey ${n} — Norma from Momentum Landscaping, their AI assistant.`,
 ];
 
 /** exactly two options — "either" is only correct here */

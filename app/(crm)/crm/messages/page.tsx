@@ -81,7 +81,7 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      {/* ===== Nora, the person ===== */}
+      {/* ===== Norma, the person ===== */}
       <div className="mo-card aiv-glow mb-6 flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
         <div className="relative shrink-0">
           <div className="grid h-20 w-20 place-items-center rounded-3xl bg-gradient-to-br from-teal to-teal-hover font-display text-3xl font-bold text-white shadow-glow ring-1 ring-white/20">W</div>
@@ -90,10 +90,10 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
           </span>
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[30px] font-bold leading-tight tracking-tight text-[color:var(--ink)]">Nora</h1>
+          <h1 className="font-display text-[30px] font-bold leading-tight tracking-tight text-[color:var(--ink)]">Norma</h1>
           <p className="text-sm font-medium text-teal">Customer relations · answers every text within seconds</p>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--body)]">
-            Nora is the voice customers meet first. He&apos;s friendly, brief, and Utah-neighborly — asks one question at a time,
+            Norma is the voice customers meet first. He&apos;s friendly, brief, and Utah-neighborly — asks one question at a time,
             uses first names, and never sends a wall of text. He tells the truth about being an AI if asked, never invents a day or a price,
             and hands the conversation to a real person the moment something needs a human touch.
           </p>
@@ -109,7 +109,7 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
 
       {/* ===== Who he is: rules, abilities ===== */}
       <div className="mb-6 grid gap-5 lg:grid-cols-2">
-        <BandCard title="What Nora can do on his own" sub="real actions, not chat">
+        <BandCard title="What Norma can do on his own" sub="real actions, not chat">
           <div className="grid gap-2.5 sm:grid-cols-2">
             {ABILITIES.map((a) => (
               <div key={a.name} className="rounded-xl border border-[color:var(--border)] bg-white/[0.02] p-3">
@@ -149,7 +149,7 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
         <BandCard title="Conversation volume" sub="last 14 days" className="lg:col-span-3">
           <AreaChart points={dayCounts} height={110} label={`${dayCounts.reduce((a, b) => a + b, 0)} messages exchanged`} />
         </BandCard>
-        <BandCard title="What Nora's been doing" sub="his routines, running now" className="lg:col-span-2">
+        <BandCard title="What Norma's been doing" sub="his routines, running now" className="lg:col-span-2">
           <div className="space-y-2.5">
             {Object.entries(groups).slice(0, 6).map(([raw, g]) => {
               const h = humanizeWorkflow(raw);

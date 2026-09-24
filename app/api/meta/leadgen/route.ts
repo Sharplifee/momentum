@@ -13,7 +13,7 @@ export const runtime = "nodejs";
  * not send us the answers — it sends a leadgen_id and expects us to go get them.
  * This route does that round trip and then hands the result to /api/leads, so a
  * lead born in an ad walks the exact same path as one from the website: same
- * dedupe, same zone resolution, same Nora confirmation text, same CAPI event,
+ * dedupe, same zone resolution, same Norma confirmation text, same CAPI event,
  * same crew alert. One intake path, not two that drift apart.
  *
  * Config lives in system_config.meta_leadgen rather than env vars so it can be

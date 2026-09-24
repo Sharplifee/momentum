@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       await sendSms({ to: phone, message: "You're re-subscribed to Momentum Landscaping texts. 🌱", thread_id: thread.id, sender: "system", bypassQuietHours: true });
       return NextResponse.json({ ok: true, action: "opt_in" });
     }
-    // fall through to Nora if they weren't opted out (a "YES" mid-conversation is a real reply)
+    // fall through to Norma if they weren't opted out (a "YES" mid-conversation is a real reply)
   }
 
   // HELP
@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // link customer by phone if not yet linked (Nora v2: existing customers text in)
+  // link customer by phone if not yet linked (Norma v2: existing customers text in)
   let customerId = thread.customer_id;
   if (!customerId) {
     const { data: cust } = await db.from("customers").select("id").eq("phone", phone).maybeSingle();
@@ -199,12 +199,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // invoke Nora and reply
+  // invoke Norma and reply
   const reply = await runNora(
     { thread_id: thread.id, phone, lead_id: leadId, customer_id: customerId, channel: "sms" },
     text
   ).catch(async (err) => {
-    // Nora failure (e.g. model API down/out of credits) must never 500 the webhook —
+    // Norma failure (e.g. model API down/out of credits) must never 500 the webhook —
     // message is already stored; escalate so a human follows up.
     await logAutomation({ trigger: "nora.sms_error", status: "error", ref_id: thread.id, error: String(err) });
     await db.from("threads").update({ escalated: true }).eq("id", thread.id);

@@ -47,7 +47,7 @@ export function SettingsPanel({ services, zones, config, templates, crews }: any
       </section>
 
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">Nora</h2>
+        <h2 className="mb-2 font-semibold">Norma</h2>
         <p className="text-sm">Model: <strong>{noraCfg?.model}</strong> · prompt version {noraCfg?.version}</p>
       </section>
 

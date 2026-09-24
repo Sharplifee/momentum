@@ -4,7 +4,7 @@ import { runNora } from "@/lib/nora";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-/** Direct Nora invocation — used by the inbound SMS webhook and (later) the portal/CRM.
+/** Direct Norma invocation — used by the inbound SMS webhook and (later) the portal/CRM.
  *  Guarded: internal callers only (CRON_SECRET). The SMS webhook calls runNora()
  *  in-process, so nothing public ever needs this route. */
 export async function POST(req: NextRequest) {

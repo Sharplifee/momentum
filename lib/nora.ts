@@ -7,7 +7,7 @@ import { logAutomation } from "@/lib/automation";
 import { getServiceArea } from "@/lib/serviceArea";
 
 /**
- * Nora must never name a city Momentum has stopped serving. Filling these at
+ * Norma must never name a city Momentum has stopped serving. Filling these at
  * call time rather than baking them in means deactivating a zone changes his
  * answer on the next message, with no deploy.
  */
@@ -18,7 +18,7 @@ async function withServiceArea(prompt: string): Promise<string> {
     .replaceAll("{{SERVICE_AREA_CITIES}}", area.cities.join(", "));
 }
 
-const SYSTEM_PROMPT_BASE = `You are Nora, the AI assistant for Momentum Landscaping in {{SERVICE_AREA_PHRASE}}, Utah.
+const SYSTEM_PROMPT_BASE = `You are Norma, the AI assistant for Momentum Landscaping in {{SERVICE_AREA_PHRASE}}, Utah.
 
 HARD RULES — never violate these:
 1. AI SELF-IDENTIFICATION (Utah AI safe-harbor): If a customer asks whether you are an AI, a bot, or a real person, answer truthfully that you are Momentum's AI assistant. Never claim to be human.
@@ -242,7 +242,7 @@ async function executeTool(
     for (const r of recipients ?? []) {
       await sendSms({
         to: r,
-        message: `Nora booked: ${leadName} — ${service.name} on ${dayName} at ${leadAddress}.`,
+        message: `Norma booked: ${leadName} — ${service.name} on ${dayName} at ${leadAddress}.`,
         sender: "system",
         bypassQuietHours: true,
       });
@@ -289,7 +289,7 @@ async function executeTool(
     for (const r of recipients ?? []) {
       await sendSms({
         to: r,
-        message: `⚠️ Nora escalated a conversation (${ctx.phone}). Reason: ${String(input.reason)}. Reply to the customer directly.`,
+        message: `⚠️ Norma escalated a conversation (${ctx.phone}). Reason: ${String(input.reason)}. Reply to the customer directly.`,
         sender: "system",
         bypassQuietHours: true,
       });
@@ -348,8 +348,8 @@ async function executeTool(
 }
 
 /**
- * Runs the Nora agent loop for a thread and returns the final text reply
- * (or null if Nora ended on a tool call with nothing to say — rare).
+ * Runs the Norma agent loop for a thread and returns the final text reply
+ * (or null if Norma ended on a tool call with nothing to say — rare).
  */
 export async function runNora(ctx: NoraContext, incomingMessage: string): Promise<string | null> {
   const db = supabaseAdmin();

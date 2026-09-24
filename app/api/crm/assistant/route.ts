@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * Nora CRM assistant mode (build plan 5): staff chat, read-everything,
+ * Norma CRM assistant mode (build plan 5): staff chat, read-everything,
  * DRAFTS ONLY — this endpoint never sends anything. Drafts come back to the
  * UI for one-tap approval through the normal send paths.
  */
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     const response = await anthropic.messages.create({
       model,
       max_tokens: 1500,
-      system: `You are Nora in CRM assistant mode, helping Momentum Landscaping staff. You can see business data provided below. You DRAFT messages and quotes when asked — you never send anything; a human taps send. Be concise and practical. Business context:${context}`,
+      system: `You are Norma in CRM assistant mode, helping Momentum Landscaping staff. You can see business data provided below. You DRAFT messages and quotes when asked — you never send anything; a human taps send. Be concise and practical. Business context:${context}`,
       messages: [{ role: "user", content: String(question) }],
     });
     const text = response.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("\n");

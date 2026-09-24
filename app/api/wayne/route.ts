@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 /**
- * The assistant is Nora now. This path stays alive because the customer app
+ * The assistant is Norma now. This path stays alive because the customer app
  * calls it from a separate repo, and renaming a route someone else depends on
  * without warning is how you break production on a Friday.
  *
