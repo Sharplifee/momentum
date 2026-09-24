@@ -1,16 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/nudges",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/tracking-sweep",
-      "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/service-verification",
-      "schedule": "0 2 * * *"
-    }
-  ]
+  "crons": []
 }
