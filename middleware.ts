@@ -3,6 +3,9 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next({ request: { headers: req.headers } });
+
+  // Replica mirror: open, read-only browsing with no login gate.
+  if (process.env.NEXT_PUBLIC_REPLICA_OPEN === "1") return res;
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

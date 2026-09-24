@@ -21,6 +21,8 @@ const AWAY_MS = 5 * 60_000;   // long enough not to nag between screens
 const KEY = "mo_bio_ok";
 
 export function BiometricGate({ children }: { children: React.ReactNode }) {
+  // Replica mirror: no Face ID gate.
+  if (process.env.NEXT_PUBLIC_REPLICA_OPEN === "1") return <>{children}</>;
   const [locked, setLocked] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);

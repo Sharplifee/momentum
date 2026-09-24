@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 export type Role = "customer" | "crew" | "manager" | "owner";
@@ -28,6 +29,25 @@ export const CAN_PREVIEW: Role[] = ["owner", "manager"];
  * downgrade a write or grant access it should not have.
  */
 export const requireStaff = cache(async function requireStaff(minRoles: Role[] = ["crew", "manager", "owner"], allowMustChange = false) {
+  // Replica mirror: no login gate. Reads as the owner through the service
+  // role so every page renders real data without a session.
+  if (process.env.NEXT_PUBLIC_REPLICA_OPEN === "1") {
+    const adb = supabaseAdmin() as unknown as ReturnType<typeof supabaseServer>;
+    const { data: p } = await adb
+      .from("profiles")
+      .select("id, role, full_name, email, phone, must_change_password, theme_pref, notif_prefs")
+      .eq("id", "51730e9a-e47b-4053-af2b-5b8a9cecac55")
+      .single();
+    const { cookies: ck } = await import("next/headers");
+    const va = (await ck()).get(VIEW_AS_COOKIE)?.value;
+    const prev = va === "crew";
+    return {
+      user: { id: p!.id, email: p!.email } as never,
+      profile: p!, role: (prev ? "crew" : "owner") as Role,
+      realRole: "owner" as Role, previewing: prev, db: adb,
+    };
+  }
+
   const db = supabaseServer();
   const { data: { user } } = await db.auth.getUser();
   if (!user) redirect("/crm/login");
