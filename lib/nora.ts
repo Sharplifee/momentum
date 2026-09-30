@@ -4,6 +4,7 @@ import { getAvailability } from "@/lib/availability";
 import { sendSms } from "@/lib/sms";
 import { sendMetaCapiEvent } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
+import { todayDenver } from "@/lib/day";
 import { getServiceArea } from "@/lib/serviceArea";
 
 /**
@@ -337,7 +338,7 @@ async function executeTool(
     const { data: customer } = await db.from("customers").select("id, full_name, status, lifetime_value").eq("phone", ctx.phone).maybeSingle();
     if (!customer) return JSON.stringify({ found: false });
     const [{ data: jobs }, { data: agreement }, { data: props }] = await Promise.all([
-      db.from("jobs").select("id, scheduled_date, status, services(name)").eq("customer_id", customer.id).gte("scheduled_date", new Date().toISOString().slice(0, 10)).order("scheduled_date").limit(5),
+      db.from("jobs").select("id, scheduled_date, status, services(name)").eq("customer_id", customer.id).gte("scheduled_date", todayDenver()).order("scheduled_date").limit(5),
       db.from("service_agreements").select("frequency, price_per_visit, day_of_week").eq("customer_id", customer.id).eq("active", true).maybeSingle(),
       db.from("properties").select("address, gate_code, pets, access_notes").eq("customer_id", customer.id),
     ]);

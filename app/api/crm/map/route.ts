@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireStaff } from "@/lib/crm";
+import { todayDenver } from "@/lib/day";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const staff = await requireStaff(["owner", "manager", "crew"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const from = req.nextUrl.searchParams.get("from") ?? new Date().toISOString().slice(0, 10);
+  const from = req.nextUrl.searchParams.get("from") ?? todayDenver();
   const to = req.nextUrl.searchParams.get("to") ?? from;
 
   const db = supabaseAdmin();

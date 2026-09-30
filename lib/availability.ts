@@ -1,15 +1,17 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { todayDenver, addDays, dayOfWeek } from "@/lib/day";
 
 export type AvailableDay = { date: string; slots_remaining: number; crew_id: number };
 
 function candidateDates(maxDays = 30): string[] {
-  const today = new Date();
+  // Denver days, not UTC days. Sundays off — tested against the same day string
+  // that gets offered, so the skip and the date can never disagree.
+  const today = todayDenver();
   const out: string[] = [];
   for (let i = 1; out.length < 20 && i < maxDays; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    if (d.getDay() === 0) continue; // Sundays off
-    out.push(d.toISOString().slice(0, 10));
+    const day = addDays(today, i);
+    if (dayOfWeek(day) === 0) continue;
+    out.push(day);
   }
   return out;
 }
