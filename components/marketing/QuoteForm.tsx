@@ -189,11 +189,11 @@ export function QuoteForm({ cities }: { cities: string[] }) {
         </select>
         <select name="service_interest" className="rounded-lg border border-stone-300 p-3" defaultValue="">
           <option value="">What do you need?</option>
-          <option value="weekly-mow">Weekly mowing ($45/visit)</option>
-          <option value="biweekly-mow">Biweekly mowing ($55/visit)</option>
-          <option value="aeration">Aeration ($89)</option>
-          <option value="cleanup">Spring/Fall cleanup (quoted)</option>
-          <option value="addons">Landscaping add-ons (quoted)</option>
+          <option value="weekly-mow">Weekly mowing</option>
+          <option value="biweekly-mow">Biweekly mowing</option>
+          <option value="aeration">Aeration</option>
+          <option value="cleanup">Spring/Fall cleanup</option>
+          <option value="addons">Landscaping add-ons</option>
         </select>
         {/* honeypot — hidden from humans */}
         <input name="company_website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
