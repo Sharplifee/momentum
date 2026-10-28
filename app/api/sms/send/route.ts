@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendSms } from "@/lib/sms";
 import { toE164 } from "@/lib/phone";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
  * for reliability; this route exists for anything that needs to trigger a
  * send over HTTP (CRM UI "quick SMS", Flow Tester, future staff tools).
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body?.to || !body?.message) {
     return NextResponse.json({ error: "to and message are required" }, { status: 400 });
@@ -30,3 +31,5 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ ok: true, message_id: result.message_id });
 }
+
+export const POST = withEventLog("POST /api/sms/send", __POST);

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resolveAllUnresolvedProperties } from "@/lib/parcel";
 import { logAutomation } from "@/lib/automation";
 import { suggestCorrections } from "@/lib/addressIntelligence";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,7 +13,7 @@ export const maxDuration = 60;
  * parcel fence (new address, or a stale centroid pin) gets re-resolved with no
  * human action. Wired via pg_cron -> momentum_cron_call('/api/cron/parcel').
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -81,3 +82,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ ok: true, resolved, suggested, auto_applied: autoApplied, total: results.length });
 }
+
+export const GET = withEventLog("GET /api/cron/parcel", __GET);

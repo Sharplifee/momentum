@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** Today-view clock in/out/exception — proxies to the crew webhook with the server secret. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager", "crew"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
@@ -16,3 +17,5 @@ export async function POST(req: NextRequest) {
   });
   return NextResponse.json(await res.json(), { status: res.status });
 }
+
+export const POST = withEventLog("POST /api/crm/clock", __POST);

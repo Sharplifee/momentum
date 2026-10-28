@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 /** CRM wrapper for the Flow Tester — owner session auth instead of CRON_SECRET. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const base = process.env.APP_BASE_URL || `https://${req.headers.get("host")}`;
@@ -15,3 +16,5 @@ export async function POST(req: NextRequest) {
   });
   return NextResponse.json(await res.json(), { status: res.status });
 }
+
+export const POST = withEventLog("POST /api/crm/test", __POST);

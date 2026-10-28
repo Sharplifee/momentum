@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -31,7 +32,7 @@ function flagLines(p: { has_dog?: boolean | null; obstacles?: string[] | null })
  *
  * OFF by default — system_config.tracking.readiness_sms_enabled must be set true.
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -73,3 +74,5 @@ export async function GET(req: NextRequest) {
   await logAutomation({ trigger: "cron.readiness.summary", detail: { enabled, sent, skippedGreen, skippedSandbox, total: (jobs ?? []).length } });
   return NextResponse.json({ ok: true, enabled, sent, skippedGreen, skippedSandbox });
 }
+
+export const GET = withEventLog("GET /api/cron/readiness", __GET);

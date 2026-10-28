@@ -5,10 +5,11 @@ import { sendSms } from "@/lib/sms";
 import { sendMetaCapiEvent } from "@/lib/meta";
 import { getBillingConfig, displayNumber } from "@/lib/invoices";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { action, invoice_id, method, note, reason } = await req.json().catch(() => ({}));
@@ -68,3 +69,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+
+export const POST = withEventLog("POST /api/crm/money", __POST);

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
 import { fetchMetaLead, ingestMetaLead } from "@/lib/metaLeadIntake";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -41,7 +42,7 @@ async function loadConfig(): Promise<LeadgenConfig> {
 /* GET — Meta's subscription handshake                                 */
 /* ------------------------------------------------------------------ */
 
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const url = req.nextUrl.searchParams;
   const mode = url.get("hub.mode");
   const token = url.get("hub.verify_token");
@@ -72,7 +73,7 @@ function signatureValid(raw: string, header: string | null, appSecret: string): 
   return crypto.timingSafeEqual(Buffer.from(got, "hex"), Buffer.from(expected, "hex"));
 }
 
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const raw = await req.text();
   const cfg = await loadConfig();
 
@@ -115,3 +116,6 @@ export async function POST(req: NextRequest) {
   // we already texted must not be texted again.
   return NextResponse.json({ ok: true, processed: results.length, results });
 }
+
+export const GET = withEventLog("GET /api/meta/leadgen", __GET);
+export const POST = withEventLog("POST /api/meta/leadgen", __POST);

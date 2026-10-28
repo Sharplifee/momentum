@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -19,7 +20,7 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-export async function GET() {
+async function __GET() {
   const checks: Record<string, { ok: boolean; detail?: string }> = {};
 
   try {
@@ -91,3 +92,5 @@ export async function GET() {
   const allOk = Object.values(checks).every((c) => c.ok);
   return NextResponse.json({ ok: allOk, checks }, { status: allOk ? 200 : 503 });
 }
+
+export const GET = withEventLog("GET /api/health", __GET);

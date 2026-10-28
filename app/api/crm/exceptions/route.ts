@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** Resolve a service exception raised by the GPS verification engine. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -27,3 +28,5 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withEventLog("POST /api/crm/exceptions", __POST);

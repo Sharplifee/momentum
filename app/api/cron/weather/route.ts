@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -14,7 +15,7 @@ const ZONE_COORDS: Record<number, [number, number]> = {
 };
 
 /** 6:10 MT: NWS rain-risk check per zone with jobs today; flag + owner alert with push-day option. */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -71,3 +72,5 @@ export async function GET(req: NextRequest) {
   await logAutomation({ trigger: "cron.weather", detail: { date: today, zones_checked: zonesWithJobs, flagged, simulated: Boolean(simulateZone) } });
   return NextResponse.json({ ok: true, flagged });
 }
+
+export const GET = withEventLog("GET /api/cron/weather", __GET);

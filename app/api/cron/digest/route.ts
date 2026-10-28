@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** 20:00 MT: owner digest SMS (email lands when Resend does). */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -34,3 +35,5 @@ export async function GET(req: NextRequest) {
   await logAutomation({ trigger: "cron.digest", status: r.ok ? "ok" : "error", detail: { msg } });
   return NextResponse.json({ ok: r.ok, digest: msg });
 }
+
+export const GET = withEventLog("GET /api/cron/digest", __GET);

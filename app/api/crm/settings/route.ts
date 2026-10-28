@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { kind, payload } = await req.json().catch(() => ({}));
@@ -24,3 +25,5 @@ export async function POST(req: NextRequest) {
   await logAutomation({ trigger: "crm.settings", detail: { kind, payload, by: staff.full_name } });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withEventLog("POST /api/crm/settings", __POST);

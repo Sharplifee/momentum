@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runNora } from "@/lib/nora";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -7,7 +8,7 @@ export const maxDuration = 60;
 /** Direct Norma invocation — used by the inbound SMS webhook and (later) the portal/CRM.
  *  Guarded: internal callers only (CRON_SECRET). The SMS webhook calls runNora()
  *  in-process, so nothing public ever needs this route. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -26,3 +27,5 @@ export async function POST(req: NextRequest) {
   );
   return NextResponse.json({ ok: true, reply });
 }
+
+export const POST = withEventLog("POST /api/nora", __POST);

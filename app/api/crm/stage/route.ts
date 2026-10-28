@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { runStageAutomation } from "@/lib/stages";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { lead_id, stage } = await req.json().catch(() => ({}));
@@ -13,3 +14,5 @@ export async function POST(req: NextRequest) {
   const result = await runStageAutomation(lead_id, stage, staff.full_name ?? staff.id);
   return NextResponse.json(result, { status: result.ok ? 200 : 400 });
 }
+
+export const POST = withEventLog("POST /api/crm/stage", __POST);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,7 @@ export const runtime = "nodejs";
  *
  * The lead stays a lead. This is not a sale, and nothing is reported to Meta.
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const { lead_id, date, window } = await req.json().catch(() => ({}));
   if (!lead_id || !date) {
     return NextResponse.json({ error: "lead_id and date required" }, { status: 400 });
@@ -62,3 +63,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, date, lat, lng, notified: (admins ?? []).length });
 }
+
+export const POST = withEventLog("POST /api/crm/quote-visit", __POST);

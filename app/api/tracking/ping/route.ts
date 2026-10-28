@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Device position report. Authenticated by the caller's own session — every logged-in device reports. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,3 +75,5 @@ export async function POST(req: NextRequest) {
   // momentum_process_ping against the surveyed parcel polygon. Nothing to do here.
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withEventLog("POST /api/tracking/ping", __POST);

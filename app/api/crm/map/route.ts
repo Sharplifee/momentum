@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireStaff } from "@/lib/crm";
 import { todayDenver } from "@/lib/day";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,7 @@ export const runtime = "nodejs";
  * more honest and more useful. Quote visits are leads, which usually have no
  * parcel yet, so they are a pin only.
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const staff = await requireStaff(["owner", "manager", "crew"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -82,3 +83,5 @@ export async function GET(req: NextRequest) {
     mapkit_token: process.env.MAPKIT_TOKEN ?? null,
   });
 }
+
+export const GET = withEventLog("GET /api/crm/map", __GET);

@@ -4,11 +4,12 @@ import { verifyStripeSignature } from "@/lib/stripe";
 import { sendSms } from "@/lib/sms";
 import { sendMetaCapiEvent } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** Stripe webhook (signature-verified in BOTH modes — pending mode uses the local HMAC secret). */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const rawBody = await req.text();
   const sig = req.headers.get("stripe-signature");
   if (!verifyStripeSignature(rawBody, sig)) {
@@ -93,3 +94,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, ignored: type });
 }
+
+export const POST = withEventLog("POST /api/payments/webhook", __POST);

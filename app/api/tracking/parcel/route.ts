@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { staffFromSession } from "@/lib/apiAuth";
 import { resolveAllUnresolvedProperties } from "@/lib/parcel";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,7 +22,7 @@ export const maxDuration = 60;
  * POST { property_id }  → resolve one
  * POST { all: true }    → resolve every property missing a verified interior-pin fence
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -41,3 +42,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, resolved, total: results.length, results });
 }
+
+export const POST = withEventLog("POST /api/tracking/parcel", __POST);

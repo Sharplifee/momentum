@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ export const runtime = "nodejs";
  * accuracy discarded — the day would otherwise end with a scheduled visit and no
  * outcome. Norma checks the calendar himself and asks the crew who were assigned.
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -76,3 +77,5 @@ export async function GET(req: NextRequest) {
   await logAutomation({ trigger: "verification.eod_followup", detail: { unresolved: unresolved.length, crews: sent } });
   return NextResponse.json({ ok: true, unresolved: unresolved.length, asked: sent });
 }
+
+export const GET = withEventLog("GET /api/cron/service-verification", __GET);

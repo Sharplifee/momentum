@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logEvent } from "@/lib/eventLog";
 
 /**
  * Every automated action in Momentum writes a row here — this is the
@@ -12,6 +13,8 @@ export async function logAutomation(params: {
   detail?: Record<string, unknown>;
   error?: string;
 }) {
+  void logEvent({ event_type: "job_step", name: `automation.${params.trigger}`, status: params.status ?? "ok", surface: "cron", actor_type: "cron",
+    error_message: params.error ?? null, payload: { ref_id: params.ref_id ?? null, ...(params.detail ?? {}) } });
   const db = supabaseAdmin();
   const { error } = await db.from("automation_runs").insert({
     trigger: params.trigger,

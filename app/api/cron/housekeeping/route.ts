@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms, renderTemplate } from "@/lib/sms";
 import { getBillingConfig, displayNumber } from "@/lib/invoices";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -12,7 +13,7 @@ export const maxDuration = 120;
  * then escalate to Connor (never Norma collections); (b) backup verification —
  * row counts + last ids per money table logged for drift detection (Phase 4 §5.2).
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -67,3 +68,5 @@ export async function GET(req: NextRequest) {
   await logAutomation({ trigger: "cron.housekeeping", detail: { date: today, overdue: overdue?.length ?? 0, reminded, escalated, backup_snapshot: snapshot } });
   return NextResponse.json({ ok: true, overdue: overdue?.length ?? 0, reminded, escalated, snapshot });
 }
+
+export const GET = withEventLog("GET /api/cron/housekeeping", __GET);

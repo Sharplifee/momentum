@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms, renderTemplate } from "@/lib/sms";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -11,7 +12,7 @@ export const maxDuration = 120;
  * ours and the lead hasn't replied, and sends nudge_1h / nudge_24h / nudge_72h
  * exactly once each. After the 72h nudge, the lead goes stage → stale.
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -93,3 +94,5 @@ export async function GET(req: NextRequest) {
   await logAutomation({ trigger: "cron.nudges", detail: { sent: results } });
   return NextResponse.json({ ok: true, sent: results });
 }
+
+export const GET = withEventLog("GET /api/cron/nudges", __GET);

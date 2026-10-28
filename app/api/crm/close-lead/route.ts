@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { staffFromSession } from "@/lib/apiAuth";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,7 @@ export const runtime = "nodejs";
  * quote visit is booked would teach it to find people who book visits rather
  * than people who buy.
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager", "crew"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -85,3 +86,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(result);
 }
+
+export const POST = withEventLog("POST /api/crm/close-lead", __POST);

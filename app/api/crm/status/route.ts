@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/crm";
+import { withEventLog } from "@/lib/eventLog";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+async function __GET() {
   try {
     const { db } = await requireStaff(["owner", "manager", "crew"]);
     const { data } = await db.from("system_config").select("value").eq("key", "launch_checklist").single();
@@ -13,3 +14,5 @@ export async function GET() {
     return NextResponse.json({ blockers: 0, items: [] });
   }
 }
+
+export const GET = withEventLog("GET /api/crm/status", __GET);

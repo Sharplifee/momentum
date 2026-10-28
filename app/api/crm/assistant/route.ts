@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,7 +13,7 @@ export const maxDuration = 60;
  * DRAFTS ONLY — this endpoint never sends anything. Drafts come back to the
  * UI for one-tap approval through the normal send paths.
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { question, lead_id, customer_id } = await req.json().catch(() => ({}));
@@ -56,3 +57,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
+
+export const POST = withEventLog("POST /api/crm/assistant", __POST);

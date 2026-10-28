@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** Crew status webhook: arrived / departed / exception (3.7). CRON_SECRET-gated (Today view calls it server-side). */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -58,3 +59,5 @@ export async function POST(req: NextRequest) {
   await logAutomation({ trigger: `webhook.crew.${event}`, ref_id: job_id, detail: { note } });
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withEventLog("POST /api/webhooks/crew", __POST);

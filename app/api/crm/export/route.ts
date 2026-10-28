@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ function toCsv(rows: Record<string, unknown>[]): string {
 }
 
 /** CSV export for leads/customers/jobs (manager+). GET /api/crm/export?entity=leads */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const entity = req.nextUrl.searchParams.get("entity");
@@ -48,3 +49,5 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+export const GET = withEventLog("GET /api/crm/export", __GET);

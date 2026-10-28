@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -12,7 +13,7 @@ type StepResult = { step: string; pass: boolean; detail?: unknown };
  * chain and reports pass/fail per step. Test rows are marked source='test'
  * and excluded from stats/nudges. Guarded by CRON_SECRET.
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -288,3 +289,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: allPass, steps });
 }
+
+export const POST = withEventLog("POST /api/test/pipeline", __POST);

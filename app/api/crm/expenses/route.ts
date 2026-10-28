@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const db = supabaseAdmin();
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
 }
 
 /** GET ?receipt={expense_id} → redirect to signed receipt URL. */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const expenseId = req.nextUrl.searchParams.get("receipt");
@@ -48,3 +49,6 @@ export async function GET(req: NextRequest) {
   if (!signed?.signedUrl) return NextResponse.json({ error: "sign failed" }, { status: 500 });
   return NextResponse.redirect(signed.signedUrl);
 }
+
+export const GET = withEventLog("GET /api/crm/expenses", __GET);
+export const POST = withEventLog("POST /api/crm/expenses", __POST);

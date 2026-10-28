@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** Self-service account actions for ANY authenticated staff/customer on their OWN row. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const s = supabaseServer();
   const { data: { user } } = await s.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -48,3 +49,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+
+export const POST = withEventLog("POST /api/crm/account", __POST);

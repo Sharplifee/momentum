@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** 6:30 MT: flag quotes >72h and unanswered threads for the dashboard. */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -34,3 +35,5 @@ export async function GET(req: NextRequest) {
   });
   return NextResponse.json({ ok: true, stale_quotes: staleQuotes?.length ?? 0, stale_threads: staleThreads?.length ?? 0 });
 }
+
+export const GET = withEventLog("GET /api/cron/stale", __GET);

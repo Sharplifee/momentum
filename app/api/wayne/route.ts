@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -20,5 +21,8 @@ async function forward(req: NextRequest) {
   return new NextResponse(res.body, { status: res.status, headers: res.headers });
 }
 
-export const GET = forward;
-export const POST = forward;
+const __GET = forward;
+const __POST = forward;
+
+export const GET = withEventLog("GET /api/wayne", __GET);
+export const POST = withEventLog("POST /api/wayne", __POST);

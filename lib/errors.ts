@@ -3,9 +3,12 @@
  * get error visibility without the full @sentry/nextjs SDK weight. Safe no-op
  * when SENTRY_DSN is unset.
  */
+import { logError } from "@/lib/eventLog";
+
 export async function reportError(err: unknown, context?: Record<string, unknown>) {
   const dsn = process.env.SENTRY_DSN;
   console.error("reportError", err, context);
+  void logError(err, { name: "reportError", payload: context ?? {} });
   if (!dsn) return;
   try {
     const m = dsn.match(/^https:\/\/([a-f0-9]+)@([^/]+)\/(\d+)$/);

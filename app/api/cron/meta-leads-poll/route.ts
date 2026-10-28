@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GRAPH_VERSION } from "@/lib/meta";
 import { fetchMetaLead, ingestMetaLead, loadLeadgenConfig } from "@/lib/metaLeadIntake";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -15,7 +16,7 @@ const PAGE_ID = "565418916665337";
  * even when the Page→app webhook subscription is missing or Meta drops a delivery.
  * ?backfill=1&since=<unix> ingests without texting (for old leads).
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -61,3 +62,5 @@ export async function GET(req: NextRequest) {
   if (created) await logAutomation({ trigger: "meta.poll.ingested", status: "ok", detail: { created, backfill } });
   return NextResponse.json({ ok: true, checked: results.length, created, results });
 }
+
+export const GET = withEventLog("GET /api/cron/meta-leads-poll", __GET);

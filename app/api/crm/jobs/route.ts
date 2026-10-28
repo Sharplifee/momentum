@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** Job updates from the dispatch board — capacity-checked server-side. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   // staff session (browser) OR internal CRON_SECRET (system automations, e.g. weather push-day)
   const internal = req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`;
   const staff = internal ? { full_name: "system" } : await staffFromSession(["owner", "manager"]);
@@ -55,3 +56,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
+
+export const POST = withEventLog("POST /api/crm/jobs", __POST);

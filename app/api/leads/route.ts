@@ -8,6 +8,7 @@ import { composeNoraOpener } from "@/lib/noraOpener";
 import { sendMetaCapiEvent, deriveFbc } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
 import { corsHeaders } from "@/lib/cors";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -23,11 +24,11 @@ function rateLimited(ip: string): boolean {
   return arr.length > 5;
 }
 
-export async function OPTIONS(req: NextRequest) {
+async function __OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req.headers.get("origin")) });
 }
 
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const cors = corsHeaders(req.headers.get("origin"));
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
@@ -254,3 +255,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, lead_id: leadId, thread_id: thread?.id, available_days: availableDays }, { headers: cors });
 }
+
+export const POST = withEventLog("POST /api/leads", __POST);
+export const OPTIONS = withEventLog("OPTIONS /api/leads", __OPTIONS);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendApns } from "@/lib/apns";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -18,7 +19,7 @@ type Queued = {
  * Tokens Apple reports as dead are retired — a reinstalled phone issues a new
  * one and the old would otherwise fail forever.
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -124,3 +125,5 @@ export async function GET(req: NextRequest) {
     errors: failed.slice(0, 5).map((f) => f.reason),
   });
 }
+
+export const GET = withEventLog("GET /api/cron/push-send", __GET);

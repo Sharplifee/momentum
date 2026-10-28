@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** Job photo upload → Supabase Storage bucket job-photos (created on first use). */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager", "crew"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const form = await req.formData();
@@ -26,3 +27,5 @@ export async function POST(req: NextRequest) {
   await db.from("job_events").insert({ job_id: jobId, type: "photo", photo_url: path, actor: staff.full_name ?? "crew" });
   return NextResponse.json({ ok: true, path, signed_url: signed?.signedUrl });
 }
+
+export const POST = withEventLog("POST /api/crm/photos", __POST);

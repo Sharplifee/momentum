@@ -5,6 +5,7 @@ import { sendSms } from "@/lib/sms";
 import { runNora } from "@/lib/nora";
 import { toE164 } from "@/lib/phone";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,7 +20,7 @@ function verifySignature(rawBody: string, signature: string | null, secret: stri
   }
 }
 
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const rawBody = await req.text();
   const secret = process.env.PINGRAM_WEBHOOK_SECRET;
 
@@ -216,3 +217,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, replied: Boolean(reply) });
 }
+
+export const POST = withEventLog("POST /api/sms/inbound", __POST);

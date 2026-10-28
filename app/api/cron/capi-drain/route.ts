@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendMetaCapiEvent } from "@/lib/meta";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,7 +22,7 @@ export const maxDuration = 60;
  * Failures back off exponentially and retire after max_attempts, so a bad row
  * cannot hold the queue.
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -140,3 +141,5 @@ export async function GET(req: NextRequest) {
     errors: failures.slice(0, 3).map((f) => f.reason),
   });
 }
+
+export const GET = withEventLog("GET /api/cron/capi-drain", __GET);

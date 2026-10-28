@@ -4,11 +4,12 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createCheckoutSession, ensureStripeCustomer, stripeMode } from "@/lib/stripe";
 import { getBillingConfig, displayNumber } from "@/lib/invoices";
 import { logAutomation } from "@/lib/automation";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
 /** Creates a checkout URL for an invoice. Callable by the invoice's customer (portal) or staff (CRM), or internally via CRON_SECRET. */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const admin = supabaseAdmin();
   const internal = req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`;
   let callerCustomerId: string | null = null;
@@ -61,3 +62,5 @@ export async function POST(req: NextRequest) {
   await logAutomation({ trigger: "payments.checkout_created", ref_id: invoice.id, detail: { mode: session.mode, session_id: session.session_id } });
   return NextResponse.json({ ok: true, url: session.url, mode: session.mode });
 }
+
+export const POST = withEventLog("POST /api/payments/checkout", __POST);

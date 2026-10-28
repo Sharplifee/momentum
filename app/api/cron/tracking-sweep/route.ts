@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
  * which tests against the surveyed parcel polygon. This route no longer sweeps
  * visits — two engines writing the same tables corrupts visit state.
  */
-export async function GET(req: NextRequest) {
+async function __GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -25,3 +26,5 @@ export async function GET(req: NextRequest) {
     .lt("recorded_at", cutoff);
   return NextResponse.json({ ok: true, pruned: count ?? 0, retain_days: retainDays });
 }
+
+export const GET = withEventLog("GET /api/cron/tracking-sweep", __GET);

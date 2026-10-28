@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { VIEW_AS_COOKIE, CAN_PREVIEW } from "@/lib/crm";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
  * preview. Setting requires owner or manager, and "crew" is the only value
  * accepted, so this cannot be used to assume some other role.
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const { view } = await req.json().catch(() => ({}));
 
   if (view === null || view === undefined || view === "") {
@@ -32,3 +33,5 @@ export async function POST(req: NextRequest) {
   });
   return res;
 }
+
+export const POST = withEventLog("POST /api/crm/view-as", __POST);

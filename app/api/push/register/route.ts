@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { withEventLog } from "@/lib/eventLog";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
  * Tokens are unique per install and iOS reissues them on reinstall, so the
  * upsert re-points an existing token at whoever is signed in now.
  */
-export async function POST(req: NextRequest) {
+async function __POST(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager", "crew", "customer"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
 }
 
 /** Called on sign-out so a shared phone stops receiving the last user's alerts. */
-export async function DELETE(req: NextRequest) {
+async function __DELETE(req: NextRequest) {
   const staff = await staffFromSession(["owner", "manager", "crew", "customer"]);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { token } = await req.json().catch(() => ({}));
@@ -47,3 +48,6 @@ export async function DELETE(req: NextRequest) {
   await db.from("push_tokens").update({ active: false }).eq("token", token).eq("profile_id", staff.id);
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withEventLog("POST /api/push/register", __POST);
+export const DELETE = withEventLog("DELETE /api/push/register", __DELETE);

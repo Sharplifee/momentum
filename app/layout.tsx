@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getServiceArea, citiesSentence } from "@/lib/serviceArea";
+import EventLogClient from "@/components/EventLogClient";
 
 // Tight grotesk for display, neutral grotesk for body, mono for micro-labels and IDs.
 const display = Inter_Tight({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display", display: "swap" });
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#0a0a0a" />
       </head>
       <body className="min-h-screen font-sans antialiased">
+        <EventLogClient />
         {children}
       </body>
     </html>
