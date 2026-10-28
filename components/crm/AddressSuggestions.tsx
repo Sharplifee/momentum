@@ -57,7 +57,7 @@ export function AddressSuggestions({ groups }: { groups: Record<string, Suggesti
           const top = list[0];
           return (
             <Card key={propertyId} className="p-4">
-              <div className="mb-1 text-[11px] uppercase tracking-wide text-[color:var(--body)]">On file</div>
+              <div className="mo-eyebrow mb-1">On file</div>
               <div className="mb-3 text-sm font-medium text-[color:var(--ink)]">
                 {top.original}{top.original_city ? `, ${top.original_city}` : ""}
               </div>
@@ -66,10 +66,10 @@ export function AddressSuggestions({ groups }: { groups: Record<string, Suggesti
                 <div key={s.id}
                   className={`rounded-xl border p-3 ${i === 0 ? "border-accent/35 bg-accent/[0.06]" : "mt-2 border-[color:var(--border)]"}`}>
                   <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[11px] uppercase tracking-wide text-[color:var(--body)]">
+                    <span className="mo-eyebrow">
                       {i === 0 ? "Best guess" : "Also possible"}
                     </span>
-                    <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[11px] font-semibold text-[#c4b9ff]">
+                    <span className="rounded-full border border-teal/50 px-2 py-0.5 text-[11px] font-semibold text-teal">
                       {s.confidence}%
                     </span>
                   </div>

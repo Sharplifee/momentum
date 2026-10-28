@@ -1,6 +1,20 @@
 import type { Config } from "tailwindcss";
 
-/** Colors mirror lib/theme.ts (brand tokens). darkMode via class on <html>. */
+/**
+ * Momentum design system — "field + evening" edition.
+ *
+ * Matte near-black surfaces, bone-white ink, one signature gradient hairline
+ * (pine → sea → bone → amber → coral: a south-valley evening over cut grass),
+ * tight grotesk display type, uppercase mono micro-labels. Nothing frosted,
+ * nothing glowing. Colors mirror lib/theme.ts and the CSS variables in
+ * globals.css — those three files are the only places a hex may live.
+ *
+ * Token names from the previous system (teal / navy / slate / ice / gold)
+ * are kept so every existing class repaints without a rewrite:
+ *   navy  → ink (bone)        slate → body (warm grey)
+ *   teal  → sea accent        ice   → light warm grey
+ *   gold  → amber (wins)      red   → coral
+ */
 const config: Config = {
   darkMode: "class",
   content: ["./app/**/*.{js,ts,jsx,tsx,mdx}", "./components/**/*.{js,ts,jsx,tsx,mdx}"],
@@ -8,28 +22,44 @@ const config: Config = {
     extend: {
       colors: {
         // legacy aliases kept so any stragglers still resolve to brand, not gray
-        moss: "#2f5233",
-        clay: "#c46b3e",
-        // brand — Aivora-inspired dark violet system (Connor 2026-07-22)
-        navy: { DEFAULT: "#e9ecf8", dark: "#f4f5fb" },      // was heading-dark; app is dark now, so this IS the ink
-        slate: "#98a1bd",                                     // muted body text on dark
-        teal: { DEFAULT: "#8b7cf6", hover: "#7263e8" },     // primary accent → violet (name kept so every class repaints)
-        ice: "#a5b0f0",                                       // soft periwinkle accents
-        gold: "#e5b95e",
-        red: "#e0655a",
-        green: { DEFAULT: "#4ade80" },
-        surface: { DEFAULT: "#0b0e17", alt: "#111527", card: "#151a2c" },
+        moss: "#1d5f58",
+        clay: "#d9775c",
+        // semantic (legacy names, new values)
+        navy: { DEFAULT: "#f2efe8", dark: "#ffffff" },
+        slate: "#9b9790",
+        teal: { DEFAULT: "#3aa99a", hover: "#2f8f82" },
+        ice: "#d8d4cb",
+        gold: "#e3a35f",
+        red: "#d9775c",
+        green: { DEFAULT: "#86b67a" },
+        surface: { DEFAULT: "#0a0a0a", alt: "#0e0e0e", card: "#121212" },
+        // named palette for new code
+        bone: "#f2efe8",
+        pine: "#1d5f58",
+        sea: "#3aa99a",
+        amber: "#e3a35f",
+        coral: "#d9775c",
+        sage: "#86b67a",
+        line: "rgba(255,255,255,0.08)",
       },
       fontFamily: {
-        sans: ["var(--font-body)", "Instrument Sans", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "DM Sans", "system-ui", "sans-serif"],
+        sans: ["var(--font-body)", "Inter", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Inter Tight", "Inter", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       borderRadius: {
-        xl: "12px", "2xl": "16px", "3xl": "20px",
+        xl: "8px", "2xl": "10px", "3xl": "12px",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25)",
-        pop: "0 12px 40px rgba(0,0,0,0.5)", glow: "0 0 24px rgba(139,124,246,0.25)",
+        card: "0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 2px rgba(0,0,0,0.5)",
+        pop: "0 16px 40px rgba(0,0,0,0.6)",
+        glow: "0 0 0 1px rgba(58,169,154,0.35)",
+      },
+      backgroundImage: {
+        ribbon: "var(--grad)",
+      },
+      letterSpacing: {
+        micro: "0.14em",
       },
       backdropBlur: { xs: "2px" },
     },

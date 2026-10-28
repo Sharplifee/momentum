@@ -1,7 +1,7 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { PageHeader, Chip, EmptyState, LinkButton } from "@/components/ui";
-import { STAGE_STYLE, STAGE_LABEL, StageKey } from "@/lib/theme";
+import { STAGE_STYLE, STAGE_LABEL, STAGE_COLOR, StageKey } from "@/lib/theme";
 import Link from "next/link";
 import { DeltaTile, FunnelChart, AreaChart, BandCard } from "@/components/crm/Charts";
 
@@ -41,8 +41,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { q?: 
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Pipeline</div>
-      <PageHeader title="Leads" action={<LinkButton href="/crm/leads?new=1">+ New lead</LinkButton>} />
+      <PageHeader eyebrow="Pipeline" title="Leads" action={<LinkButton href="/crm/leads?new=1">+ New lead</LinkButton>} />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <DeltaTile label="This Week" value={wk} delta={`${wkD >= 0 ? "+" : ""}${wkD}% vs last`} up={wkD >= 0} icon="◎" seed={3} points={dayCounts} />
@@ -54,10 +53,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: { q?: 
       <div className="mb-6 grid gap-5 lg:grid-cols-5">
         <BandCard title="Funnel" sub="every stage" className="lg:col-span-2">
           <FunnelChart stages={[
-            { k: "New", v: counts["new"] ?? 0, c: "#8b7cf6", href: "/crm/leads?stage=new" },
-            { k: "Contacted", v: counts["contacted"] ?? 0, c: "#a99df8", href: "/crm/leads?stage=contacted" },
-            { k: "Quoted", v: counts["quote_sent"] ?? 0, c: "#e5b95e", href: "/crm/leads?stage=quote_sent" },
-            { k: "Won", v: counts["closed_won"] ?? 0, c: "#4ade80", href: "/crm/leads?stage=closed_won" },
+            { k: "New", v: counts["new"] ?? 0, c: STAGE_COLOR.new, href: "/crm/leads?stage=new" },
+            { k: "Contacted", v: counts["contacted"] ?? 0, c: STAGE_COLOR.contacted, href: "/crm/leads?stage=contacted" },
+            { k: "Quoted", v: counts["quote_sent"] ?? 0, c: STAGE_COLOR.quote_sent, href: "/crm/leads?stage=quote_sent" },
+            { k: "Won", v: counts["closed_won"] ?? 0, c: STAGE_COLOR.closed_won, href: "/crm/leads?stage=closed_won" },
           ]} />
         </BandCard>
         <BandCard title="Flow" sub="leads per day · 14d" className="lg:col-span-3">

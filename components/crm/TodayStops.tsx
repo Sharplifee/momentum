@@ -122,9 +122,9 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
 
   if (!jobs.length) {
     return (
-      <div className="mo-card p-8 text-center">
-        <p className="text-lg">Nothing on today.</p>
-        <p className="mt-1 text-sm text-slate">Enjoy it. 🌤</p>
+      <div className="mo-card mo-rule p-8 text-center">
+        <p className="font-display text-lg font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Nothing on today.</p>
+        <p className="mt-1 text-sm text-slate">Enjoy it.</p>
       </div>
     );
   }
@@ -132,16 +132,16 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
   return (
     <div className="space-y-3">
       {queued > 0 && (
-        <div className="rounded-xl bg-gold/10 p-3 text-sm">
-          📶 {queued} update{queued > 1 ? "s" : ""} saved — they&apos;ll send themselves when you&apos;re back on signal.
+        <div className="rounded-lg border border-gold/50 p-3 text-sm text-gold">
+          {queued} update{queued > 1 ? "s" : ""} saved — they&apos;ll send themselves when you&apos;re back on signal.
         </div>
       )}
 
       <div className="flex items-baseline gap-2 px-1">
-        <span className="font-display text-2xl">{done.length}</span>
-        <span className="text-sm text-slate">of {jobs.length} done</span>
-        <div className="ml-auto h-1.5 w-24 overflow-hidden rounded-full bg-ice/25">
-          <div className="h-full rounded-full bg-teal transition-all"
+        <span className="mo-num text-2xl font-semibold text-[color:var(--ink)]">{done.length}</span>
+        <span className="mo-eyebrow">of {jobs.length} done</span>
+        <div className="ml-auto h-1 w-24 overflow-hidden rounded-full bg-white/[0.08]">
+          <div className="h-full rounded-full bg-ribbon transition-all"
                style={{ width: `${Math.round((done.length / jobs.length) * 100)}%` }} />
         </div>
       </div>
@@ -156,29 +156,29 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
           <div className={`mo-card p-5 ${gateBlocked ? "border border-red/60" : active.weather_flag ? "border border-gold/50" : "border border-teal/40"}`}>
             <div className="mb-1 flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-teal">
+                <div className="mo-eyebrow text-teal">
                   {active.arrival_at ? "On site" : "Next stop"}
                 </div>
-                <div className="font-display text-2xl leading-tight">{active.customers?.full_name ?? "Customer"}</div>
+                <div className="mt-1 font-display text-2xl font-semibold leading-tight tracking-[-0.03em] text-[color:var(--ink)]">{active.customers?.full_name ?? "Customer"}</div>
                 <p className="mt-0.5 text-sm text-slate">
                   {p?.address}{p?.city ? `, ${p.city}` : ""} · {active.services?.name}
                 </p>
               </div>
               {onSite !== null && (
                 <div className="shrink-0 text-right">
-                  <div className="font-display text-2xl leading-none">{onSite}</div>
-                  <div className="text-[11px] text-slate">min</div>
+                  <div className="mo-num text-2xl font-semibold leading-none text-[color:var(--ink)]">{onSite}</div>
+                  <div className="mo-eyebrow mt-1">min</div>
                 </div>
               )}
             </div>
 
             {gateBlocked && (
-              <p className="mt-3 rounded-lg bg-red/10 px-3 py-2 text-sm font-semibold text-red">
-                🔒 Gate is {p?.gate_width_in} in — the mower needs {MIN_GATE_IN}. Bring the push mower or call ahead.
+              <p className="mt-3 rounded-lg border border-red/50 px-3 py-2 text-sm font-semibold text-red">
+                Gate is {p?.gate_width_in} in — the mower needs {MIN_GATE_IN}. Bring the push mower or call ahead.
               </p>
             )}
             {active.weather_flag && (
-              <p className="mt-2 rounded-lg bg-gold/10 px-3 py-2 text-sm">☔ Weather flagged for this stop.</p>
+              <p className="mt-2 rounded-lg border border-gold/50 px-3 py-2 text-sm text-gold">Weather flagged for this stop.</p>
             )}
 
             {facts(p).length > 0 && (
@@ -191,26 +191,26 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
               {!active.arrival_at ? (
                 <>
                   <a href={nav(p)} target="_blank" rel="noreferrer"
-                     className="grid min-h-[52px] place-items-center rounded-xl bg-ice/20 text-base font-semibold dark:bg-white/10">
-                    ➤ Drive here
+                     className="grid min-h-[52px] place-items-center rounded-full border border-[color:var(--border-strong)] text-base font-semibold text-[color:var(--ink)]">
+                    Drive here ↗
                   </a>
                   <button disabled={busy === active.id}
                     onClick={() => fire("/api/crm/clock", { job_id: active.id, event: "arrived" }, active.id)}
-                    className="grid min-h-[56px] place-items-center rounded-xl bg-teal text-lg font-semibold text-white shadow-card disabled:opacity-60">
-                    ☀︎ Start job
+                    className="mo-primary grid min-h-[56px] place-items-center text-lg disabled:opacity-60">
+                    Start job
                   </button>
                 </>
               ) : (
                 <>
-                  <label className="grid min-h-[52px] cursor-pointer place-items-center rounded-xl bg-ice/20 text-base font-semibold dark:bg-white/10">
-                    {busy === active.id + "-photo" ? "Uploading…" : "📷 Add a photo"}
+                  <label className="grid min-h-[52px] cursor-pointer place-items-center rounded-full border border-[color:var(--border-strong)] text-base font-semibold text-[color:var(--ink)]">
+                    {busy === active.id + "-photo" ? "Uploading…" : "Add a photo"}
                     <input type="file" accept="image/*" capture="environment" className="hidden"
                       onChange={(e) => e.target.files?.[0] && uploadPhoto(active.id, e.target.files[0])} />
                   </label>
                   <button disabled={busy === active.id}
                     onClick={() => fire("/api/crm/clock", { job_id: active.id, event: "departed" }, active.id)}
-                    className="grid min-h-[56px] place-items-center rounded-xl bg-gold text-lg font-semibold text-navy shadow-card disabled:opacity-60">
-                    ✓ Finish job
+                    className="grid min-h-[56px] place-items-center rounded-full bg-gold text-lg font-semibold text-[#0a0a0a] disabled:opacity-60">
+                    Finish job ✓
                   </button>
                 </>
               )}
@@ -218,20 +218,20 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
 
             {/* Exceptions are rare and were competing with the button you came to press. */}
             <button onClick={() => setShowTrouble(showTrouble === active.id ? null : active.id)}
-              className="mt-3 min-h-[44px] w-full text-sm text-slate underline decoration-ice/40 underline-offset-4">
+              className="mt-3 min-h-[44px] w-full text-sm text-slate underline decoration-white/20 underline-offset-4">
               Something&apos;s wrong here
             </button>
             {showTrouble === active.id && (
               <div className="mt-2 grid gap-2">
                 <button disabled={busy === active.id}
                   onClick={() => { const n = prompt("What's not ready? (optional)") ?? ""; fire("/api/crm/clock", { job_id: active.id, event: "yard_not_ready", note: n || null }, active.id); }}
-                  className="min-h-[44px] rounded-lg bg-ice/20 px-4 text-sm dark:bg-white/10">🌱 Yard not ready</button>
+                  className="min-h-[44px] rounded-full border border-[color:var(--border-strong)] px-4 text-sm text-[color:var(--ink)]">Yard not ready</button>
                 <button disabled={busy === active.id}
                   onClick={() => { const n = prompt("What's blocking access? (optional)") ?? ""; fire("/api/crm/clock", { job_id: active.id, event: "access_blocked", note: n || null }, active.id); }}
-                  className="min-h-[44px] rounded-lg bg-ice/20 px-4 text-sm dark:bg-white/10">🔒 Access blocked</button>
+                  className="min-h-[44px] rounded-full border border-[color:var(--border-strong)] px-4 text-sm text-[color:var(--ink)]">Access blocked</button>
                 <button disabled={busy === active.id}
                   onClick={() => { const n = prompt("What's the issue?"); if (n) fire("/api/crm/clock", { job_id: active.id, event: "exception", note: n }, active.id); }}
-                  className="min-h-[44px] rounded-lg bg-ice/20 px-4 text-sm dark:bg-white/10">⚠️ Other issue</button>
+                  className="min-h-[44px] rounded-full border border-[color:var(--border-strong)] px-4 text-sm text-[color:var(--ink)]">Other issue</button>
               </div>
             )}
           </div>
@@ -241,16 +241,16 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
       {/* ── still to come ─────────────────────────────────────── */}
       {upcoming.length > 0 && (
         <div className="mo-card divide-y divide-[color:var(--border)] p-0">
-          <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate">
+          <div className="mo-eyebrow px-4 py-2.5">
             Still to come · {upcoming.length}
           </div>
           {upcoming.map((j, i) => (
             <div key={j.id} className="flex items-center gap-3 px-4 py-3">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ice/25 text-xs font-semibold">
+              <span className="mo-mono grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[color:var(--border)] text-xs text-[color:var(--ink)]">
                 {done.length + i + 2}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{j.customers?.full_name ?? "Customer"}</div>
+                <div className="truncate text-sm font-medium text-[color:var(--ink)]">{j.customers?.full_name ?? "Customer"}</div>
                 <div className="truncate text-xs text-slate">{j.properties?.address}</div>
               </div>
               {j.properties?.gate_width_in != null && j.properties.gate_width_in < MIN_GATE_IN && <span title="Narrow gate">🔒</span>}
@@ -264,14 +264,14 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
       {/* ── finished ──────────────────────────────────────────── */}
       {done.length > 0 && (
         <div className="mo-card divide-y divide-[color:var(--border)] p-0 opacity-70">
-          <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate">
+          <div className="mo-eyebrow px-4 py-2.5">
             Done · {done.length}
           </div>
           {done.map((j) => (
             <div key={j.id} className="flex items-center gap-3 px-4 py-2.5">
               <span className="text-teal">✓</span>
               <div className="min-w-0 flex-1 truncate text-sm">{j.customers?.full_name ?? "Customer"}</div>
-              <span className="text-xs text-slate">
+              <span className="mo-mono text-xs text-slate">
                 {j.arrival_at && j.departure_at
                   ? `${Math.max(1, Math.round((new Date(j.departure_at).getTime() - new Date(j.arrival_at).getTime()) / 60000))} min`
                   : ""}

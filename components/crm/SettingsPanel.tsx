@@ -24,7 +24,7 @@ export function SettingsPanel({ services, zones, config, templates, crews }: any
     <div className="space-y-6">
       {msg && <p className="text-sm text-slate">{msg}</p>}
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">Services</h2>
+        <h2 className="mb-3 font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Services</h2>
         <p className="mb-2 text-xs text-[color:var(--body)]">No listed pricing — every job is quoted per client at the visit.</p>
         {services.map((s: any) => (
           <div key={s.id} className="flex items-center gap-2 border-b border-[color:var(--border)] py-2 text-sm last:border-0">
@@ -35,24 +35,24 @@ export function SettingsPanel({ services, zones, config, templates, crews }: any
       </section>
 
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">SMS sandbox <span className="text-xs text-[oklch(0.55_0.10_70)] dark:text-gold">(disable ONLY with Connor's explicit go)</span></h2>
-        <p className="text-sm">{sandboxCfg?.enabled ? `🟡 ON — everything redirects to ${sandboxCfg.redirect_all_to}` : "🟢 OFF — live sends"}</p>
+        <h2 className="mb-3 font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">SMS sandbox <span className="text-xs text-gold">(disable ONLY with Connor's explicit go)</span></h2>
+        <p className="flex items-center gap-2 text-sm"><span className={`h-2 w-2 rounded-full ${sandboxCfg?.enabled ? "bg-gold" : "bg-sage"}`} />{sandboxCfg?.enabled ? `ON — everything redirects to ${sandboxCfg.redirect_all_to}` : "OFF — live sends"}</p>
       </section>
 
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">Team alerts</h2>
+        <h2 className="mb-3 font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Team alerts</h2>
         <p className="mb-2 text-sm">Mode: <strong>{alertsCfg?.mode}</strong> · testing → {JSON.stringify(alertsCfg?.recipients)} · launch → {JSON.stringify(alertsCfg?.launch_recipients)}</p>
         <button disabled={busy === "alerts"} onClick={() => save("alerts_mode", { mode: alertsCfg?.mode === "testing" ? "launch" : "testing" })}
           className="rounded-lg bg-ice/20 px-3 py-1 text-sm dark:bg-white/10">Switch to {alertsCfg?.mode === "testing" ? "launch" : "testing"}</button>
       </section>
 
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">Norma</h2>
+        <h2 className="mb-3 font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Norma</h2>
         <p className="text-sm">Model: <strong>{noraCfg?.model}</strong> · prompt version {noraCfg?.version}</p>
       </section>
 
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">SMS templates</h2>
+        <h2 className="mb-3 font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">SMS templates</h2>
         {templates.map((t: any) => (
           <details key={t.id} className="border-b border-[color:var(--border)] py-2 text-sm last:border-0">
             <summary>{t.name}{t.delay_minutes != null ? ` (+${t.delay_minutes}m)` : ""}{!t.active && " · inactive"}</summary>
@@ -63,7 +63,7 @@ export function SettingsPanel({ services, zones, config, templates, crews }: any
       </section>
 
       <section className="mo-card p-4">
-        <h2 className="mb-2 font-semibold">Zones & crews</h2>
+        <h2 className="mb-3 font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Zones & crews</h2>
         {zones.map((z: any) => <div key={z.id} className="text-sm">{z.name} — {(z.cities ?? []).join(", ")}</div>)}
         <div className="mt-2 text-sm text-slate">{crews.map((c: any) => `${c.name} (zone ${c.home_zone}, max ${c.max_daily_jobs}/day)`).join(" · ")}</div>
       </section>

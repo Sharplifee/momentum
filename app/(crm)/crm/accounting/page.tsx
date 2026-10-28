@@ -2,6 +2,8 @@ import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { DeltaTile, BandCard, HBars, DonutChart } from "@/components/crm/Charts";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui";
+import { brand, SERIES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -36,14 +38,12 @@ export default async function Accounting() {
   const custName = (id: string | null) => (customers ?? []).find((c) => c.id === id)?.full_name ?? "—";
   const expByCat: Record<string, number> = {};
   for (const e of expenses ?? []) expByCat[e.category ?? "other"] = (expByCat[e.category ?? "other"] ?? 0) + Number(e.amount);
-  const invStatus = (st: string) => st === "paid" ? "bg-green/15 text-green ring-green/30" : st === "overdue" ? "bg-red/15 text-red ring-red/30" : st === "void" ? "bg-white/10 text-[color:var(--body)] ring-white/10" : "bg-gold/15 text-gold ring-gold/30";
+  const invStatus = (st: string) => st === "paid" ? "text-sage ring-sage/50" : st === "overdue" ? "text-red ring-red/50" : st === "void" ? "text-[color:var(--body)] ring-white/10" : "text-gold ring-gold/50";
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Bookkeeping</div>
-        <h1 className="mb-1 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Accounting</h1>
-        <p className="mb-5 text-sm text-[color:var(--body)]">Everything in one place — ledger, invoices, expenses, and P&L, live.</p>
+        <PageHeader eyebrow="Bookkeeping" title="Accounting" sub="Everything in one place — ledger, invoices, expenses, and P&L, live." />
 
         {/* ===== Top band ===== */}
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -58,7 +58,7 @@ export default async function Accounting() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
-                <tr className="border-b border-[color:var(--border)] text-left text-[11px] uppercase tracking-wide text-[color:var(--body)]/70">
+                <tr className="border-b border-[color:var(--border)] mo-eyebrow text-left text-[color:var(--body)]/70">
                   <th className="px-5 py-3">Account</th><th className="px-4 py-3">Visits</th><th className="px-4 py-3">Upcoming</th>
                   <th className="px-4 py-3">Last service</th><th className="px-4 py-3 text-right">Invoiced</th>
                   <th className="px-4 py-3 text-right">Paid</th><th className="px-5 py-3 text-right">Balance</th>
@@ -102,7 +102,7 @@ export default async function Accounting() {
 
           <BandCard title="Expenses" sub={`$${totExpenses.toFixed(0)} tracked`}>
             {Object.keys(expByCat).length ? (
-              <HBars rows={Object.entries(expByCat).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v], i) => ({ k: k[0].toUpperCase() + k.slice(1), v: Math.round(v), c: ["#e5b95e", "#8b7cf6", "#a5b0f0", "#4ade80", "#e0655a"][i] }))} />
+              <HBars rows={Object.entries(expByCat).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v], i) => ({ k: k[0].toUpperCase() + k.slice(1), v: Math.round(v), c: SERIES[i % SERIES.length] }))} />
             ) : <p className="py-2 text-sm text-[color:var(--body)]">No expenses logged yet.</p>}
             <div className="mt-4 space-y-1.5 border-t border-[color:var(--border)] pt-3">
               {(expenses ?? []).slice(0, 4).map((e) => (
@@ -169,8 +169,8 @@ export default async function Accounting() {
         <BandCard title="Profit & Loss" sub="all-time, live" className="mt-6">
           <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
             <DonutChart segs={[
-              { k: "Collected", v: Math.round(totPaid), c: "#4ade80" },
-              { k: "Expenses", v: Math.round(totExpenses), c: "#e5b95e" },
+              { k: "Collected", v: Math.round(totPaid), c: brand.sage },
+              { k: "Expenses", v: Math.round(totExpenses), c: brand.amber },
             ]} center={`${net < 0 ? "-" : ""}$${Math.abs(net).toFixed(0)}`} />
             <div className="grid grid-cols-3 gap-4 text-center sm:text-left">
               <div><div className="text-[11px] text-[color:var(--body)]">Revenue collected</div><div className="font-display text-2xl font-bold text-green">${totPaid.toFixed(0)}</div></div>

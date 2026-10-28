@@ -21,11 +21,11 @@ export function FlowTester() {
       </button>
       {result && (
         <div className="space-y-2">
-          <div className={`rounded-xl p-4 font-semibold ${result.ok ? "bg-gold/15 text-[oklch(0.5_0.10_70)] dark:text-gold" : "bg-red/10 text-red"}`}>
+          <div className={`rounded-xl p-4 font-semibold ${result.ok ? "border border-gold/50 text-gold" : "bg-red/10 text-red"}`}>
             {result.ok ? "✓ ALL STEPS PASS" : "✗ FAILURES DETECTED"}
           </div>
           {(result.steps ?? []).map((s: any, i: number) => (
-            <div key={i} className="flex items-start justify-between rounded-lg bg-white p-3 text-sm shadow-sm ">
+            <div key={i} className="flex items-start justify-between mo-card rounded-lg p-3 text-sm ">
               <span>{s.pass ? "✅" : "❌"} <strong>{s.step}</strong></span>
               <span className="max-w-md truncate text-xs text-slate/70">{JSON.stringify(s.detail ?? "")}</span>
             </div>

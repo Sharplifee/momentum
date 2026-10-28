@@ -4,6 +4,7 @@ import { MonthCalendar } from "@/components/crm/MonthCalendar";
 import { DeltaTile, BandCard } from "@/components/crm/Charts";
 import { ScheduleMap } from "@/components/crm/ScheduleMap";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -83,35 +84,27 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-        <h1 className="mb-1 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Schedule</h1>
-        <p className="mb-5 text-sm text-[color:var(--body)]">
-          Both calendars, always visible — <span className="font-medium text-teal">service visits</span> and <span className="font-medium text-gold">quote visits</span>.
-        </p>
+        <PageHeader eyebrow="Operations" title="Schedule" sub="Both calendars, always visible — service visits in teal, quote visits in amber." />
 
         <ScheduleMap token={process.env.MAPKIT_TOKEN ?? null} />
 
         {/* One strip rather than four tiles: the only numbers that matter here are
             how much work there is this week and how much of it is today. */}
-        <div className="mo-card mb-6 grid grid-cols-2 gap-y-5 p-5 sm:grid-cols-4">
-          <div>
-            <div className="font-display text-[34px] font-bold leading-none text-teal">{svcWeek.length}</div>
-            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Service · week</div>
-          </div>
-          <div>
-            <div className="font-display text-[34px] font-bold leading-none text-[color:var(--ink)]">{svcToday.length}</div>
-            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Service · today</div>
-          </div>
-          <div>
-            <div className="font-display text-[34px] font-bold leading-none text-gold">{qWeek.length}</div>
-            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Quotes · week</div>
-          </div>
-          <div>
-            <div className="font-display text-[34px] font-bold leading-none text-[color:var(--ink)]">{qToday.length}</div>
-            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--body)]">Quotes · today</div>
-          </div>
+        <div className="mo-card mb-6 grid grid-cols-2 gap-y-5 p-5 sm:grid-cols-4 sm:divide-x sm:divide-[color:var(--border)]">
+          {[
+            { v: svcWeek.length, l: "Service · week", c: "text-teal" },
+            { v: svcToday.length, l: "Service · today", c: "text-[color:var(--ink)]" },
+            { v: qWeek.length, l: "Quotes · week", c: "text-gold" },
+            { v: qToday.length, l: "Quotes · today", c: "text-[color:var(--ink)]" },
+          ].map((t, i) => (
+            <div key={t.l} className={i ? "sm:pl-5" : ""}>
+              <div className={`mo-num text-[34px] font-semibold leading-none ${t.c}`}>{t.v}</div>
+              <div className="mo-eyebrow mt-2">{t.l}</div>
+            </div>
+          ))}
         </div>
 
-        <BandCard title="This week" sub={`${week[0].dow} ${week[0].num} → ${week[4].dow} ${week[4].num} · teal = service · gold = quote`} className="mb-6">
+        <BandCard title="This week" sub={`${week[0].dow} ${week[0].num} → ${week[4].dow} ${week[4].num}`} className="mb-6">
           <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
             {week.map((d) => {
               const svc = service.filter((j) => j.scheduled_date === d.iso);
@@ -119,17 +112,17 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
               const isToday = d.iso === todayIso;
               return (
                 <Link key={d.iso} href={`/crm/schedule?m=${d.iso.slice(0, 7)}&d=${d.iso}`}
-                  className={`min-h-[150px] rounded-2xl border p-2 transition hover:border-teal/50 sm:min-h-[170px] ${isToday ? "border-teal/60 bg-teal/[0.08] shadow-glow" : "border-[color:var(--border)] bg-white/[0.02]"}`}>
+                  className={`min-h-[150px] rounded-lg border p-2 transition hover:border-white/25 sm:min-h-[170px] ${isToday ? "border-white/25 bg-white/[0.04]" : "border-[color:var(--border)]"}`}>
                   <div className="mb-1.5 text-center">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--body)]/70">{d.dow}</div>
-                    <div className={`mx-auto grid h-8 w-8 place-items-center rounded-full text-[15px] font-bold ${isToday ? "bg-teal text-white" : "text-[color:var(--ink)]"}`}>{d.num}</div>
+                    <div className="mo-eyebrow">{d.dow}</div>
+                    <div className={`mx-auto grid h-8 w-8 place-items-center rounded-full text-[15px] font-bold ${isToday ? "bg-[color:var(--ink)] text-[#0a0a0a]" : "text-[color:var(--ink)]"}`}>{d.num}</div>
                   </div>
                   <div className="space-y-1">
                     {svc.slice(0, 3).map((j) => (
-                      <div key={j.id} title={j.customer} className="truncate rounded-md bg-teal/20 px-1.5 py-1 text-[10px] font-medium leading-tight text-teal ring-1 ring-teal/25">{j.customer}</div>
+                      <div key={j.id} title={j.customer} className="truncate rounded border border-teal/40 px-1.5 py-1 text-[10px] font-medium leading-tight text-teal">{j.customer}</div>
                     ))}
                     {qts.slice(0, 3).map((j) => (
-                      <div key={j.id} title={j.customer} className="truncate rounded-md bg-gold/20 px-1.5 py-1 text-[10px] font-medium leading-tight text-gold ring-1 ring-gold/30">{j.customer}</div>
+                      <div key={j.id} title={j.customer} className="truncate rounded border border-gold/40 px-1.5 py-1 text-[10px] font-medium leading-tight text-gold">{j.customer}</div>
                     ))}
                     {svc.length + qts.length === 0 && <div className="pt-2 text-center text-[10px] text-[color:var(--body)]/40">—</div>}
                     {svc.length + qts.length > 6 && <div className="text-center text-[10px] text-[color:var(--body)]/60">+{svc.length + qts.length - 6} more</div>}
@@ -143,17 +136,17 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         <div className="grid gap-6 xl:grid-cols-2">
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-teal" />
-              <h2 className="text-[15px] font-semibold text-[color:var(--ink)]">Service calendar</h2>
-              <span className="text-[11px] text-[color:var(--body)]/70">active client visits</span>
+              <span className="h-2 w-2 rounded-full bg-teal" />
+              <h2 className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Service calendar</h2>
+              <span className="mo-eyebrow">active client visits</span>
             </div>
             <MonthCalendar month={month} jobs={service as any} crews={(crews ?? []) as any} todayIso={todayIso} basePath="/crm/schedule?" />
           </div>
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-gold" />
-              <h2 className="text-[15px] font-semibold text-[color:var(--ink)]">Quote visits calendar</h2>
-              <span className="text-[11px] text-[color:var(--body)]/70">new-business appointments</span>
+              <span className="h-2 w-2 rounded-full bg-gold" />
+              <h2 className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Quote visits calendar</h2>
+              <span className="mo-eyebrow">new-business appointments</span>
             </div>
             <MonthCalendar month={month} jobs={quotes as any} crews={(crews ?? []) as any} todayIso={todayIso} basePath="/crm/schedule?" />
           </div>

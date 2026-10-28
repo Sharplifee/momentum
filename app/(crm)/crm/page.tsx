@@ -1,42 +1,9 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
-import { Card, StatCard, PageHeader, Chip } from "@/components/ui";
-import { STAGE_STYLE, STAGE_LABEL } from "@/lib/theme";
+import { PageHeader } from "@/components/ui";
+import { STAGE_LABEL, STAGE_COLOR, SERIES } from "@/lib/theme";
 import Link from "next/link";
 import { DeltaTile, FunnelChart, AreaChart, DonutChart, BandCard } from "@/components/crm/Charts";
-
-/** Tiny deterministic sparkline like the Aivora cards. */
-function Spark({ seed, up = true }: { seed: number; up?: boolean }) {
-  const pts: number[] = [];
-  let v = 30 + (seed % 20);
-  for (let i = 0; i < 12; i++) { v += Math.sin((i + seed) * 1.7) * 8 + (up ? 1.5 : -1); pts.push(Math.max(6, Math.min(44, v))); }
-  const d = pts.map((y, i) => `${i === 0 ? "M" : "L"}${(i * 100) / 11},${50 - y}`).join(" ");
-  return (
-    <svg viewBox="0 0 100 50" className="h-10 w-full" preserveAspectRatio="none">
-      <defs><linearGradient id={`g${seed}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b7cf6" stopOpacity="0.35"/><stop offset="100%" stopColor="#8b7cf6" stopOpacity="0"/></linearGradient></defs>
-      <path d={`${d} L100,50 L0,50 Z`} fill={`url(#g${seed})`} />
-      <path d={d} fill="none" stroke="#a99df8" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function StatTile({ label, value, sub, href, icon, seed }: { label: string; value: string | number; sub?: string; href?: string; icon: string; seed: number }) {
-  const body = (
-    <div className="mo-card aiv-glow flex flex-col gap-2 p-4 transition hover:shadow-glow">
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal/15 text-base text-teal ring-1 ring-teal/25">{icon}</span>
-        <span className="text-[13px] font-medium text-slate">{label}</span>
-      </div>
-      <div className="flex items-end justify-between gap-2">
-        <span className="font-display text-[30px] font-bold leading-none text-navy">{value}</span>
-        {sub && <span className="pb-1 text-[11px] font-medium text-green">{sub}</span>}
-      </div>
-      <Spark seed={seed} />
-    </div>
-  );
-  return href ? <Link href={href}>{body}</Link> : body;
-}
-
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +63,7 @@ export default async function Dashboard() {
   const wkDelta = prevWk ? Math.round(((thisWk - prevWk) / prevWk) * 100) : (thisWk ? 100 : 0);
   const srcAgg: Record<string, number> = {};
   for (const r of (srcRows.data ?? []) as any[]) srcAgg[r.source ?? "direct"] = (srcAgg[r.source ?? "direct"] ?? 0) + 1;
-  const SRC_COLORS = ["#8b7cf6", "#e5b95e", "#4ade80", "#a5b0f0", "#e0655a"];
+  const SRC_COLORS = SERIES;
   const perDay = (rows: { scheduled_date?: string; created_at?: string }[], key: "scheduled_date" | "created_at", days = 14) => {
     const out = Array.from({ length: days }, () => 0);
     for (const r of rows) {
@@ -128,8 +95,11 @@ export default async function Dashboard() {
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Dashboard</div>
-      <PageHeader title={`Welcome back, ${(profile.full_name ?? "").split(" ")[0]}`} action={<Link href="/crm/leads" className="mo-primary rounded-xl px-4 py-2 text-sm font-medium shadow-card">View pipeline →</Link>} />
+      <PageHeader
+        eyebrow={`Dashboard · ${new Date().toLocaleDateString("en-US", { timeZone: "America/Denver", weekday: "short", month: "short", day: "numeric" })}`}
+        title={`Welcome back, ${(profile.full_name ?? "").split(" ")[0]}`}
+        action={<Link href="/crm/leads" className="mo-primary inline-flex items-center gap-1.5 px-4 py-2 text-[13px]">View pipeline <span aria-hidden>↗</span></Link>}
+      />
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => <DeltaTile key={s.label} {...s} />)}
@@ -138,10 +108,10 @@ export default async function Dashboard() {
       <div className="mb-5 grid gap-5 lg:grid-cols-5">
         <BandCard title="Leads by stage" sub="pipeline funnel" className="lg:col-span-2">
           <FunnelChart stages={[
-            { k: "New", v: byStage.new, c: "#8b7cf6", href: "/crm/leads?stage=new" },
-            { k: "Contacted", v: byStage.contacted, c: "#a99df8", href: "/crm/leads?stage=contacted" },
-            { k: "Quoted", v: byStage.quote_sent, c: "#e5b95e", href: "/crm/leads?stage=quote_sent" },
-            { k: "Won", v: byStage.closed_won, c: "#4ade80", href: "/crm/leads?stage=closed_won" },
+            { k: "New", v: byStage.new, c: STAGE_COLOR.new, href: "/crm/leads?stage=new" },
+            { k: "Contacted", v: byStage.contacted, c: STAGE_COLOR.contacted, href: "/crm/leads?stage=contacted" },
+            { k: "Quoted", v: byStage.quote_sent, c: STAGE_COLOR.quote_sent, href: "/crm/leads?stage=quote_sent" },
+            { k: "Won", v: byStage.closed_won, c: STAGE_COLOR.closed_won, href: "/crm/leads?stage=closed_won" },
           ]} />
         </BandCard>
         <BandCard title="Leads over time" sub="last 14 days" className="lg:col-span-3">
@@ -154,22 +124,22 @@ export default async function Dashboard() {
           {srcSegs.length ? <DonutChart segs={srcSegs} /> : <p className="py-6 text-sm text-[color:var(--body)]">Sources appear as leads arrive.</p>}
           <div className="mt-4 flex items-center justify-between border-t border-[color:var(--border)] pt-3 text-sm">
             <span className="text-[color:var(--body)]">Avg first response</span>
-            <span className="font-display text-xl font-bold text-[color:var(--ink)]">{avgResp != null ? `${avgResp}m` : "—"}</span>
+            <span className="mo-num text-xl font-semibold text-[color:var(--ink)]">{avgResp != null ? `${avgResp}m` : "—"}</span>
           </div>
         </BandCard>
         <BandCard title="Live activity" sub="as it happens" className="lg:col-span-3">
-          <div className="space-y-1">
+          <div>
             {(activity.data ?? []).slice(0, 7).map((a, i) => (
               <Link key={i} href={a.lead_id ? `/crm/leads/${a.lead_id}` : "/crm/messages"}
-                className="flex items-center justify-between rounded-xl border border-[color:var(--border)] bg-white/[0.02] px-3 py-2.5 text-sm transition hover:border-teal/40 hover:bg-teal/[0.06]">
+                className="flex items-center justify-between border-b border-[color:var(--border)] px-1 py-2.5 text-sm transition last:border-b-0 hover:text-[color:var(--ink)]">
                 <span className="flex min-w-0 items-center gap-2.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
-                  <span className="truncate text-navy dark:text-ice">{humanize(a)}</span>
+                  <span className="truncate text-[color:var(--ink)]">{humanize(a)}</span>
                 </span>
-                <span className="shrink-0 pl-3 text-xs text-slate/70">{new Date(a.created_at).toLocaleString("en-US", { timeZone: "America/Denver", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                <span className="mo-mono shrink-0 pl-3 text-[11px] text-[color:var(--body)]">{new Date(a.created_at).toLocaleString("en-US", { timeZone: "America/Denver", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
               </Link>
             ))}
-            {!activity.data?.length && <p className="py-6 text-center text-sm text-slate">Quiet so far — new activity shows up here.</p>}
+            {!activity.data?.length && <p className="py-6 text-center text-sm text-[color:var(--body)]">Quiet so far — new activity shows up here.</p>}
           </div>
         </BandCard>
       </div>

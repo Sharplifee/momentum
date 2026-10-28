@@ -18,14 +18,14 @@ type Job = {
 };
 type Crew = { id: number; name: string; max_daily_jobs: number };
 
-const CREW_DOT: Record<number, string> = { 1: "bg-teal", 2: "bg-[#8fb3c6]", 3: "bg-[#b8a35a]" };
-const CREW_TEXT: Record<number, string> = { 1: "text-teal", 2: "text-[#5c86a0]", 3: "text-[#8a7a3f]" };
+const CREW_DOT: Record<number, string> = { 1: "bg-teal", 2: "bg-ice", 3: "bg-gold" };
+const CREW_TEXT: Record<number, string> = { 1: "text-teal", 2: "text-ice", 3: "text-gold" };
 const STATUS_PILL: Record<string, string> = {
-  scheduled: "bg-black/[0.05] text-[color:var(--body)]",
-  in_progress: "bg-teal/15 text-teal",
-  completed: "bg-emerald-500/12 text-emerald-600",
-  exception: "bg-amber-500/15 text-amber-600",
-  cancelled: "bg-black/[0.04] text-[color:var(--body)] line-through",
+  scheduled: "border border-white/10 text-[color:var(--body)]",
+  in_progress: "border border-teal/60 text-teal",
+  completed: "border border-sage/60 text-sage",
+  exception: "border border-gold/60 text-gold",
+  cancelled: "border border-white/10 text-[color:var(--body)] line-through",
 };
 
 function ymd(d: Date) {
@@ -81,19 +81,19 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
   const dayJobs = selected ? byDay.get(selected) ?? [] : [];
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
+    <div className="flex flex-col gap-4 2xl:flex-row">
       {/* month grid */}
       <div className="mo-card flex-1 p-4">
         <div className="mb-3 flex items-center justify-between px-1">
           <div className="flex items-center gap-1">
-            <Link href={`${basePath}m=${prev}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-black/[0.05]">‹</Link>
-            <Link href={`${basePath}m=${next}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-black/[0.05]">›</Link>
+            <Link href={`${basePath}m=${prev}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-white/[0.06] hover:text-[color:var(--ink)]">‹</Link>
+            <Link href={`${basePath}m=${next}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-white/[0.06] hover:text-[color:var(--ink)]">›</Link>
           </div>
-          <h2 className="text-[17px] font-semibold text-[color:var(--ink)]">{monthLabel}</h2>
-          <Link href={`${basePath}m=${todayIso.slice(0,7)}`} onClick={() => setSelected(todayIso)} className="rounded-full px-3 py-1 text-sm font-medium text-teal transition hover:bg-teal/10">Today</Link>
+          <h2 className="font-display text-[17px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">{monthLabel}</h2>
+          <Link href={`${basePath}m=${todayIso.slice(0,7)}`} onClick={() => setSelected(todayIso)} className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[12px] font-medium text-[color:var(--ink)] transition hover:border-white/30">Today</Link>
         </div>
 
-        <div className="grid grid-cols-7 border-b border-[color:var(--border)] pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[color:var(--body)]/70">
+        <div className="mo-eyebrow grid grid-cols-7 pb-2 text-center">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d}>{d}</div>)}
         </div>
 
@@ -108,15 +108,15 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
               <button
                 key={i}
                 onClick={() => setSelected(iso)}
-                className={`relative flex min-h-[76px] flex-col items-stretch gap-1 border-b border-r sm:min-h-[104px] border-[color:var(--border)]/60 p-1.5 text-left transition ${i % 7 === 0 ? "border-l" : ""} ${i < 7 ? "border-t" : ""} ${isSel ? "bg-teal/[0.07]" : "hover:bg-white/[0.03]"} ${inMonth ? "" : "opacity-40"}`}
+                className={`relative flex min-h-[76px] flex-col items-stretch gap-1 border-b border-r border-[color:var(--border)] p-1.5 text-left transition sm:min-h-[104px] ${i % 7 === 0 ? "border-l" : ""} ${i < 7 ? "border-t" : ""} ${isSel ? "bg-white/[0.05]" : "hover:bg-white/[0.03]"} ${inMonth ? "" : "opacity-40"}`}
               >
-                <span className={`self-start rounded-full text-[13px] leading-none ${isToday ? "grid h-6 w-6 place-items-center bg-teal font-semibold text-white" : "px-1 pt-0.5 font-medium text-[color:var(--ink)]"}`}>
+                <span className={`self-start rounded-full text-[13px] leading-none ${isToday ? "grid h-6 w-6 place-items-center bg-[color:var(--ink)] font-semibold text-[#0a0a0a]" : "px-1 pt-0.5 font-medium text-[color:var(--ink)]"}`}>
                   {d.getUTCDate()}
                 </span>
                 <div className="hidden flex-col gap-0.5 sm:flex">
                   {list.slice(0, 3).map((j) => (
                     <span key={j.id} className="flex items-center gap-1 truncate rounded-md bg-white/[0.06] px-1 py-0.5 text-[11px] leading-tight text-[color:var(--ink)]">
-                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${j.kind === "quote" ? "bg-gold" : (CREW_DOT[j.crew_id ?? 0] ?? "bg-slate-400")}`} />
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${j.kind === "quote" ? "bg-gold" : (CREW_DOT[j.crew_id ?? 0] ?? "bg-slate")}`} />
                       <span className="truncate">{j.customer}</span>
                     </span>
                   ))}
@@ -125,13 +125,13 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
                 {list.length > 0 && (
                   <div className="flex flex-wrap content-start gap-1 px-0.5 sm:hidden">
                     {list.slice(0, 6).map((j) => (
-                      <span key={j.id} className={`h-1.5 w-1.5 rounded-full ${j.kind === "quote" ? "bg-gold" : (CREW_DOT[j.crew_id ?? 0] ?? "bg-slate-400")}`} />
+                      <span key={j.id} className={`h-1.5 w-1.5 rounded-full ${j.kind === "quote" ? "bg-gold" : (CREW_DOT[j.crew_id ?? 0] ?? "bg-slate")}`} />
                     ))}
                     {list.length > 6 && <span className="text-[9px] font-semibold leading-none text-[color:var(--body)]">+{list.length - 6}</span>}
                   </div>
                 )}
                 {list.length > 0 && capTotal > 0 && (
-                  <span className={`absolute bottom-1 right-1.5 hidden text-[9px] font-semibold sm:block ${list.length >= capTotal ? "text-red-500" : "text-[color:var(--body)]/50"}`}>
+                  <span className={`absolute bottom-1 right-1.5 hidden text-[9px] font-semibold sm:block mo-mono ${list.length >= capTotal ? "text-red" : "text-[color:var(--faint)]"}`}>
                     {list.length}/{capTotal}
                   </span>
                 )}
@@ -142,21 +142,21 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
       </div>
 
       {/* day panel — the day IS the route */}
-      <div className="mo-card w-full shrink-0 p-4 lg:w-[360px]">
+      <div className="mo-card w-full shrink-0 p-4 2xl:w-[320px]">
         {!selected ? (
           <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 text-center">
-            <span className="text-3xl">📅</span>
+            <span className="mo-eyebrow">Day view</span>
             <p className="text-sm text-[color:var(--body)]">Select a day to see its schedule and route.</p>
           </div>
         ) : (
           <>
-            <h3 className="mb-1 text-[17px] font-semibold text-[color:var(--ink)]">
+            <h3 className="mb-1 font-display text-[17px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">
               {new Date(selected + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </h3>
             <p className="mb-3 text-xs text-[color:var(--body)]">{dayJobs.length ? `${dayJobs.length} stop${dayJobs.length === 1 ? "" : "s"} — in route order` : "No jobs scheduled."}</p>
             <div className="flex flex-col gap-2">
               {dayJobs.map((j, idx) => (
-                <div key={j.id} className="rounded-2xl border border-[color:var(--border)] bg-white/[0.04] p-3">
+                <div key={j.id} className="rounded-lg border border-[color:var(--border)] p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 text-sm font-semibold text-[color:var(--ink)]">

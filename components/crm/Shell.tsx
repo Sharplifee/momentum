@@ -105,13 +105,13 @@ function ModeSwitch({ previewing }: { previewing?: boolean }) {
   };
 
   const base =
-    "min-h-[36px] rounded-lg px-3 text-[13px] font-semibold transition disabled:opacity-60";
-  const on = "bg-teal text-white shadow-sm";
+    "min-h-[32px] rounded-full px-3.5 text-[12px] font-semibold tracking-[-0.01em] transition disabled:opacity-60";
+  const on = "bg-[color:var(--ink)] text-[#0a0a0a]";
   const off = "text-[color:var(--body)] hover:text-[color:var(--ink)]";
 
   return (
     <div
-      className="flex shrink-0 items-center gap-0.5 rounded-xl border border-[color:var(--border)] bg-[color:var(--bg)] p-0.5"
+      className="mo-segment flex shrink-0 items-center gap-0.5 p-0.5"
       role="group"
       aria-label="Switch between admin and crew"
     >
@@ -145,53 +145,69 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
     <div className="min-h-screen">
       {/* top bar — shifts below the preview banner when it is showing */}
       <header
-        className="sticky z-30 border-b border-[color:var(--border)] bg-[color:var(--bg)]/80 backdrop-blur"
+        className="sticky z-30 border-b border-[color:var(--border)] bg-[color:var(--bg)]"
         style={{ top: topOffset }}
       >
-        <div className="flex items-center gap-3 px-4 py-2.5 md:px-6">
-          <button onClick={() => setDrawer(!drawer)} className="rounded-lg p-1.5 text-slate hover:bg-ice/15 md:hidden" aria-label="Menu">☰</button>
-          <Link href={role === "crew" ? "/crm/today" : "/crm"} className="flex items-center gap-2">
-            <img src="/logo-mark.png" alt="Momentum" className="h-8 w-8 shrink-0 object-contain" />
-            <span className="hidden font-display text-lg font-bold text-navy dark:text-ice sm:block">Momentum</span>
+        <div className="flex h-[56px] items-center gap-3 px-4 md:px-6">
+          <button onClick={() => setDrawer(!drawer)} className="rounded-full p-1.5 text-[color:var(--body)] hover:text-[color:var(--ink)] md:hidden" aria-label="Menu">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <Link href={role === "crew" ? "/crm/today" : "/crm"} className="flex items-center gap-2.5 md:w-[208px]">
+            <img src="/logo-mark.png" alt="Momentum" className="h-7 w-7 shrink-0 object-contain" />
+            <span className="hidden font-display text-[19px] font-semibold tracking-[-0.04em] text-[color:var(--ink)] sm:block">Momentum<span className="ml-0.5 align-super text-[8px] font-medium tracking-normal text-[color:var(--body)]">©</span></span>
           </Link>
           <div className="mx-auto w-full max-w-md"><GlobalSearch /></div>
-          {(realRole === "owner" || realRole === "manager") && <ModeSwitch previewing={previewing} />}
+          {(realRole === "owner" || realRole === "manager") && <div className="hidden sm:block"><ModeSwitch previewing={previewing} /></div>}
           <AccountMenu name={name} email={email} role={realRole ?? role} previewing={previewing} />
         </div>
       </header>
 
       <div className="flex">
         {/* desktop sidebar */}
-        <aside className="sticky top-[53px] hidden h-[calc(100vh-53px)] w-60 shrink-0 overflow-y-auto border-r border-[color:var(--border)] px-3 py-4 md:block">
-          {NAV.map((g) => {
-            const items = g.items.filter(can);
-            if (!items.length) return null;
-            return (
-              <div key={g.group} className="mb-5">
-                <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
-                <nav className="space-y-0.5">
-                  {items.map((n) => (
-                    <Link key={n.href} href={n.href} prefetch
-                      className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive(n.href) ? "bg-teal/15 text-navy shadow-glow ring-1 ring-teal/40" : "text-slate hover:bg-ice/15 hover:text-navy dark:hover:text-ice"}`}>
-                      <NavIcon name={n.icon} />{n.label}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-            );
-          })}
-                  </aside>
+        <aside className="sticky top-[57px] hidden h-[calc(100vh-57px)] w-[232px] shrink-0 flex-col border-r border-[color:var(--border)] md:flex">
+          <div className="flex-1 overflow-y-auto px-3 py-5">
+            {NAV.map((g) => {
+              const items = g.items.filter(can);
+              if (!items.length) return null;
+              return (
+                <div key={g.group} className="mb-6">
+                  <div className="mo-eyebrow px-3 pb-2 text-[color:var(--faint)]">{g.group || "Workspace"}</div>
+                  <nav className="space-y-px">
+                    {items.map((n) => {
+                      const active = isActive(n.href);
+                      return (
+                        <Link key={n.href} href={n.href} prefetch
+                          className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13.5px] font-medium transition ${active ? "text-[color:var(--ink)]" : "text-[color:var(--body)] hover:text-[color:var(--ink)]"}`}>
+                          <span aria-hidden className={`absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full transition ${active ? "bg-ribbon opacity-100" : "opacity-0"}`} />
+                          <span className={`transition ${active ? "text-[color:var(--ink)]" : "text-[color:var(--faint)] group-hover:text-[color:var(--body)]"}`}><NavIcon name={n.icon} /></span>
+                          {n.label}
+                          {n.href === "/crm/settings" && blockerCount > 0 && (
+                            <span className="ml-auto rounded-full border border-gold/50 px-1.5 text-[10px] font-semibold leading-4 text-gold">{blockerCount}</span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </div>
+              );
+            })}
+          </div>
+          <div className="px-6 pb-5 pt-3">
+            <div className="mo-hairline-soft mb-3" />
+            <div className="mo-eyebrow leading-[1.7] text-[color:var(--faint)]">Momentum Landscaping<br />South Salt Lake Valley · MT</div>
+          </div>
+        </aside>
 
         {/* mobile drawer */}
         {drawer && (
           <div className="fixed inset-0 z-40 md:hidden" onClick={() => setDrawer(false)}>
-            <div className="absolute inset-0 bg-navy/40" />
-            <aside className="absolute inset-y-0 left-0 w-64 overflow-y-auto bg-[color:var(--bg)] px-3 py-4 shadow-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute inset-0 bg-black/70" />
+            <aside className="absolute inset-y-0 left-0 w-64 overflow-y-auto border-r border-[color:var(--border)] bg-[color:var(--bg)] px-3 py-4" onClick={(e) => e.stopPropagation()}>
               {/* The header is cramped on a phone, so the switch lives here too —
                   the drawer is where a phone user looks for anything not a tab. */}
               {(realRole === "owner" || realRole === "manager") && (
                 <div className="mb-5 px-1">
-                  <div className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">View</div>
+                  <div className="mo-eyebrow px-2 pb-2 text-[color:var(--faint)]">View</div>
                   <ModeSwitch previewing={previewing} />
                 </div>
               )}
@@ -200,27 +216,30 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
                 if (!items.length) return null;
                 return (
                   <div key={g.group} className="mb-5">
-                    <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate/50">{g.group || "Menu"}</div>
+                    <div className="mo-eyebrow px-3 pb-2 text-[color:var(--faint)]">{g.group || "Workspace"}</div>
                     {items.map((n) => (
                       <Link key={n.href} href={n.href} prefetch onClick={() => setDrawer(false)}
-                        className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium ${isActive(n.href) ? "bg-teal text-white" : "text-slate hover:bg-ice/15"}`}>
+                        className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium ${isActive(n.href) ? "bg-white/[0.06] text-[color:var(--ink)]" : "text-[color:var(--body)]"}`}>
                         <NavIcon name={n.icon} />{n.label}
                       </Link>
                     ))}
                   </div>
                 );
               })}
-              
-        </aside>
+              <div className="mt-4 px-3">
+                <div className="mo-hairline-soft mb-3" />
+                <div className="mo-eyebrow leading-[1.7] text-[color:var(--faint)]">Momentum Landscaping<br />South Salt Lake Valley · MT</div>
+              </div>
+            </aside>
           </div>
         )}
 
         {/* content */}
-        <main className="min-w-0 flex-1 px-4 py-6 pb-24 md:px-8 md:pb-8">{children}</main>
+        <main className="min-w-0 flex-1 px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-10 lg:px-10">{children}</main>
       </div>
 
       {/* mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[color:var(--border)] bg-[#0b0e17]/95 pt-0.5 backdrop-blur-xl md:hidden"
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 border-t border-[color:var(--border)] bg-[color:var(--bg)]/95 pt-0.5 backdrop-blur-xl md:hidden"
         style={{
           paddingLeft: "max(14px, env(safe-area-inset-left))",
           paddingRight: "max(14px, env(safe-area-inset-right))",
@@ -228,14 +247,14 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
         }}>
         {mobileTabs.map((n) => (
           <Link key={n.href} href={n.href} prefetch
-            className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[10.5px] font-medium leading-none transition ${isActive(n.href) ? "text-teal" : "text-slate"}`}>
-            {isActive(n.href) && <span className="absolute -top-px h-0.5 w-8 rounded-full bg-teal" />}
-            <span className={`grid h-8 w-full max-w-[46px] place-items-center rounded-xl transition ${isActive(n.href) ? "bg-teal/15" : ""}`}><NavIcon name={n.icon} /></span>
+            className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium leading-none transition ${isActive(n.href) ? "text-[color:var(--ink)]" : "text-[color:var(--body)]"}`}>
+            {isActive(n.href) && <span className="absolute -top-px h-[2px] w-8 rounded-full bg-ribbon" />}
+            <span className="grid h-8 w-full max-w-[46px] place-items-center"><NavIcon name={n.icon} /></span>
             <span className="w-full truncate px-0.5 text-center">{n.label}</span>
           </Link>
         ))}
-        <button onClick={() => setDrawer(true)} className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2.5 text-[10.5px] font-medium leading-none text-slate">
-          <span className="grid h-8 w-full max-w-[46px] place-items-center rounded-xl"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <button onClick={() => setDrawer(true)} className="flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium leading-none text-[color:var(--body)]">
+          <span className="grid h-8 w-full max-w-[46px] place-items-center"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
           <span className="w-full truncate px-0.5 text-center">More</span>
         </button>
       </nav>

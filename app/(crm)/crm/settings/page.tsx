@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { SettingsPanel } from "@/components/crm/SettingsPanel";
+import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,9 @@ export default async function Settings() {
   ]);
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Settings</h1>
+      <PageHeader eyebrow="Configuration" title="Settings" />
         {blockers.length > 0 && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-gold/50 bg-gold/10 p-4 text-sm">
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-gold/50 bg-gold/10 p-4 text-sm">
             <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gold text-[12px] font-bold text-black">{blockers.length}</span>
             <div>
               <div className="font-semibold text-[color:var(--ink)]">Attention needed — {blockers.length} item{blockers.length > 1 ? "s" : ""} blocking</div>
@@ -29,11 +30,11 @@ export default async function Settings() {
           </div>
         )}
         <div className="mo-card mb-5 p-4">
-          <h2 className="mb-2 font-semibold text-[color:var(--ink)]">Launch checklist</h2>
+          <h2 className="mb-3 font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Launch checklist</h2>
           <ul className="space-y-1.5 text-sm">
             {clItems.map((i) => (
               <li key={i.label} className="flex items-center gap-2.5">
-                <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold ${i.done ? "bg-green/20 text-green" : "bg-gold/20 text-gold"}`}>{i.done ? "✓" : "!"}</span>
+                <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold ${i.done ? "border border-sage/50 text-sage" : "border border-gold/60 text-gold"}`}>{i.done ? "✓" : "!"}</span>
                 <span className={i.done ? "text-[color:var(--body)] line-through decoration-[color:var(--border)]" : "text-[color:var(--ink)]"}>{i.label}</span>
               </li>
             ))}

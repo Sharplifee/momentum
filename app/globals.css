@@ -2,60 +2,151 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------ tokens
+   Momentum — matte black, bone ink, one gradient hairline.
+   The app is a single dark theme; the .dark block exists only so any
+   `dark:` variant resolves to the same values instead of a stale light set. */
 :root {
-  --bg: #0b0e17;
-  --bg-alt: #111527;
-  --card: 21 26 44;
-  --card-alpha: 0.72;
-  --border: rgba(148, 155, 200, 0.14);
-  --ink: #e9ecf8;
-  --body: #98a1bd;
-  --accent: #8b7cf6;
+  --bg: #0a0a0a;
+  --bg-alt: #0e0e0e;
+  --card: 18 18 18;            /* rgb triplet for rgba(var(--card) / a) */
+  --card-alpha: 1;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --ink: #f2efe8;
+  --body: #9b9790;
+  --faint: #66635c;
+  --accent: #3aa99a;
+  --accent-rgb: 58 169 154;
+  --amber: #e3a35f;
+  --coral: #d9775c;
+  --sage: #86b67a;
+  --pine: #1d5f58;
+  --bone: #efe7d6;
+  /* the signature: pine → sea → bone → amber → coral */
+  --grad: linear-gradient(90deg, #1d5f58 0%, #3aa99a 30%, #efe7d6 52%, #e3a35f 74%, #d9775c 100%);
+  --grad-soft: linear-gradient(90deg, rgba(29,95,88,0.9), rgba(58,169,154,0.9) 30%, rgba(239,231,214,0.9) 52%, rgba(227,163,95,0.9) 74%, rgba(217,119,92,0.9));
 }
 .dark {
-  --bg: #0b0e17;
-  --bg-alt: #111527;
-  --card: 21 26 44;
-  --card-alpha: 0.72;
-  --border: rgba(148, 155, 200, 0.14);
-  --ink: #e9ecf8;
-  --body: #98a1bd;
+  --bg: #0a0a0a;
+  --bg-alt: #0e0e0e;
+  --card: 18 18 18;
+  --card-alpha: 1;
+  --border: rgba(255, 255, 255, 0.08);
+  --ink: #f2efe8;
+  --body: #9b9790;
 }
 
+html { background: var(--bg); }
 body {
-  background:
-    radial-gradient(1100px 520px at 85% -8%, rgba(139,124,246,0.16), transparent 60%),
-    radial-gradient(800px 480px at -10% 108%, rgba(99,102,241,0.10), transparent 55%),
-    var(--bg);
+  background: var(--bg);
   color: var(--body);
+  font-feature-settings: "cv11", "ss01", "tnum";
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: rgba(58,169,154,0.35); color: var(--ink); }
+
+/* ------------------------------------------------------------------ cards
+   Matte, hairline-bordered, flat. The only ornament is the gradient hairline
+   (`aiv-glow` kept as the class name so the eight cards that carried the old
+   violet glow now carry the signature line instead). */
+.mo-card {
+  position: relative;
+  background: rgb(var(--card));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
+}
+.aiv-glow { position: relative; overflow: hidden; }
+.aiv-glow::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: var(--grad); opacity: 0.9; pointer-events: none;
 }
 
-/* Brand card language: frosted, soft-bordered, gently shadowed */
-.mo-card {
-  background: linear-gradient(180deg, rgba(var(--card) / 0.86), rgba(var(--card) / 0.62));
+/* the hairline on its own */
+.mo-hairline { height: 2px; width: 100%; background: var(--grad); border-radius: 999px; }
+.mo-hairline-soft { height: 1px; width: 100%; background: var(--grad); opacity: 0.55; }
+
+/* ruled-line texture (the business-card back) — for empty states, login, dividers */
+.mo-rule {
+  background-image: repeating-linear-gradient(180deg, transparent 0 15px, rgba(255,255,255,0.035) 15px 16px);
+}
+.mo-rule-dots {
+  background-image: radial-gradient(rgba(255,255,255,0.10) 0.7px, transparent 0.8px);
+  background-size: 14px 14px;
+}
+
+/* ribbon — the layered gradient panel (login, hero). pure CSS, no image. */
+.mo-ribbon {
+  position: relative; overflow: hidden; background: #0a0a0a;
+}
+.mo-ribbon::before {
+  content: ""; position: absolute; inset: -40% -10%;
+  background:
+    repeating-linear-gradient(112deg, rgba(10,10,10,0) 0 22px, rgba(10,10,10,0.55) 22px 26px),
+    linear-gradient(112deg, #0a0a0a 0%, #103a36 22%, #2f8f82 42%, #efe7d6 56%, #e3a35f 72%, #a94f3d 88%, #0a0a0a 100%);
+  transform: skewY(-8deg);
+  filter: saturate(0.95);
+}
+.mo-ribbon::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(10,10,10,0.35), rgba(10,10,10,0) 40%, rgba(10,10,10,0.55) 100%);
+}
+
+/* ------------------------------------------------------------------ type */
+.mo-h1 {
+  font-family: var(--font-display), "Inter Tight", "Inter", system-ui, sans-serif;
+  color: var(--ink); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05;
+}
+.mo-eyebrow {
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--body);
+}
+.mo-mono { font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.mo-num { font-family: var(--font-display), "Inter Tight", system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+
+/* ------------------------------------------------------------------ controls
+   Primary action is a bone pill with black text — the "Cadastre-se" button. */
+.mo-primary {
+  background: var(--ink); color: #0a0a0a; border-radius: 999px;
+  font-weight: 600; letter-spacing: -0.01em;
+}
+.mo-primary:hover { background: #ffffff; }
+.mo-primary:active { transform: translateY(0.5px); }
+
+.mo-surface {
+  background: #0e0e0e;
   border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 30px rgba(0,0,0,0.28);
-  backdrop-filter: blur(12px);
+  color: var(--ink);
 }
-.aiv-glow { position: relative; }
-.aiv-glow::before {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(420px 140px at 80% -20%, rgba(139,124,246,0.18), transparent 70%);
+.mo-surface::placeholder { color: var(--faint); opacity: 1; }
+.mo-surface:focus { border-color: var(--border-strong); outline: none; box-shadow: 0 0 0 1px rgba(58,169,154,0.45); }
+
+.mo-chip {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--body);
+  border-radius: 999px;
 }
-.mo-h1 { font-family: var(--font-display), "DM Sans", system-ui, sans-serif; color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
-.mo-primary { background: linear-gradient(135deg, #8b7cf6, #6f5de8); color: #fff; box-shadow: 0 4px 18px rgba(139,124,246,0.35); }
-.mo-primary:hover { filter: brightness(1.08); }
+.mo-chip:hover { color: var(--ink); border-color: var(--border-strong); }
+.mo-chip[data-active="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #0a0a0a;
+}
+
+.mo-segment { background: #0e0e0e; border: 1px solid var(--border); border-radius: 999px; }
+.mo-segment-item { color: var(--body); border-radius: 999px; }
+.mo-segment-item[data-active="true"] { background: var(--ink); color: #0a0a0a; }
 
 /* loading skeleton shimmer */
 @keyframes mo-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
 .mo-skeleton {
-  background: linear-gradient(90deg, rgba(150,178,190,0.10) 25%, rgba(150,178,190,0.22) 37%, rgba(150,178,190,0.10) 63%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.10) 37%, rgba(255,255,255,0.05) 63%);
   background-size: 800px 100%;
   animation: mo-shimmer 1.4s infinite linear;
-  border-radius: 10px;
+  border-radius: 6px;
 }
-
 
 /* Autofill: iOS/Safari/Chrome paint a solid grey-white box that hides both value and
    placeholder. box-shadow inset is the only reliable override across all three. */
@@ -65,58 +156,41 @@ input:-webkit-autofill:focus,
 input:-webkit-autofill:active,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
-  -webkit-text-fill-color: #e9ecf8 !important;
-  -webkit-box-shadow: inset 0 0 0 1000px #171c30 !important;
-  box-shadow: inset 0 0 0 1000px #171c30 !important;
-  caret-color: #e9ecf8 !important;
-  border-radius: 16px;
+  -webkit-text-fill-color: #f2efe8 !important;
+  -webkit-box-shadow: inset 0 0 0 1000px #0e0e0e !important;
+  box-shadow: inset 0 0 0 1000px #0e0e0e !important;
+  caret-color: #f2efe8 !important;
+  border-radius: 8px;
   transition: background-color 600000s 0s, color 600000s 0s;
 }
 
-/* Interactive surfaces.
-   The theme is driven by CSS variables, not by a .dark class, so any component
-   written as `bg-white/60 dark:bg-white/10` renders a literal white block —
-   the dark: variant never fires. These classes follow the real theme. */
-.mo-surface {
-  background: rgba(var(--card) / 0.55);
-  border: 1px solid var(--border);
-  color: var(--ink);
-}
-.mo-surface::placeholder { color: var(--body); opacity: 1; }
-.mo-surface:focus { border-color: var(--accent); outline: none; }
+/* ------------------------------------------------------------------ remaps
+   Translucent white was used throughout as a "subtle surface" tint, written for
+   a light theme that no longer exists. Remap those tints onto the dark scale so
+   every surface follows the real theme. Solid `bg-white` is left alone; it's
+   used deliberately for badges. */
+.bg-white\/5   { background-color: rgba(255,255,255,0.03) !important; }
+.bg-white\/10  { background-color: rgba(255,255,255,0.05) !important; }
+.bg-white\/20  { background-color: rgba(255,255,255,0.06) !important; }
+.bg-white\/40  { background-color: rgba(255,255,255,0.07) !important; }
+.bg-white\/50  { background-color: rgba(255,255,255,0.07) !important; }
+.bg-white\/60  { background-color: rgba(255,255,255,0.08) !important; }
+.bg-white\/70  { background-color: rgba(255,255,255,0.08) !important; }
+.bg-white\/80  { background-color: rgba(255,255,255,0.09) !important; }
 
-.mo-chip {
-  background: rgba(var(--card) / 0.55);
-  border: 1px solid var(--border);
-  color: var(--body);
-}
-.mo-chip:hover { color: var(--ink); }
-.mo-chip[data-active="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.mo-segment { background: rgba(var(--card) / 0.45); border: 1px solid var(--border); }
-.mo-segment-item { color: var(--body); }
-.mo-segment-item[data-active="true"] { background: rgba(var(--accent) / 0.22); color: var(--ink); }
-
-/* Translucent white was used throughout as a "subtle surface" tint, written for
-   a light theme that no longer exists — it renders as pale blocks on the dark
-   UI. Remap those tints onto the card colour so every surface follows the real
-   theme. Solid `bg-white` is left alone; it's used deliberately for badges. */
-.bg-white\/5   { background-color: rgba(var(--card) / 0.35) !important; }
-.bg-white\/10  { background-color: rgba(var(--card) / 0.45) !important; }
-.bg-white\/20  { background-color: rgba(var(--card) / 0.55) !important; }
-.bg-white\/40  { background-color: rgba(var(--card) / 0.60) !important; }
-.bg-white\/50  { background-color: rgba(var(--card) / 0.62) !important; }
-.bg-white\/60  { background-color: rgba(var(--card) / 0.65) !important; }
-.bg-white\/70  { background-color: rgba(var(--card) / 0.70) !important; }
-.bg-white\/80  { background-color: rgba(var(--card) / 0.78) !important; }
-
-/* Same story for text: navy was the light-theme ink. */
+/* navy was the light-theme ink. */
 .text-navy { color: var(--ink); }
 
 /* Calendar gridlines were pure white borders — far too loud on a dark surface. */
 .mo-calendar td, .mo-calendar th,
 table.mo-grid td, table.mo-grid th { border-color: var(--border) !important; }
+
+/* Tables: hairline rows, mono numerics, no zebra. */
+.mo-table th { font-family: var(--font-mono), ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--body); font-weight: 500; }
+.mo-table tr + tr td { border-top: 1px solid var(--border); }
+
+/* scrollbars: thin, quiet */
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+*::-webkit-scrollbar-track { background: transparent; }

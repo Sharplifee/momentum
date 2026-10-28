@@ -40,7 +40,7 @@ export default async function LeadDetail({ params }: { params: { id: string } })
       <h2 className="mb-2 mt-8 font-semibold">Timeline</h2>
       <div className="space-y-2">
         {timeline.map((t, i) => (
-          <div key={i} className="rounded-lg bg-white p-3 text-sm shadow-sm ">
+          <div key={i} className="mo-card rounded-lg p-3 text-sm ">
             <div className="flex justify-between text-xs text-slate/70">
               <span>{t.kind} · {t.actor}</span>
               <span>{new Date(t.ts).toLocaleString("en-US", { timeZone: "America/Denver" })}</span>

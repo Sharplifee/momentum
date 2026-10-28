@@ -25,7 +25,7 @@ export default async function Money({ searchParams }: { searchParams: { status?:
       </div>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:max-w-md">
         <div className="mo-card p-4"><div className="text-xs text-[color:var(--body)]">Outstanding</div><div className="mt-0.5 text-2xl font-bold text-[color:var(--ink)]">${outstanding.toFixed(0)}</div></div>
-        <div className="mo-card p-4"><div className="text-xs text-[color:var(--body)]">Paid this month</div><div className="mt-0.5 text-2xl font-bold text-emerald-600">${paidMonth.toFixed(0)}</div></div>
+        <div className="mo-card p-4"><div className="text-xs text-[color:var(--body)]">Paid this month</div><div className="mt-0.5 text-2xl font-bold text-sage">${paidMonth.toFixed(0)}</div></div>
       </div>
       <div className="mb-4 inline-flex flex-wrap gap-1 rounded-xl bg-white/[0.06] p-1">
         {["", "draft", "sent", "paid", "overdue", "void"].map((s) => (

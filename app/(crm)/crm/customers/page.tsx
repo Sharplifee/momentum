@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import Link from "next/link";
 import { DeltaTile } from "@/components/crm/Charts";
+import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,7 @@ export default async function Customers({ searchParams }: { searchParams: { q?: 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
-        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal/80">Accounts</div>
-        <h1 className="mb-4 font-display text-[28px] font-bold tracking-tight text-[color:var(--ink)] md:text-[32px]">Customers</h1>
+        <PageHeader eyebrow="Accounts" title="Customers" />
         <div className="mb-5 grid grid-cols-3 gap-3">
           <DeltaTile label="Total Clients" value={(customers ?? []).length} delta="active accounts" icon="◈" seed={5} />
           <DeltaTile label="New (30d)" value={newMonth} delta="growth" icon="◎" seed={9} />

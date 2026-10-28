@@ -62,12 +62,11 @@ export default async function Today() {
            name={profile.full_name ?? ""} email={profile.email ?? undefined}>
 
       <header className="mb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-teal">
-          {weekday} · {datePart}
-        </p>
-        <h1 className="mt-1 font-display text-[30px] font-bold leading-none tracking-tight text-[color:var(--ink)] md:text-[36px]">
+        <p className="mo-eyebrow">{weekday} · {datePart}</p>
+        <h1 className="mo-h1 mt-2 text-[30px] md:text-[36px]">
           {greet}{firstName ? `, ${firstName}` : ""}
         </h1>
+        <div className="mo-hairline-soft mt-4" />
 
         <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
           {/* the work */}
@@ -75,13 +74,13 @@ export default async function Today() {
             <div className="relative grid h-14 w-14 shrink-0 place-items-center">
               <svg viewBox="0 0 36 36" className="absolute inset-0 h-14 w-14 -rotate-90">
                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--border)" strokeWidth="4" />
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#7FB8BE" strokeWidth="4"
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#3aa99a" strokeWidth="4"
                         strokeLinecap="round" strokeDasharray={`${pct * 0.974} 100`} />
               </svg>
-              <span className="font-display text-[15px] font-bold">{done}</span>
+              <span className="mo-num text-[15px] font-semibold text-[color:var(--ink)]">{done}</span>
             </div>
             <div className="min-w-0">
-              <div className="font-display text-xl leading-tight">
+              <div className="font-display text-xl font-semibold leading-tight tracking-[-0.02em] text-[color:var(--ink)]">
                 {list.length === 0 ? "Nothing today" : `${list.length - done} left`}
               </div>
               <div className="text-[13px] text-[color:var(--body)]">
@@ -92,11 +91,17 @@ export default async function Today() {
 
           {/* the sky */}
           <div className="mo-card flex items-center gap-4 p-4">
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-ice/15 text-2xl">
-              {rain !== null && rain >= 50 ? "🌧" : rain !== null && rain >= 25 ? "🌦" : "☀️"}
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] text-[color:var(--ink)]">
+              {rain !== null && rain >= 50 ? (
+                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 15a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a3.5 3.5 0 0 1-.5 6.96H7z"/><path d="M8 18v2M12 18v3M16 18v2"/></svg>
+              ) : rain !== null && rain >= 25 ? (
+                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 15a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a3.5 3.5 0 0 1-.5 6.96H7z"/><path d="M10 18v2"/></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+              )}
             </div>
             <div className="min-w-0">
-              <div className="font-display text-xl leading-tight">
+              <div className="font-display text-xl font-semibold leading-tight tracking-[-0.02em] text-[color:var(--ink)]">
                 {day?.highF != null ? `${Math.round(day.highF)}°` : "—"}
                 {day?.lowF != null && (
                   <span className="ml-1.5 text-[15px] font-normal text-[color:var(--body)]">

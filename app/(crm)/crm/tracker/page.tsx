@@ -44,14 +44,14 @@ export default async function Tracker() {
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <PageHeader title="Tracker" />
+      <PageHeader eyebrow="Field" title="Tracker" sub="Exceptions, crew devices, and GPS-verified visits." />
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Open exceptions" value={exceptions.length} icon="🧭" />
-        <StatCard label="Critical" value={critical} icon="🧭" />
-        <StatCard label="High" value={high} icon="🧭" />
-        <StatCard label="Verified today" value={`${verifiedToday}/${jobsToday.length}`} icon="☀️" tone={verifiedToday > 0 ? "win" : "default"} />
-        <StatCard label="Devices to fix" value={needsAttention} icon="📱" />
+        <StatCard label="Open exceptions" value={exceptions.length} icon="◎" />
+        <StatCard label="Critical" value={critical} icon="▲" />
+        <StatCard label="High" value={high} icon="△" />
+        <StatCard label="Verified today" value={`${verifiedToday}/${jobsToday.length}`} icon="✓" tone={verifiedToday > 0 ? "win" : "default"} />
+        <StatCard label="Devices to fix" value={needsAttention} icon="▤" />
       </div>
 
       <AddressSuggestions groups={grouped} />

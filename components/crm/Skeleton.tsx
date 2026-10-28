@@ -9,14 +9,15 @@
 export function Skeleton({ cards = 4, rows = 6 }: { cards?: number; rows?: number }) {
   return (
     <div className="animate-pulse">
-      <div className="mb-2 h-3 w-24 rounded bg-white/[0.06]" />
-      <div className="mb-6 h-8 w-48 rounded-lg bg-white/[0.08]" />
+      <div className="mb-2 h-2.5 w-24 rounded bg-white/[0.06]" />
+      <div className="mb-4 h-8 w-56 rounded bg-white/[0.08]" />
+      <div className="mb-6 h-px w-full bg-white/[0.08]" />
 
       {cards > 0 && (
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {Array.from({ length: cards }).map((_, i) => (
             <div key={i} className="mo-card h-[104px] p-4">
-              <div className="mb-3 h-9 w-9 rounded-xl bg-white/[0.06]" />
+              <div className="mb-4 h-2.5 w-20 rounded bg-white/[0.06]" />
               <div className="h-7 w-16 rounded bg-white/[0.08]" />
             </div>
           ))}

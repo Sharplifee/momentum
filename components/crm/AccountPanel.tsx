@@ -42,27 +42,20 @@ export function AccountPanel({ profile, forcePassword }: { profile: Profile; for
     setBusy("pw");
     const res = await fetch("/api/crm/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "password", current_password: cur, new_password: nw }) });
     const j = await res.json().catch(() => ({}));
-    if (res.ok) { setToast("Password changed. 🎉"); setCur(""); setNw(""); setNw2(""); setTimeout(() => router.push(profile.role === "crew" ? "/crm/today" : "/crm"), 1200); }
+    if (res.ok) { setToast("Password changed."); setCur(""); setNw(""); setNw2(""); setTimeout(() => router.push(profile.role === "crew" ? "/crm/today" : "/crm"), 1200); }
     else setToast(j.error ?? "Couldn't change password.");
     setBusy("");
   }
-  function toggleTheme(dark: boolean) {
-    const el = document.documentElement;
-    el.classList.toggle("dark", dark);
-    try { localStorage.setItem("mo-theme", dark ? "dark" : "light"); } catch {}
-    fetch("/api/crm/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "theme", theme: dark ? "dark" : "light" }) });
-  }
-  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="My account" />
       {forcePassword && (
-        <div className="mb-5 rounded-2xl border border-gold/40 bg-gold/10 p-4 text-sm text-navy dark:text-ice">
-          👋 Welcome! You're signed in with a temporary password — please set your own below to continue.
+        <div className="mb-5 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm text-[color:var(--ink)]">
+          Welcome! You're signed in with a temporary password — please set your own below to continue.
         </div>
       )}
-      {toast && <div className="mb-4 rounded-xl bg-teal/15 px-4 py-2 text-sm text-teal">{toast}</div>}
+      {toast && <div className="mb-4 rounded-xl border border-teal/40 px-4 py-2 text-sm text-teal">{toast}</div>}
 
       <Card className="mb-5">
         <h2 className="mo-h1 mb-3 text-base">Change password</h2>
@@ -119,14 +112,6 @@ export function AccountPanel({ profile, forcePassword }: { profile: Profile; for
           ))}
           <p className="pt-1 text-xs text-slate/60">Applies on top of the team alert list an owner controls in Settings.</p>
           <Button variant="secondary" onClick={saveProfile} disabled={busy === "profile"}>Save preferences</Button>
-        </div>
-      </Card>
-
-      <Card className="mb-5">
-        <h2 className="mo-h1 mb-3 text-base">Appearance</h2>
-        <div className="flex gap-2">
-          <Button variant={!isDark ? "primary" : "secondary"} onClick={() => toggleTheme(false)}>☀️ Light</Button>
-          <Button variant={isDark ? "primary" : "secondary"} onClick={() => toggleTheme(true)}>🌙 Dark</Button>
         </div>
       </Card>
 

@@ -118,7 +118,7 @@ export function ScheduleMap({ token }: { token: string | null }) {
       return;
     }
 
-    const teal = "#7FB8BE", gold = "#D9A441";
+    const teal = "#3aa99a", gold = "#e3a35f";
     const items: any[] = [], overlays: any[] = [];
 
     for (const s of shown) {

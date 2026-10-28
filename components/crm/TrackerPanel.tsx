@@ -26,7 +26,7 @@ type HealthRow = {
 
 const SEV: Record<string, string> = {
   critical: "bg-red/15 text-red",
-  high: "bg-gold/25 text-[oklch(0.45_0.10_70)] dark:text-gold",
+  high: "border border-gold/60 text-gold",
   warn: "bg-ice/25 text-navy dark:text-ice",
 };
 
@@ -74,7 +74,7 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
       {err && <div className="mb-3 text-sm text-red">{err}</div>}
 
       {tab === "exceptions" && (exceptions.length === 0 ? (
-        <EmptyState icon="✅" title="Queue is clear" hint="No open service exceptions." />
+        <EmptyState icon="Exceptions" title="Queue is clear" hint="No open service exceptions." />
       ) : (
         <div className="space-y-2">
           {exceptions.map((e) => (
@@ -102,7 +102,7 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
       ))}
 
       {tab === "crew" && (crew.length === 0 ? (
-        <EmptyState icon="🧭" title="No active crew devices" hint="Nobody has the crew app installed and reporting yet." />
+        <EmptyState icon="Crew" title="No active crew devices" hint="Nobody has the crew app installed and reporting yet." />
       ) : (
         <div className="space-y-2">
           {crew.map((c) => {
@@ -128,7 +128,7 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
       ))}
 
       {tab === "devices" && (devices.length === 0 ? (
-        <EmptyState icon="📱" title="No devices enrolled" hint="Install Momentum Crew and sign in to enrol a phone." />
+        <EmptyState icon="Devices" title="No devices enrolled" hint="Install Momentum Crew and sign in to enrol a phone." />
       ) : (
         <div className="space-y-2">
           {devices.map((d) => (
@@ -143,7 +143,7 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
                   {d.last_error ? ` · ${d.last_error}` : ""}
                 </div>
               </div>
-              <Chip className={d.health === "healthy" ? "bg-teal/20 text-teal" : d.health === "dark" ? "bg-red/15 text-red" : "bg-gold/25 text-[oklch(0.45_0.10_70)] dark:text-gold"}>
+              <Chip className={d.health === "healthy" ? "border border-sage/60 text-sage" : d.health === "dark" ? "border border-red/60 text-red" : "border border-gold/60 text-gold"}>
                 {d.health.replace(/_/g, " ")}
               </Chip>
             </Card>
@@ -155,7 +155,7 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[color:var(--border)] text-left text-[10px] uppercase tracking-[0.14em] text-slate/60">
+              <tr className="border-b border-[color:var(--border)] mo-eyebrow text-left text-slate/60">
                 <th className="px-4 py-3">Day</th><th className="px-4 py-3">Scheduled</th><th className="px-4 py-3">Completed</th>
                 <th className="px-4 py-3">Verified</th><th className="px-4 py-3">Rate</th><th className="px-4 py-3">Avg min</th><th className="px-4 py-3">Revenue</th>
               </tr>
