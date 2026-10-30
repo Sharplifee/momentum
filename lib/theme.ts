@@ -5,7 +5,7 @@
  * (Closed Won, Paid). Coral is the only red. Sage is the only green.
  *
  * The system is one dark theme: matte near-black, bone ink, one gradient
- * hairline (pine → sea → bone → amber → coral). There is no light theme, so
+ * hairline (navy → glacier → bone → amber → coral). There is no light theme, so
  * `dark:` variants are never written — they never fired and left light-theme
  * ink on a dark surface.
  */
@@ -21,30 +21,30 @@ export const brand = {
   body: "#9b9790",
   faint: "#66635c",
   // palette
-  pine: "#1d5f58",
-  sea: "#3aa99a",   // primary accent (links, active, focus)
+  pine: "#0b1f4d",   // midnight navy — the badge's dark blue
+  sea: "#7ac1c9",   // glacier — the badge's blue; primary accent (links, active, focus)
   bone: "#efe7d6",
   amber: "#e3a35f", // WINS ONLY
   coral: "#d9775c", // errors, overdue
   sage: "#86b67a",  // healthy, completed
   // the signature
-  grad: "linear-gradient(90deg, #1d5f58 0%, #3aa99a 30%, #efe7d6 52%, #e3a35f 74%, #d9775c 100%)",
+  grad: "linear-gradient(90deg, #0b1f4d 0%, #7ac1c9 30%, #efe7d6 52%, #e3a35f 74%, #d9775c 100%)",
   // legacy aliases (same values as the tailwind tokens of the same name)
   navy: "#f2efe8",
   slate: "#9b9790",
-  teal: "#3aa99a",
-  tealHover: "#2f8f82",
+  teal: "#7ac1c9",
+  tealHover: "#5fb0ba",
   ice: "#d8d4cb",
   gold: "#e3a35f",
   red: "#d9775c",
 } as const;
 
 /** Chart series order — the gradient stops, read left to right. */
-export const SERIES = ["#3aa99a", "#e3a35f", "#efe7d6", "#86b67a", "#d9775c", "#1d5f58"] as const;
+export const SERIES = ["#7ac1c9", "#e3a35f", "#efe7d6", "#86b67a", "#d9775c", "#0b1f4d"] as const;
 
 /** Pipeline stage colors — a pipeline walks the hairline: sea → bone → amber. */
 export const STAGE_COLOR: Record<"new" | "contacted" | "quote_sent" | "closed_won", string> = {
-  new: "#3aa99a",
+  new: "#7ac1c9",
   contacted: "#8fd0c6",
   quote_sent: "#efe7d6",
   closed_won: "#e3a35f",

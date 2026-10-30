@@ -74,7 +74,7 @@ export default async function Today() {
             <div className="relative grid h-14 w-14 shrink-0 place-items-center">
               <svg viewBox="0 0 36 36" className="absolute inset-0 h-14 w-14 -rotate-90">
                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--border)" strokeWidth="4" />
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#3aa99a" strokeWidth="4"
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#7ac1c9" strokeWidth="4"
                         strokeLinecap="round" strokeDasharray={`${pct * 0.974} 100`} />
               </svg>
               <span className="mo-num text-[15px] font-semibold text-[color:var(--ink)]">{done}</span>

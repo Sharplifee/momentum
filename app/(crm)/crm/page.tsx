@@ -3,7 +3,7 @@ import { Shell } from "@/components/crm/Shell";
 import { PageHeader } from "@/components/ui";
 import { STAGE_LABEL, STAGE_COLOR, SERIES } from "@/lib/theme";
 import Link from "next/link";
-import { DeltaTile, FunnelChart, AreaChart, DonutChart, BandCard } from "@/components/crm/Charts";
+import { Tile, CompareBars, DayStrip, TrendLine, HBars, AreaChart, DonutChart, BandCard } from "@/components/crm/Charts";
 
 export const dynamic = "force-dynamic";
 
@@ -64,18 +64,31 @@ export default async function Dashboard() {
   const srcAgg: Record<string, number> = {};
   for (const r of (srcRows.data ?? []) as any[]) srcAgg[r.source ?? "direct"] = (srcAgg[r.source ?? "direct"] ?? 0) + 1;
   const SRC_COLORS = SERIES;
-  const perDay = (rows: { scheduled_date?: string; created_at?: string }[], key: "scheduled_date" | "created_at", days = 14) => {
+  // Past series (customers added) bucket backwards from now; scheduled visits
+  // bucket FORWARD from today, one slot per calendar day in Denver.
+  const perDayPast = (rows: { created_at?: string }[], days = 14) => {
     const out = Array.from({ length: days }, () => 0);
     for (const r of rows) {
-      const t = new Date((r as any)[key] + (key === "scheduled_date" ? "T12:00:00" : "")).getTime();
-      const idx = days - 1 - Math.floor((Date.now() - t) / 86400_000);
+      const idx = days - 1 - Math.floor((Date.now() - new Date(r.created_at as string).getTime()) / 86400_000);
       if (idx >= 0 && idx < days) out[idx]++;
     }
     return out;
   };
-  const qvPts = perDay(quoteVisits as any, "scheduled_date", 7);
-  const svPts = perDay(svcJobs as any, "scheduled_date", 7);
-  const custPts = perDay((custSeries.data ?? []) as any, "created_at", 14);
+  const todayNoon = new Date(todayIso + "T12:00:00").getTime();
+  const perDayAhead = (rows: { scheduled_date?: string }[], days = 7) => {
+    const out = Array.from({ length: days }, () => 0);
+    for (const r of rows) {
+      const idx = Math.round((new Date(r.scheduled_date + "T12:00:00").getTime() - todayNoon) / 86400_000);
+      if (idx >= 0 && idx < days) out[idx]++;
+    }
+    return out;
+  };
+  const dayLabels = Array.from({ length: 7 }, (_, i) =>
+    new Date(todayNoon + i * 86400_000).toLocaleDateString("en-US", { timeZone: "America/Denver", weekday: "narrow" }));
+  const qvPts = perDayAhead(quoteVisits as any);
+  const svPts = perDayAhead(svcJobs as any);
+  const custPts = perDayPast((custSeries.data ?? []) as any, 14);
+  const custMonth = (custSeries.data ?? []).length;
   const srcSegs = Object.entries(srcAgg).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v], i) => ({ k: k === "website" ? "Website" : k[0].toUpperCase() + k.slice(1), v, c: SRC_COLORS[i] }));
 
   const revenue = (wonJobs.data ?? []).reduce((s, j) => s + Number(j.price ?? 0), 0);
@@ -84,14 +97,7 @@ export default async function Dashboard() {
 
   // pipeline bar (teal scale)
   const byStage: Record<string, number> = { new: newL.count ?? 0, contacted: contacted.count ?? 0, quote_sent: quoted.count ?? 0, closed_won: won.count ?? 0 };
-  const maxStage = Math.max(1, ...Object.values(byStage));
 
-  const stats = [
-    { label: "Incoming Leads", value: newL.count ?? 0, delta: `${wkDelta >= 0 ? "+" : ""}${wkDelta}% vs last wk`, up: wkDelta >= 0, href: "/crm/leads?stage=new", icon: "◎", seed: 3, points: dayCounts },
-    { label: "Quote Visits", value: quoteVisits.length, delta: "next 7 days", href: "/crm/schedule", icon: "▤", seed: 11, points: qvPts },
-    { label: "Service Visits", value: svcJobs.length, delta: "next 7 days", href: "/crm/schedule", icon: "✓", seed: 7, points: svPts },
-    { label: "Total Clients", value: custCount.count ?? 0, delta: "accounts", href: "/crm/customers", icon: "◈", seed: 5, points: custPts },
-  ];
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
@@ -101,17 +107,30 @@ export default async function Dashboard() {
         action={<Link href="/crm/leads" className="mo-primary inline-flex items-center gap-1.5 px-4 py-2 text-[13px]">View pipeline <span aria-hidden>↗</span></Link>}
       />
 
+      {/* Four tiles, four different pictures. Titles are one or two words so
+          they never wrap at phone width; the period lives next to the number. */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {stats.map((s) => <DeltaTile key={s.label} {...s} />)}
+        <Tile label="Leads" value={thisWk} note="this week" href="/crm/leads?stage=new">
+          <CompareBars a={thisWk} b={prevWk} />
+        </Tile>
+        <Tile label="Clients" value={custCount.count ?? 0} note={custMonth ? `+${custMonth} in 14 d` : "accounts"} href="/crm/customers">
+          <TrendLine points={custPts} label="Clients added over the last 14 days" />
+        </Tile>
+        <Tile label="Service visits" value={svcJobs.length} note="next 7 days" href="/crm/schedule">
+          <DayStrip counts={svPts} labels={dayLabels} title="Service visits by day" />
+        </Tile>
+        <Tile label="Quote visits" value={quoteVisits.length} note="next 7 days" href="/crm/schedule">
+          <DayStrip counts={qvPts} labels={dayLabels} title="Quote visits by day" />
+        </Tile>
       </div>
 
       <div className="mb-5 grid gap-5 lg:grid-cols-5">
-        <BandCard title="Leads by stage" sub="pipeline funnel" className="lg:col-span-2">
-          <FunnelChart stages={[
-            { k: "New", v: byStage.new, c: STAGE_COLOR.new, href: "/crm/leads?stage=new" },
-            { k: "Contacted", v: byStage.contacted, c: STAGE_COLOR.contacted, href: "/crm/leads?stage=contacted" },
-            { k: "Quoted", v: byStage.quote_sent, c: STAGE_COLOR.quote_sent, href: "/crm/leads?stage=quote_sent" },
-            { k: "Won", v: byStage.closed_won, c: STAGE_COLOR.closed_won, href: "/crm/leads?stage=closed_won" },
+        <BandCard title="Leads by stage" sub="pipeline" className="lg:col-span-2">
+          <HBars rows={[
+            { k: "New", v: byStage.new, c: STAGE_COLOR.new },
+            { k: "Contacted", v: byStage.contacted, c: STAGE_COLOR.contacted },
+            { k: "Quoted", v: byStage.quote_sent, c: STAGE_COLOR.quote_sent },
+            { k: "Won", v: byStage.closed_won, c: STAGE_COLOR.closed_won },
           ]} />
         </BandCard>
         <BandCard title="Leads over time" sub="last 14 days" className="lg:col-span-3">

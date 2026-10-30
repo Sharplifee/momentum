@@ -104,10 +104,10 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <DeltaTile label="Messages (24h)" value={msgs24} delta="both directions" icon="✉" seed={4} points={dayCounts} />
-        <DeltaTile label="Open Conversations" value={openConvos.length} delta="active < 72h" icon="◎" seed={9} />
-        <DeltaTile label="Replies She Sent" value={noraReplies} delta="last 14 days" icon="⚡" seed={13} />
-        <DeltaTile label="Needs a Human" value={escalated} delta={escalated ? "waiting on you" : "all handled"} up={!escalated} icon="◈" seed={6} />
+        <DeltaTile label="Today" value={msgs24} delta="both directions" icon="✉" seed={4} points={dayCounts} />
+        <DeltaTile label="Open" value={openConvos.length} delta="active < 72h" icon="◎" seed={9} />
+        <DeltaTile label="Sent" value={noraReplies} delta="last 14 days" icon="⚡" seed={13} />
+        <DeltaTile label="Needs you" value={escalated} delta={escalated ? "waiting on you" : "all handled"} up={!escalated} icon="◈" seed={6} />
       </div>
 
       {/* ===== Who she is: rules, abilities ===== */}

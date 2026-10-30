@@ -105,14 +105,14 @@ export function Skeleton({ rows = 3, className = "" }: { rows?: number; classNam
 }
 
 /** Stat card: mono label, display numeral, hairline. Clicks through to a filtered list. */
-export function StatCard({ label, value, href, icon, tone = "default" }: { label: string; value: React.ReactNode; href?: string; icon?: string; tone?: "default" | "win" }) {
+export function StatCard({ label, value, href, icon, tone = "default" }: { label: string; value: React.ReactNode; href?: string; icon?: string; tone?: "default" | "win" | "warn" }) {
   const inner = (
     <div className="mo-card flex flex-col gap-3 p-4 transition hover:border-white/20">
       <div className="flex items-center justify-between">
         <span className="mo-eyebrow">{label}</span>
         {icon && <span className="text-sm text-[color:var(--faint)]">{icon}</span>}
       </div>
-      <span className={`mo-num text-[28px] font-semibold leading-none ${tone === "win" ? "text-gold" : "text-[color:var(--ink)]"}`}>{value}</span>
+      <span className={`mo-num text-[28px] font-semibold leading-none ${tone === "win" ? "text-gold" : tone === "warn" ? "text-coral" : "text-[color:var(--ink)]"}`}>{value}</span>
     </div>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;

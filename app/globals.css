@@ -16,16 +16,16 @@
   --ink: #f2efe8;
   --body: #9b9790;
   --faint: #66635c;
-  --accent: #3aa99a;
-  --accent-rgb: 58 169 154;
+  --accent: #7ac1c9;
+  --accent-rgb: 122 193 201;
   --amber: #e3a35f;
   --coral: #d9775c;
   --sage: #86b67a;
-  --pine: #1d5f58;
+  --pine: #0b1f4d;
   --bone: #efe7d6;
-  /* the signature: pine → sea → bone → amber → coral */
-  --grad: linear-gradient(90deg, #1d5f58 0%, #3aa99a 30%, #efe7d6 52%, #e3a35f 74%, #d9775c 100%);
-  --grad-soft: linear-gradient(90deg, rgba(29,95,88,0.9), rgba(58,169,154,0.9) 30%, rgba(239,231,214,0.9) 52%, rgba(227,163,95,0.9) 74%, rgba(217,119,92,0.9));
+  /* the signature: navy → glacier → bone → amber → coral (the badge's blues) */
+  --grad: linear-gradient(90deg, #0b1f4d 0%, #7ac1c9 30%, #efe7d6 52%, #e3a35f 74%, #d9775c 100%);
+  --grad-soft: linear-gradient(90deg, rgba(11,31,77,0.9), rgba(122,193,201,0.9) 30%, rgba(239,231,214,0.9) 52%, rgba(227,163,95,0.9) 74%, rgba(217,119,92,0.9));
 }
 .dark {
   --bg: #0a0a0a;
@@ -84,7 +84,7 @@ body {
   content: ""; position: absolute; inset: -40% -10%;
   background:
     repeating-linear-gradient(112deg, rgba(10,10,10,0) 0 22px, rgba(10,10,10,0.55) 22px 26px),
-    linear-gradient(112deg, #0a0a0a 0%, #103a36 22%, #2f8f82 42%, #efe7d6 56%, #e3a35f 72%, #a94f3d 88%, #0a0a0a 100%);
+    linear-gradient(112deg, #0a0a0a 0%, #0b1f4d 22%, #7ac1c9 42%, #efe7d6 56%, #e3a35f 72%, #a94f3d 88%, #0a0a0a 100%);
   transform: skewY(-8deg);
   filter: saturate(0.95);
 }

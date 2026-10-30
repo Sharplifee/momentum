@@ -2,26 +2,91 @@ import Link from "next/link";
 import { brand, SERIES } from "@/lib/theme";
 
 /* ===== Momentum chart kit — pure-SVG server components =====
-   One rule: every chart draws with the brand's own stops (lib/theme.ts). Lines
-   carry the gradient hairline; fills are the same stop at low alpha; the
-   "no data yet" state is an honest flat line, never an invented curve. */
+   One rule: a chart should be readable by anyone on a phone in two seconds.
+   Lines and bars are one flat accent colour; the gradient ribbon is ornament
+   (hairlines, tab marks), never data. The "no data yet" state is an honest
+   flat line, never an invented curve. */
 
 /** Gradient defs shared by every chart; ids are scoped per instance. */
 function GradDefs({ id, vertical = false }: { id: string; vertical?: boolean }) {
   return (
     <defs>
+      {/* Lines are one flat colour now — the five-stop ribbon stays on hairlines
+          and tab indicators, where it is ornament, not data. */}
       <linearGradient id={`${id}-line`} x1="0" y1="0" x2={vertical ? "0" : "1"} y2={vertical ? "1" : "0"}>
-        <stop offset="0%" stopColor={brand.pine} />
-        <stop offset="30%" stopColor={brand.sea} />
-        <stop offset="52%" stopColor={brand.bone} />
-        <stop offset="74%" stopColor={brand.amber} />
-        <stop offset="100%" stopColor={brand.coral} />
+        <stop offset="0%" stopColor={brand.sea} />
+        <stop offset="100%" stopColor={brand.sea} />
       </linearGradient>
       <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor={brand.sea} stopOpacity="0.22" />
         <stop offset="100%" stopColor={brand.sea} stopOpacity="0" />
       </linearGradient>
     </defs>
+  );
+}
+
+/** A stat tile with a one-line title, the number, a short note, and a slot
+    for one of the simple visuals below. Titles must be short enough never to
+    wrap at phone width — pick the label accordingly. */
+export function Tile({ label, value, note, href, children }: {
+  label: string; value: string | number; note?: string; href?: string; children?: React.ReactNode;
+}) {
+  const body = (
+    <div className="mo-card flex h-full flex-col gap-3 p-4 transition hover:border-white/20">
+      <span className="mo-eyebrow whitespace-nowrap">{label}</span>
+      <div className="flex items-baseline gap-2 whitespace-nowrap">
+        <span className="mo-num text-[28px] font-semibold leading-none text-[color:var(--ink)]">{value}</span>
+        {note && <span className="mo-mono text-[11px] text-[color:var(--body)]">{note}</span>}
+      </div>
+      {children}
+    </div>
+  );
+  return href ? <Link href={href} className="block h-full">{body}</Link> : body;
+}
+
+/** Two bars: this period against the last one. Reads as "more or fewer than last week" at a glance. */
+export function CompareBars({ a, b, aLabel = "This wk", bLabel = "Last wk" }: { a: number; b: number; aLabel?: string; bLabel?: string }) {
+  const max = Math.max(1, a, b);
+  const row = (label: string, v: number, strong: boolean) => (
+    <div className="flex items-center gap-2">
+      <span className={`mo-eyebrow w-11 text-[8px] ${strong ? "text-[color:var(--ink)]" : ""}`}>{label}</span>
+      <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+        <span className="block h-full rounded-full" style={{ width: `${(v / max) * 100}%`, background: strong ? brand.sea : "rgba(122,193,201,0.35)" }} />
+      </span>
+      <span className={`mo-mono w-4 text-right text-[10px] ${strong ? "text-[color:var(--ink)]" : "text-[color:var(--body)]"}`}>{v}</span>
+    </div>
+  );
+  return <div className="flex h-[38px] flex-col justify-center gap-1.5" role="img" aria-label={`${a} ${aLabel.toLowerCase()}, ${b} ${bLabel.toLowerCase()}`}>{row(aLabel, a, true)}{row(bLabel, b, false)}</div>;
+}
+
+/** Seven days with the count on each: which days have work, and how much. */
+export function DayStrip({ counts, labels, title }: { counts: number[]; labels: string[]; title: string }) {
+  return (
+    <div className="flex h-[38px] items-end gap-[3px]" role="img" aria-label={`${title}: ${counts.map((c, i) => `${labels[i]} ${c}`).join(", ")}`}>
+      {counts.map((c, i) => (
+        <span key={i} className="flex flex-1 flex-col items-center gap-[3px]">
+          <span className={`mo-mono text-[11px] ${c ? "text-[color:var(--ink)]" : "text-[color:var(--faint)]"}`}>{c || "·"}</span>
+          <span className="h-1.5 w-full rounded-[2px]" style={{ background: c ? brand.sea : "rgba(255,255,255,0.08)" }} />
+          <span className={`mo-eyebrow text-[8px] ${c ? "text-[color:var(--ink)]" : "text-[color:var(--faint)]"}`}>{labels[i]}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** One flat trend line with a dot on the latest value. */
+export function TrendLine({ points, label }: { points: number[]; label: string }) {
+  const has = points.length > 1 && points.some((p) => p > 0);
+  const max = Math.max(1, ...points);
+  const n = Math.max(1, points.length - 1);
+  const xy = points.map((v, i) => [(i * 100) / n, 27 - (v / max) * 21] as const);
+  const d = has ? `M${xy.map(([x, y]) => `${x},${y}`).join(" L")}` : "M0,27 L100,27";
+  const last = xy[xy.length - 1] ?? [100, 27];
+  return (
+    <svg viewBox="0 0 100 30" className="h-[38px] w-full" preserveAspectRatio="none" role="img" aria-label={label}>
+      <path d={d} fill="none" stroke={has ? brand.sea : "rgba(255,255,255,0.14)"} strokeWidth={has ? 2 : 1} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      {has && <circle cx={last[0]} cy={last[1]} r="2.4" fill={brand.ink} vectorEffect="non-scaling-stroke" />}
+    </svg>
   );
 }
 

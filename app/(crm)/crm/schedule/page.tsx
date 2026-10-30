@@ -1,7 +1,7 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { MonthCalendar } from "@/components/crm/MonthCalendar";
-import { DeltaTile, BandCard } from "@/components/crm/Charts";
+import { DeltaTile, BandCard, Tile } from "@/components/crm/Charts";
 import { ScheduleMap } from "@/components/crm/ScheduleMap";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
@@ -84,24 +84,15 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-        <PageHeader eyebrow="Operations" title="Schedule" sub="Both calendars, always visible — service visits in teal, quote visits in amber." />
+        <PageHeader eyebrow="Operations" title="Schedule" sub="Both calendars, always visible — service visits in blue, quote visits in amber." />
 
         <ScheduleMap token={process.env.MAPKIT_TOKEN ?? null} />
 
-        {/* One strip rather than four tiles: the only numbers that matter here are
-            how much work there is this week and how much of it is today. */}
-        <div className="mo-card mb-6 grid grid-cols-2 gap-y-5 p-5 sm:grid-cols-4 sm:divide-x sm:divide-[color:var(--border)]">
-          {[
-            { v: svcWeek.length, l: "Service · week", c: "text-teal" },
-            { v: svcToday.length, l: "Service · today", c: "text-[color:var(--ink)]" },
-            { v: qWeek.length, l: "Quotes · week", c: "text-gold" },
-            { v: qToday.length, l: "Quotes · today", c: "text-[color:var(--ink)]" },
-          ].map((t, i) => (
-            <div key={t.l} className={i ? "sm:pl-5" : ""}>
-              <div className={`mo-num text-[34px] font-semibold leading-none ${t.c}`}>{t.v}</div>
-              <div className="mo-eyebrow mt-2">{t.l}</div>
-            </div>
-          ))}
+        {/* Two tiles, titles short enough never to wrap on a phone; today's
+            count sits next to the week's number instead of in its own cell. */}
+        <div className="mb-6 grid grid-cols-2 gap-3">
+          <Tile label="Service visits" value={svcWeek.length} note={`this week · ${svcToday.length} today`} />
+          <Tile label="Quote visits" value={qWeek.length} note={`this week · ${qToday.length} today`} />
         </div>
 
         <BandCard title="This week" sub={`${week[0].dow} ${week[0].num} → ${week[4].dow} ${week[4].num}`} className="mb-6">

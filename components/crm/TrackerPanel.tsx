@@ -24,11 +24,10 @@ type HealthRow = {
   verification_rate: number | null; avg_minutes_on_site: number | null; revenue_serviced: number | null;
 };
 
-const SEV: Record<string, string> = {
-  critical: "bg-red/15 text-red",
-  high: "border border-gold/60 text-gold",
-  warn: "bg-ice/25 text-navy dark:text-ice",
-};
+// No urgency tiers on screen. The card border carries the one distinction
+// that matters — does this need a person right now — and the label says so.
+const SEV_BORDER: Record<string, string> = { critical: "border-coral/50", high: "border-gold/40" };
+const SEV_LABEL: Record<string, string> = { critical: "Needs you", high: "Open", warn: "Open" };
 
 const ago = (m: number | null) =>
   m == null ? "—" : m < 60 ? `${Math.round(m)}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
@@ -78,10 +77,10 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
       ) : (
         <div className="space-y-2">
           {exceptions.map((e) => (
-            <Card key={e.id} className="flex items-start gap-3 p-4">
+            <Card key={e.id} className={`flex items-start gap-3 p-4 ${SEV_BORDER[e.severity] ?? ""}`}>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <Chip className={SEV[e.severity] ?? SEV.warn}>{e.severity}</Chip>
+                  <span className={`mo-eyebrow text-[9px] ${e.severity === "critical" ? "text-coral" : "text-gold"}`}>{SEV_LABEL[e.severity] ?? "Open"}</span>
                   <span className="text-xs text-slate">{e.type.replace(/_/g, " ")}</span>
                   {e.occurred_on && <span className="text-xs text-slate/60">{e.occurred_on}</span>}
                 </div>

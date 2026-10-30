@@ -192,7 +192,7 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
                 <>
                   <a href={nav(p)} target="_blank" rel="noreferrer"
                      className="grid min-h-[52px] place-items-center rounded-full border border-[color:var(--border-strong)] text-base font-semibold text-[color:var(--ink)]">
-                    Drive here ↗
+                    Drive here · Apple Maps
                   </a>
                   <button disabled={busy === active.id}
                     onClick={() => fire("/api/crm/clock", { job_id: active.id, event: "arrived" }, active.id)}

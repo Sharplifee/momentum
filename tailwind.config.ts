@@ -4,7 +4,7 @@ import type { Config } from "tailwindcss";
  * Momentum design system — "field + evening" edition.
  *
  * Matte near-black surfaces, bone-white ink, one signature gradient hairline
- * (pine → sea → bone → amber → coral: a south-valley evening over cut grass),
+ * (navy → glacier → bone → amber → coral: the badge's blues into a south-valley evening),
  * tight grotesk display type, uppercase mono micro-labels. Nothing frosted,
  * nothing glowing. Colors mirror lib/theme.ts and the CSS variables in
  * globals.css — those three files are the only places a hex may live.
@@ -27,7 +27,7 @@ const config: Config = {
         // semantic (legacy names, new values)
         navy: { DEFAULT: "#f2efe8", dark: "#ffffff" },
         slate: "#9b9790",
-        teal: { DEFAULT: "#3aa99a", hover: "#2f8f82" },
+        teal: { DEFAULT: "#7ac1c9", hover: "#5fb0ba" },
         ice: "#d8d4cb",
         gold: "#e3a35f",
         red: "#d9775c",
@@ -35,8 +35,8 @@ const config: Config = {
         surface: { DEFAULT: "#0a0a0a", alt: "#0e0e0e", card: "#121212" },
         // named palette for new code
         bone: "#f2efe8",
-        pine: "#1d5f58",
-        sea: "#3aa99a",
+        pine: "#0b1f4d",
+        sea: "#7ac1c9",
         amber: "#e3a35f",
         coral: "#d9775c",
         sage: "#86b67a",
