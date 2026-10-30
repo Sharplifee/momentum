@@ -49,7 +49,7 @@ export function CompareBars({ a, b, aLabel = "This wk", bLabel = "Last wk" }: { 
   const max = Math.max(1, a, b);
   const row = (label: string, v: number, strong: boolean) => (
     <div className="flex items-center gap-2">
-      <span className={`mo-eyebrow w-11 text-[8px] ${strong ? "text-[color:var(--ink)]" : ""}`}>{label}</span>
+      <span className={`mo-eyebrow w-14 shrink-0 whitespace-nowrap text-[8px] tracking-[0.08em] ${strong ? "text-[color:var(--ink)]" : ""}`}>{label}</span>
       <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
         <span className="block h-full rounded-full" style={{ width: `${(v / max) * 100}%`, background: strong ? brand.sea : "rgba(122,193,201,0.35)" }} />
       </span>

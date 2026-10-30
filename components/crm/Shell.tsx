@@ -146,7 +146,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
       {/* top bar — shifts below the preview banner when it is showing */}
       <header
         className="sticky z-30 border-b border-[color:var(--border)] bg-[color:var(--bg)]"
-        style={{ top: topOffset }}
+        style={{ top: topOffset, paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="flex h-[56px] items-center gap-3 px-4 md:px-6">
           <button onClick={() => setDrawer(!drawer)} className="rounded-full p-1.5 text-[color:var(--body)] hover:text-[color:var(--ink)] md:hidden" aria-label="Menu">
@@ -164,7 +164,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
 
       <div className="flex">
         {/* desktop sidebar */}
-        <aside className="sticky top-[57px] hidden h-[calc(100vh-57px)] w-[232px] shrink-0 flex-col border-r border-[color:var(--border)] md:flex">
+        <aside className="sticky top-[57px] hidden h-[calc(100dvh-57px)] w-[232px] shrink-0 flex-col border-r border-[color:var(--border)] md:flex">
           <div className="flex-1 overflow-y-auto px-3 py-5">
             {NAV.map((g) => {
               const items = g.items.filter(can);

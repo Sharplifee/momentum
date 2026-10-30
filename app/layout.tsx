@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getServiceArea, citiesSentence } from "@/lib/serviceArea";
@@ -21,12 +21,19 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// viewport-fit=cover lets the page run under the notch and the home indicator
+// inside the iOS WebView shells; the Shell pads header and tab bar with the
+// safe-area insets so nothing hides behind them.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0a0a0a",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${display.variable} ${body.variable} ${mono.variable}`} suppressHydrationWarning>
-      <head>
-        <meta name="theme-color" content="#0a0a0a" />
-      </head>
       <body className="min-h-screen font-sans antialiased">
         <EventLogClient />
         {children}
