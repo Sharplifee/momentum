@@ -7,6 +7,7 @@ import { useState , useEffect} from "react";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { AccountMenu } from "@/components/crm/AccountMenu";
 import { LocationReporter } from "@/components/crm/LocationReporter";
+import { LiveRefresh } from "@/components/crm/LiveRefresh";
 
 type NavItem = { href: string; label: string; icon: string; roles: string[] };
 type NavGroup = { group: string; items: NavItem[] };
@@ -259,6 +260,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
         </button>
       </nav>
       <LocationReporter />
+      <LiveRefresh />
     </div>
   );
 }
