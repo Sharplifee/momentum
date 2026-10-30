@@ -55,6 +55,9 @@ export default async function Dashboard() {
   const prevWk = dayCounts.slice(0, 7).reduce((a, b) => a + b, 0);
   const S = (summary as any)?.data ?? {};
   const stageCount = (k: string) => Number(S.stages?.[k] ?? 0);
+  const stale = stageCount("stale");
+  const lost = stageCount("not_qualified");
+  const totalLeads = Object.values((S.stages ?? {}) as Record<string, number>).reduce((a, b) => a + Number(b), 0);
   const newL = { count: stageCount("new") };
   const contacted = { count: stageCount("contacted") };
   const quoted = { count: stageCount("quote_sent") };
@@ -110,7 +113,7 @@ export default async function Dashboard() {
       {/* Four tiles, four different pictures. Titles are one or two words so
           they never wrap at phone width; the period lives next to the number. */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Tile label="Leads" value={thisWk} note="this week" href="/crm/leads?stage=new">
+        <Tile label="Leads" value={totalLeads} note={thisWk ? `${thisWk} this week` : `${newL.count} new`} href="/crm/leads">
           <CompareBars a={thisWk} b={prevWk} />
         </Tile>
         <Tile label="Clients" value={custCount.count ?? 0} note={custMonth ? `+${custMonth} in 14 d` : "accounts"} href="/crm/customers">
@@ -125,12 +128,14 @@ export default async function Dashboard() {
       </div>
 
       <div className="mb-5 grid gap-5 lg:grid-cols-5">
-        <BandCard title="Leads by stage" sub="pipeline" className="lg:col-span-2">
+        <BandCard title="Leads by stage" sub={`${totalLeads} total`} className="lg:col-span-2">
           <HBars rows={[
             { k: "New", v: byStage.new, c: STAGE_COLOR.new },
             { k: "Contacted", v: byStage.contacted, c: STAGE_COLOR.contacted },
             { k: "Quoted", v: byStage.quote_sent, c: STAGE_COLOR.quote_sent },
             { k: "Won", v: byStage.closed_won, c: STAGE_COLOR.closed_won },
+            ...(stale ? [{ k: "Stale", v: stale, c: "#66635c" }] : []),
+            ...(lost ? [{ k: "Not qualified", v: lost, c: "#d9775c" }] : []),
           ]} />
         </BandCard>
         <BandCard title="Leads over time" sub="last 14 days" className="lg:col-span-3">
