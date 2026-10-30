@@ -33,22 +33,34 @@ async function __GET() {
 
   // Pingram: real auth check against the account endpoint. Also surfaces the
   // spend cap, which is what silently discarded ~200 messages in August.
+  // The dedicated number was released 2026-08-03; sends go out on Pingram's
+  // shared number, so PINGRAM_FROM_NUMBER is no longer a requirement.
   const pingramKey = process.env.PINGRAM_API_KEY;
-  if (!pingramKey || !process.env.PINGRAM_FROM_NUMBER) {
-    checks.pingram = { ok: false, detail: "PINGRAM_API_KEY or PINGRAM_FROM_NUMBER not set" };
+  if (!pingramKey) {
+    checks.pingram = { ok: false, detail: "PINGRAM_API_KEY not set" };
   } else {
     try {
-      const r = await withTimeout(
-        fetch("https://api.pingram.io/account", {
-          headers: { authorization: `Bearer ${pingramKey}` },
-          cache: "no-store",
-        }),
+      const h = { authorization: `Bearer ${pingramKey}` };
+      const [r, u] = await withTimeout(
+        Promise.all([
+          fetch("https://api.pingram.io/account", { headers: h, cache: "no-store" }),
+          fetch("https://api.pingram.io/account/usage", { headers: h, cache: "no-store" }),
+        ]),
         8000
       );
       const body = (await r.json().catch(() => ({}))) as { costCap?: number; accountType?: string };
-      checks.pingram = r.ok
-        ? { ok: true, detail: `plan ${body.accountType ?? "?"}, cost cap $${body.costCap ?? "?"}/mo` }
-        : { ok: false, detail: `account check ${r.status}` };
+      const usage = (await u.json().catch(() => ({}))) as { costs?: { SMS?: number }; counts?: { SMS?: number }; billingCycleEnd?: string };
+      const spent = usage.costs?.SMS ?? 0;
+      const cap = body.costCap ?? 0;
+      const exhausted = r.ok && u.ok && cap > 0 && spent >= cap;
+      checks.pingram = !r.ok
+        ? { ok: false, detail: `account check ${r.status}` }
+        : {
+            // At the cap Pingram accepts the request and discards the SMS, so
+            // this is a real outage for Norma even though sends return 2xx.
+            ok: !exhausted,
+            detail: `plan ${body.accountType ?? "?"}, SMS $${spent.toFixed(2)} of $${cap}/mo cap (${usage.counts?.SMS ?? "?"} msgs), cycle resets ${usage.billingCycleEnd?.slice(0, 10) ?? "?"}${exhausted ? " — BUDGET EXHAUSTED, outbound SMS discarded" : ""}`,
+          };
     } catch (e) {
       checks.pingram = { ok: false, detail: String(e) };
     }

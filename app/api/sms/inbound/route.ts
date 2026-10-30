@@ -10,15 +10,43 @@ import { withEventLog } from "@/lib/eventLog";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function verifySignature(rawBody: string, signature: string | null, secret: string): boolean {
-  if (!signature) return false;
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+function safeEqualHex(a: string, b: string): boolean {
   try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+    return a.length === b.length && crypto.timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
   } catch {
     return false;
   }
 }
+
+/**
+ * Pingram signs every webhook as documented at
+ * pingram.io/docs/features/events-webhook#verifying-webhooks:
+ *   X-Pingram-Id        — event trackingId
+ *   X-Pingram-Timestamp — unix ms when sent (new on every retry)
+ *   X-Pingram-Signature — "v1,{hex}" where
+ *     hex = HMAC-SHA256(trackingId + "." + timestamp + "." + rawBody, secret)
+ * A body-only HMAC (the pre-Pingram dispatcher's scheme) is accepted when the
+ * id/timestamp headers are absent so an older sender keeps working.
+ */
+function verifySignature(
+  rawBody: string,
+  h: { id: string | null; ts: string | null; sig: string | null },
+  secret: string
+): { ok: boolean; reason?: string } {
+  if (!h.sig) return { ok: false, reason: "no signature" };
+  const hex = h.sig.startsWith("v1,") ? h.sig.slice(3) : h.sig;
+  if (h.id && h.ts) {
+    const age = Math.abs(Date.now() - Number(h.ts));
+    if (!Number.isFinite(age) || age > 5 * 60_000) return { ok: false, reason: "timestamp outside 5 min window" };
+    const expected = crypto.createHmac("sha256", secret).update(`${h.id}.${h.ts}.${rawBody}`).digest("hex");
+    return safeEqualHex(hex, expected) ? { ok: true } : { ok: false, reason: "hmac mismatch (v1 id.ts.body)" };
+  }
+  const legacy = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  return safeEqualHex(hex, legacy) ? { ok: true } : { ok: false, reason: "hmac mismatch (body only)" };
+}
+
+/** Pingram's non-inbound events (delivery, failure, opt-in/out) land here too. */
+const STATUS_EVENTS = new Set(["SMS_DELIVERED", "SMS_FAILED", "SMS_UNSUBSCRIBE", "SMS_SUBSCRIBE", "ACCOUNT_USAGE"]);
 
 async function __POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -27,19 +55,71 @@ async function __POST(req: NextRequest) {
   // Verify signature when Pingram sends one; the previously-live dispatcher
   // received unsigned posts, so an absent header is tolerated (logged) rather
   // than rejected — a hard 401 would silently kill all inbound SMS.
-  const sig =
-    req.headers.get("x-pingram-signature") ??
-    req.headers.get("x-webhook-signature") ??
-    req.headers.get("x-signature");
-  if (secret && sig && !verifySignature(rawBody, sig, secret)) {
-    await logAutomation({ trigger: "sms.inbound.bad_signature", status: "error" });
-    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  const headers = {
+    id: req.headers.get("x-pingram-id"),
+    ts: req.headers.get("x-pingram-timestamp"),
+    sig:
+      req.headers.get("x-pingram-signature") ??
+      req.headers.get("x-webhook-signature") ??
+      req.headers.get("x-signature"),
+  };
+  if (secret && headers.sig) {
+    const v = verifySignature(rawBody, headers, secret);
+    if (!v.ok) {
+      await logAutomation({
+        trigger: "sms.inbound.bad_signature",
+        status: "error",
+        error: v.reason,
+        detail: { has_id: Boolean(headers.id), has_ts: Boolean(headers.ts), sig_prefix: headers.sig.slice(0, 3) },
+      });
+      return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+    }
   }
-  if (secret && !sig) {
+  if (secret && !headers.sig) {
     await logAutomation({ trigger: "sms.inbound.unsigned", status: "skipped" });
   }
 
   const payload = JSON.parse(rawBody || "{}");
+
+  // Delivery / failure / opt-in-out callbacks: record them against the outbound
+  // message they belong to (messages.meta.provider_response.trackingId) and ack.
+  if (payload?.eventType && payload.eventType !== "SMS_INBOUND" && STATUS_EVENTS.has(payload.eventType)) {
+    const db = supabaseAdmin();
+    const trackingId: string | null = payload.trackingId ?? null;
+    let messageId: number | null = null;
+    if (trackingId) {
+      const { data: m } = await db
+        .from("messages")
+        .select("id")
+        .eq("direction", "outbound")
+        .contains("meta", { provider_response: { trackingId } })
+        .limit(1)
+        .maybeSingle();
+      messageId = m?.id ?? null;
+      if (messageId) {
+        const { data: cur } = await db.from("messages").select("meta").eq("id", messageId).single();
+        await db
+          .from("messages")
+          .update({ meta: { ...(cur?.meta ?? {}), delivery: payload.eventType, delivery_at: new Date().toISOString(), failure_code: payload.failureCode ?? undefined } })
+          .eq("id", messageId);
+      }
+    }
+    await db.from("sms_events").insert({
+      provider: "pingram",
+      event_type: payload.eventType.toLowerCase(),
+      payload,
+      message_id: messageId,
+    });
+    if (payload.eventType === "SMS_UNSUBSCRIBE" || payload.eventType === "SMS_SUBSCRIBE") {
+      // Pingram already handled the STOP/START reply; mirror the flag so sendSms respects it.
+      const phone = payload.userId ? toE164(String(payload.userId)) : null;
+      if (phone) {
+        await db.from("customers").update({ sms_opt_out: payload.eventType === "SMS_UNSUBSCRIBE" }).eq("phone", phone);
+      }
+    }
+    await logAutomation({ trigger: `sms.status.${payload.eventType.toLowerCase()}`, ref_id: messageId ? String(messageId) : trackingId, status: payload.eventType === "SMS_FAILED" ? "error" : "ok", detail: { failureCode: payload.failureCode } });
+    return NextResponse.json({ ok: true, recorded: payload.eventType });
+  }
   // Tolerant extraction — Pingram inbound shape may evolve while it's the interim provider.
   // shapes observed from the live v5 dispatcher: from | sms.from | data.from,
   // text | message | sms.message | data.message, eventType SMS_INBOUND
@@ -47,8 +127,11 @@ async function __POST(req: NextRequest) {
     payload?.from?.number ?? payload?.from ?? payload?.sms?.from ?? payload?.data?.from ?? payload?.sender ?? null;
   const text: string =
     payload?.sms?.message ?? payload?.message ?? payload?.text ?? payload?.data?.message ?? payload?.body ?? "";
+  // Pingram SMS_INBOUND carries no message id of its own; X-Pingram-Id is the
+  // idempotency key for that delivery and is the same on every retry.
   const providerId: string | null =
-    payload?.id ?? payload?.message_id ?? payload?.sms?.id ?? payload?.data?.id ?? null;
+    payload?.id ?? payload?.message_id ?? payload?.sms?.id ?? payload?.data?.id ?? headers.id ??
+    (payload?.receivedAt && fromRaw ? `${fromRaw}:${payload.receivedAt}` : null);
 
   const phone = fromRaw ? toE164(String(fromRaw)) : null;
   if (!phone || !text) {

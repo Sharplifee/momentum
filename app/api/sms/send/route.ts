@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendSms } from "@/lib/sms";
+import { staffFromSession } from "@/lib/apiAuth";
 import { toE164 } from "@/lib/phone";
 import { withEventLog } from "@/lib/eventLog";
 
@@ -12,6 +13,13 @@ export const runtime = "nodejs";
  * send over HTTP (CRM UI "quick SMS", Flow Tester, future staff tools).
  */
 async function __POST(req: NextRequest) {
+  // Staff session (CRM UI) or the server secret (internal tools). Without this
+  // the route was an open, unauthenticated SMS sender on the public internet.
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const internal = Boolean(process.env.CRON_SECRET) && bearer === process.env.CRON_SECRET;
+  const staff = internal ? null : await staffFromSession(["owner", "manager", "crew"]);
+  if (!internal && !staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
   const body = await req.json().catch(() => null);
   if (!body?.to || !body?.message) {
     return NextResponse.json({ error: "to and message are required" }, { status: 400 });

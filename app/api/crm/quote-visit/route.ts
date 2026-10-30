@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/sms";
 import { withEventLog } from "@/lib/eventLog";
+import { staffFromSession } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,12 @@ export const runtime = "nodejs";
  * The lead stays a lead. This is not a sale, and nothing is reported to Meta.
  */
 async function __POST(req: NextRequest) {
+  // Staff session or the server secret — this books a visit and texts three admins.
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const internal = Boolean(process.env.CRON_SECRET) && bearer === process.env.CRON_SECRET;
+  if (!internal && !(await staffFromSession(["owner", "manager", "crew"]))) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const { lead_id, date, window } = await req.json().catch(() => ({}));
   if (!lead_id || !date) {
     return NextResponse.json({ error: "lead_id and date required" }, { status: 400 });
