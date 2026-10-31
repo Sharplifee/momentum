@@ -2,69 +2,104 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { STAGE_NAME } from "@/lib/leadTimeline";
 
-const STAGES = ["new", "contacted", "quote_sent", "closed_won", "not_qualified", "stale"];
+type LeadRef = { id: string; stage: string; full_name: string | null };
 
-export function LeadActions({ lead, services, quotes }: {
-  lead: { id: string; stage: string; phone: string; thread_id: string | null };
-  services: { name: string; slug: string; base_price: number | null }[];
-  quotes: { id: string; line_items: any; total: number; status: string }[];
-}) {
+async function setStage(leadId: string, stage: string): Promise<string | null> {
+  const res = await fetch("/api/crm/stage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lead_id: leadId, stage }) });
+  const json = await res.json().catch(() => ({}));
+  return res.ok ? null : (json.error ?? "That didn't go through.");
+}
+
+/** Header-right coral outline: marks the lead not qualified, with an inline confirm. */
+export function NotQualifiedButton({ lead }: { lead: LeadRef }) {
   const router = useRouter();
-  const [sms, setSms] = useState("");
-  const [busy, setBusy] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
-  const [note, setNote] = useState("");
-
-  async function post(url: string, body: unknown) {
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) setNote(json.error ?? "failed"); else setNote("");
-    router.refresh();
-    return res.ok;
-  }
-
+  const [arm, setArm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  if (lead.stage === "not_qualified") return <span className="mo-eyebrow text-coral">Not qualified</span>;
+  if (lead.stage === "closed_won") return null;
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="mo-card p-4">
-        <h3 className="mb-2 text-sm font-semibold">Stage</h3>
-        <div className="flex flex-wrap gap-1">
-          {STAGES.map((s) => (
-            <button key={s} disabled={busy === s || s === lead.stage}
-              onClick={async () => { setBusy(s); await post("/api/crm/stage", { lead_id: lead.id, stage: s }); setBusy(""); }}
-              className={`rounded-full px-3 py-1 text-xs ${s === lead.stage ? "bg-teal text-white" : "bg-ice/15 hover:bg-ice/20 dark:bg-white/10"}`}>
-              {busy === s ? "…" : s}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="mo-card p-4">
-        <h3 className="mb-2 text-sm font-semibold">Quick SMS</h3>
-        <textarea value={sms} onChange={(e) => setSms(e.target.value)} rows={3} placeholder="Message…"
-          className="mb-2 w-full rounded-lg border border-[color:var(--border)] p-2 text-sm dark:border-[color:var(--border)] dark:bg-white/10" />
-        <button disabled={!sms || busy === "sms"}
-          onClick={async () => { setBusy("sms"); const ok = await post("/api/crm/sms", { to: lead.phone, message: sms, thread_id: lead.thread_id }); if (ok) setSms(""); setBusy(""); }}
-          className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Send</button>
-      </div>
-      <div className="mo-card p-4">
-        <h3 className="mb-2 text-sm font-semibold">Quote builder</h3>
-        {services.filter((s) => s.base_price != null).map((s) => (
-          <label key={s.slug} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={selected.includes(s.slug)}
-              onChange={(e) => setSelected(e.target.checked ? [...selected, s.slug] : selected.filter((x) => x !== s.slug))} />
-            {s.name} (${s.base_price})
-          </label>
-        ))}
-        <button disabled={!selected.length || busy === "quote"}
-          onClick={async () => { setBusy("quote"); await post("/api/crm/leads", { action: "quote", lead_id: lead.id, service_slugs: selected }); setSelected([]); setBusy(""); }}
-          className="mt-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Create quote</button>
-        {quotes.length > 0 && (
-          <div className="mt-3 space-y-1 text-xs text-slate">
-            {quotes.map((q) => <div key={q.id}>${q.total} · {q.status}</div>)}
-          </div>
+    <div className="flex items-center gap-2">
+      {err && <span className="text-[12px] text-coral">{err}</span>}
+      {arm ? (
+        <>
+          <button type="button" onClick={() => setArm(false)} className="flex h-9 items-center rounded-full border border-[color:var(--border-strong)] px-3.5 text-[12.5px] font-semibold text-[color:var(--ink)]">Keep</button>
+          <button type="button" disabled={busy} onClick={async () => { setBusy(true); const e = await setStage(lead.id, "not_qualified"); setErr(e); setBusy(false); if (!e) { setArm(false); router.refresh(); } }}
+            className="flex h-9 items-center rounded-full border border-coral bg-coral/15 px-3.5 text-[12.5px] font-semibold text-coral disabled:opacity-50">{busy ? "…" : "Yes, not qualified"}</button>
+        </>
+      ) : (
+        <button type="button" onClick={() => setArm(true)} className="flex h-9 items-center rounded-full border border-coral/50 px-3.5 text-[12.5px] font-semibold text-coral transition hover:bg-coral/10">Not qualified</button>
+      )}
+    </div>
+  );
+}
+
+/** The three primary actions: Open thread · Build quote · Close won. */
+export function LeadPills({ lead, threadHref }: { lead: LeadRef; threadHref: string }) {
+  const router = useRouter();
+  const [arm, setArm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const ghost = "flex h-11 flex-1 items-center justify-center rounded-full border border-teal/50 text-[13px] font-semibold text-[color:var(--ink)] transition hover:bg-white/[0.04]";
+  const won = lead.stage === "closed_won";
+  const dead = lead.stage === "not_qualified";
+  return (
+    <div>
+      <div className="flex gap-2">
+        <Link href={threadHref} className={ghost}>Open thread</Link>
+        <Link href={`/crm/leads/${lead.id}/quote`} className={ghost}>Build quote</Link>
+        {won ? (
+          <span className="flex h-11 flex-1 items-center justify-center rounded-full border border-gold/50 text-[13px] font-semibold text-gold">Won</span>
+        ) : arm ? (
+          <button type="button" disabled={busy} onClick={async () => { setBusy(true); const e = await setStage(lead.id, "closed_won"); setErr(e); setBusy(false); if (!e) { setArm(false); router.refresh(); } }}
+            className="mo-primary flex h-11 flex-1 items-center justify-center rounded-full text-[13px] font-semibold disabled:opacity-50">{busy ? "Closing…" : "Confirm won"}</button>
+        ) : (
+          <button type="button" disabled={dead} onClick={() => setArm(true)} className="mo-primary flex h-11 flex-1 items-center justify-center rounded-full text-[13px] font-semibold disabled:opacity-40">Close won</button>
         )}
       </div>
-      {note && <p className="text-sm text-red md:col-span-3">{note}</p>}
+      {arm && !busy && (
+        <p className="mt-2 text-[12px] text-[color:var(--body)]">
+          Creates the customer, the property with the checklist answers, and the service agreement.{" "}
+          <button type="button" onClick={() => setArm(false)} className="text-teal">Cancel</button>
+        </p>
+      )}
+      {err && <p className="mt-2 text-[12px] text-coral">{err}</p>}
+    </div>
+  );
+}
+
+const ALL_STAGES = ["new", "contacted", "quote_sent", "quote_scheduled", "closed_won", "not_qualified", "stale"];
+
+/** Small Stage row inside the Request card — every other stage is one tap away. */
+export function StageRow({ lead }: { lead: LeadRef }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <div className="border-t border-[color:var(--border)] py-2.5 text-[13px]">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[color:var(--body)]">Stage</span>
+        <button type="button" onClick={() => setOpen(!open)} className="flex items-center gap-1.5 text-[color:var(--ink)]">
+          {STAGE_NAME[lead.stage] ?? lead.stage}
+          <span className="mo-eyebrow text-teal">{open ? "Done" : "Change"}</span>
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {ALL_STAGES.map((s) => (
+            <button key={s} type="button" disabled={s === lead.stage || Boolean(busy)}
+              onClick={async () => { setBusy(s); const e = await setStage(lead.id, s); setErr(e); setBusy(""); if (!e) { setOpen(false); router.refresh(); } }}
+              className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${s === lead.stage ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)] hover:text-[color:var(--ink)]"} disabled:opacity-60`}>
+              {busy === s ? "…" : STAGE_NAME[s]}
+            </button>
+          ))}
+          {err && <span className="w-full text-[12px] text-coral">{err}</span>}
+        </div>
+      )}
     </div>
   );
 }
