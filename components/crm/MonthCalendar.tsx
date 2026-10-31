@@ -18,7 +18,7 @@ type Job = {
 };
 type Crew = { id: number; name: string; max_daily_jobs: number };
 
-const CREW_DOT: Record<number, string> = { 1: "bg-teal", 2: "bg-ice", 3: "bg-gold" };
+const CREW_DOT: Record<number, string> = { 1: "bg-teal", 2: "bg-teal", 3: "bg-teal" };
 const CREW_TEXT: Record<number, string> = { 1: "text-teal", 2: "text-ice", 3: "text-gold" };
 const STATUS_PILL: Record<string, string> = {
   scheduled: "border border-white/10 text-[color:var(--body)]",
@@ -32,9 +32,11 @@ function ymd(d: Date) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Denver" });
 }
 
-export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/schedule?" }: { month: string; jobs: Job[]; crews: Crew[]; todayIso: string; basePath?: string }) {
+export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/schedule?", action, selectedIso }: {
+  month: string; jobs: Job[]; crews: Crew[]; todayIso: string; basePath?: string; action?: React.ReactNode; selectedIso?: string;
+}) {
   const router = useRouter();
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(selectedIso ?? null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const [y, m] = month.split("-").map(Number);
@@ -90,7 +92,9 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
             <Link href={`${basePath}m=${next}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-[color:var(--body)] transition hover:bg-white/[0.06] hover:text-[color:var(--ink)]">›</Link>
           </div>
           <h2 className="font-display text-[17px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">{monthLabel}</h2>
-          <Link href={`${basePath}m=${todayIso.slice(0,7)}`} onClick={() => setSelected(todayIso)} className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[12px] font-medium text-[color:var(--ink)] transition hover:border-white/30">Today</Link>
+          {action ?? (
+            <Link href={`${basePath}m=${todayIso.slice(0,7)}`} onClick={() => setSelected(todayIso)} className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[12px] font-medium text-[color:var(--ink)] transition hover:border-white/30">Today</Link>
+          )}
         </div>
 
         <div className="mo-eyebrow grid grid-cols-7 pb-2 text-center">
@@ -159,11 +163,13 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
                 <div key={j.id} className="rounded-lg border border-[color:var(--border)] p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 text-sm font-semibold text-[color:var(--ink)]">
+                      <Link href={`/crm/jobs/${j.id}`} className="flex items-center gap-1.5 text-sm font-semibold text-[color:var(--ink)] hover:text-teal">
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${j.kind === "quote" ? "bg-gold" : "bg-teal"}`} />
                         <span className="text-[color:var(--body)]/60">{idx + 1}.</span>
                         <span className="truncate">{j.customer}</span>
+                        <span className="text-[color:var(--faint)]">›</span>
                         {j.weather_flag && <span title="Weather flag">🌧️</span>}
-                      </div>
+                      </Link>
                       <div className="truncate text-xs text-[color:var(--body)]">{j.address}</div>
                       <div className="mt-0.5 text-xs text-[color:var(--body)]">{j.service}{j.window_start ? ` · ${j.window_start.slice(0, 5)}` : ""}</div>
                     </div>

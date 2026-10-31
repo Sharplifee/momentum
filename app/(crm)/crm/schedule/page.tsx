@@ -1,10 +1,10 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { MonthCalendar } from "@/components/crm/MonthCalendar";
-import { DeltaTile, BandCard, Tile } from "@/components/crm/Charts";
-import { ScheduleMap } from "@/components/crm/ScheduleMap";
+import { BandCard, Tile } from "@/components/crm/Charts";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
+import { NewJobButton } from "@/components/crm/NewJobSheet";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +39,10 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
     const { data: myCrew } = await db.from("crews").select("id").eq("lead_profile", profile.id).maybeSingle();
     if (myCrew) jobsQ = jobsQ.eq("crew_id", myCrew.id);
   }
-  const [{ data: jobs }, { data: crews }] = await Promise.all([
+  const [{ data: jobs }, { data: crews }, { data: services }] = await Promise.all([
     jobsQ,
     db.from("crews").select("id, name, max_daily_jobs").eq("active", true).order("id"),
+    db.from("services").select("id, name, recurring").eq("active", true).order("id"),
   ]);
 
   const shaped = (jobs ?? []).map((j: any) => ({
@@ -73,20 +74,13 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const weekIsos = week.map((w) => w.iso);
   const svcWeek = service.filter((j) => weekIsos.includes(j.scheduled_date));
   const qWeek = quotes.filter((j) => weekIsos.includes(j.scheduled_date));
-  const todayJobs = shaped.filter((j) => j.scheduled_date === todayIso);
   const svcToday = service.filter((j) => j.scheduled_date === todayIso);
   const qToday = quotes.filter((j) => j.scheduled_date === todayIso);
-  const svcPts = week.map((w) => service.filter((j) => j.scheduled_date === w.iso).length);
-  const qPts = week.map((w) => quotes.filter((j) => j.scheduled_date === w.iso).length);
-  const capacity = (crews ?? []).reduce((s, c) => s + (c.max_daily_jobs ?? 12), 0) * 7 || 1;
-  const util = Math.round((svcWeek.length / capacity) * 100);
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-        <PageHeader eyebrow="Operations" title="Schedule" sub="Both calendars, always visible — service visits in blue, quote visits in amber." />
-
-        <ScheduleMap token={process.env.MAPKIT_TOKEN ?? null} />
+        <PageHeader eyebrow="Operations" title="Schedule" />
 
         {/* Two tiles, titles short enough never to wrap on a phone; today's
             count sits next to the week's number instead of in its own cell. */}
@@ -124,24 +118,17 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           </div>
         </BandCard>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-teal" />
-              <h2 className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Service calendar</h2>
-              <span className="mo-eyebrow">active client visits</span>
-            </div>
-            <MonthCalendar month={month} jobs={service as any} crews={(crews ?? []) as any} todayIso={todayIso} basePath="/crm/schedule?" />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-gold" />
-              <h2 className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Quote visits calendar</h2>
-              <span className="mo-eyebrow">new-business appointments</span>
-            </div>
-            <MonthCalendar month={month} jobs={quotes as any} crews={(crews ?? []) as any} todayIso={todayIso} basePath="/crm/schedule?" />
-          </div>
-        </div>
+        {/* One calendar: service visits as glacier dots, quote visits amber,
+            month arrows on the left, "+ Job" on the right — as designed. */}
+        <MonthCalendar
+          month={month}
+          jobs={shaped as any}
+          crews={(crews ?? []) as any}
+          todayIso={todayIso}
+          selectedIso={/^\d{4}-\d{2}-\d{2}$/.test(sp.d ?? "") ? sp.d : undefined}
+          basePath="/crm/schedule?"
+          action={role !== "crew" ? <NewJobButton services={(services ?? []) as any} crews={(crews ?? []) as any} defaultDate={todayIso} /> : undefined}
+        />
       </div>
     </Shell>
   );
