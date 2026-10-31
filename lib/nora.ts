@@ -357,7 +357,9 @@ export async function runNora(ctx: NoraContext, incomingMessage: string): Promis
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   // model from system_config (fallback to a safe default)
-  const { data: noraCfg } = await db.from("system_config").select("value").eq("key", "nora").single();
+  // The assistant's config row is keyed "wayne" (its first name); "nora" is honoured if it ever appears.
+  const { data: cfgRows } = await db.from("system_config").select("key, value").in("key", ["wayne", "nora"]);
+  const noraCfg = (cfgRows ?? []).find((r: any) => r.key === "nora") ?? (cfgRows ?? []).find((r: any) => r.key === "wayne");
   const model = (noraCfg?.value?.model as string) ?? "claude-sonnet-4-5";
 
   // context: lead + property + last 20 messages + knowledge

@@ -52,7 +52,14 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!bio.isEnrolled()) { setLocked(false); return; }
     const seen = Number(sessionStorage.getItem(KEY) ?? 0);
-    if (seen && Date.now() - seen < AWAY_MS) { setLocked(false); return; }
+    if (seen && Date.now() - seen < AWAY_MS) {
+      // Still in use: every screen refreshes the stamp, so the lock only
+      // comes back after the app has actually been away, not after five
+      // minutes of walking around inside it.
+      sessionStorage.setItem(KEY, String(Date.now()));
+      setLocked(false);
+      return;
+    }
     setLocked(true);
     void prompt();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,7 +73,9 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
       if (hidden.current && Date.now() - hidden.current > AWAY_MS) {
         setLocked(true);
         void prompt();
+        return;
       }
+      sessionStorage.setItem(KEY, String(Date.now()));   // back quickly — keep it fresh
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);

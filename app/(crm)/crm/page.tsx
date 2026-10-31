@@ -20,6 +20,9 @@ function humanize(row: { trigger?: string; type?: string; detail?: any; actor?: 
   if (t === "nora.escalate") return `Norma handed a conversation to the team`;
   if (t === "note") return `Note: ${(d.note ?? "").slice(0, 60)}`;
   if (t === "reminder_sent") return `Day-before reminder sent`;
+  const nudge = /^nudge_sent_nudge_(\w+)$/.exec(t);
+  if (nudge) return `Follow-up text sent · ${nudge[1]} after the lead`;
+  if (t === "nudge_sent") return `Follow-up text sent`;
   return t.replace(/[._]/g, " ");
 }
 

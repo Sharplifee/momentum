@@ -42,6 +42,7 @@ export function AccountMenu({ name, email, role, previewing }: {
             <div className="mo-eyebrow mt-1.5">{role}</div>
           </div>
           <Link href="/crm/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-[color:var(--body)] transition hover:bg-white/[0.04] hover:text-[color:var(--ink)]">My account</Link>
+          <Link href="/crm/notifications" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-[color:var(--body)] transition hover:bg-white/[0.04] hover:text-[color:var(--ink)]">Notifications</Link>
           {canPreview && (
             <button
               onClick={() => setView(previewing ? null : "crew")}

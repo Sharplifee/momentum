@@ -7,6 +7,7 @@ import { useState , useEffect} from "react";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { AccountMenu } from "@/components/crm/AccountMenu";
 import { LocationReporter } from "@/components/crm/LocationReporter";
+import { OfflineBanner } from "./OfflineBanner";
 import { LiveRefresh } from "@/components/crm/LiveRefresh";
 
 type NavItem = { href: string; label: string; icon: string; roles: string[] };
@@ -138,6 +139,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
   const [drawer, setDrawer] = useState(false);
   const can = (item: NavItem) => item.roles.includes(role);
   const isActive = (href: string) => (href === "/crm" ? pathname === "/crm" : pathname === href || pathname.startsWith(href + "/"));
+  const moreActive = ["/crm/more", "/crm/settings", "/crm/account", "/crm/customers", "/crm/accounting", "/crm/expenses", "/crm/notifications"].some((h) => isActive(h));
   const mobileTabs = MOBILE_TABS.filter(can);
 
   const topOffset = 0;
@@ -162,6 +164,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
           <AccountMenu name={name} email={email} role={realRole ?? role} previewing={previewing} />
         </div>
       </header>
+      <OfflineBanner />
 
       <div className="flex">
         {/* desktop sidebar */}
@@ -254,10 +257,11 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
             <span className="w-full truncate px-0.5 text-center">{n.label}</span>
           </Link>
         ))}
-        <button onClick={() => setDrawer(true)} className="flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium leading-none text-[color:var(--body)]">
+        <Link href="/crm/more" prefetch className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium leading-none transition ${moreActive ? "text-[color:var(--ink)]" : "text-[color:var(--body)]"}`}>
+          {moreActive && <span className="absolute -top-px h-[2px] w-8 rounded-full bg-ribbon" />}
           <span className="grid h-8 w-full max-w-[46px] place-items-center"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
           <span className="w-full truncate px-0.5 text-center">More</span>
-        </button>
+        </Link>
       </nav>
       <LocationReporter />
       <LiveRefresh />
