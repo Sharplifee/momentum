@@ -139,6 +139,12 @@ export async function sendSms(input: SendSmsInput) {
     });
     providerResponse = await res.json().catch(() => null);
     sendOk = res.ok; // {"messages":[]} in a 2xx body is NOT failure — Pingram dashboard is truth
+    // ...but a 2xx with "Discarding SMS" / "Aborted" in `messages` IS failure:
+    // Pingram accepts the request and drops it at the monthly budget cap, and
+    // for weeks that looked like a delivered text in every table we keep.
+    const notes = ((providerResponse as { messages?: unknown })?.messages ?? []) as unknown[];
+    const discarded = notes.some((m) => typeof m === "string" && /discard|aborted|budget|disabled/i.test(m));
+    if (discarded) sendOk = false;
   } catch (err) {
     providerResponse = { error: err instanceof Error ? err.message : String(err) };
   }
@@ -172,8 +178,13 @@ export async function sendSms(input: SendSmsInput) {
     }).eq("key", "sms_sandbox");
   }
 
+  const budgetWall =
+    !sendOk &&
+    (((providerResponse as { messages?: unknown })?.messages ?? []) as unknown[]).some(
+      (m) => typeof m === "string" && /budget|discard/i.test(m)
+    );
   await logAutomation({
-    trigger: dryRun ? "sms.send.dry_run" : sandboxed ? "sms.send.sandboxed" : "sms.send",
+    trigger: dryRun ? "sms.send.dry_run" : budgetWall ? "sms.send.budget_discarded" : sandboxed ? "sms.send.sandboxed" : "sms.send",
     ref_id: msgRow?.id ? String(msgRow.id) : null,
     status: sendOk ? "ok" : "error",
     detail: { to, intended_to: sandboxed ? input.to : undefined },
