@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Lead = {
+export type ChecklistLead = {
   id: string;
   has_dog: boolean | null;
   gate_width_in: number | null;
@@ -14,20 +14,29 @@ type Lead = {
   haul_clippings: boolean | null;
 };
 
-const OBSTACLE_OPTIONS = ["trampoline", "hoses", "toys"];
+const OBSTACLE_OPTIONS = ["trampoline", "hoses", "toys", "beds"];
 const WATERING_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/**
- * Personal-quote checklist — captured on site, in person, per HARD RULE 6.
- * These flags carry over to the property (and into pricing modifiers) the moment
- * the lead closes won.
- */
-export function QuoteChecklist({ lead }: { lead: Lead }) {
-  const router = useRouter();
-  const [state, setState] = useState<Lead>(lead);
-  const [saving, setSaving] = useState(false);
+/** How many of the six walk-through questions have an answer on file. */
+export function checklistProgress(l: ChecklistLead): { done: number; total: number } {
+  const answered = [l.gate_width_in != null, l.has_dog != null, l.obstacles != null, l.watering_day != null, l.bags_clippings != null, l.premium_handling != null];
+  return { done: answered.filter(Boolean).length, total: answered.length };
+}
 
-  async function save(patch: Partial<Lead>) {
+/**
+ * The on-site walk-through — captured in person at the quote visit, per
+ * HARD RULE 6. Each row is one question; the dot fills when it has an
+ * answer. Every answer carries over to the property (and into pricing
+ * modifiers) the moment the lead closes won.
+ */
+export function QuoteChecklist({ lead, title = "Quote visit checklist", line = false }: { lead: ChecklistLead; title?: string; line?: boolean }) {
+  const router = useRouter();
+  const [state, setState] = useState<ChecklistLead>(lead);
+  const [saving, setSaving] = useState(false);
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  const progress = checklistProgress(state);
+
+  async function save(patch: Partial<ChecklistLead>) {
     const next = { ...state, ...patch };
     setState(next);
     setSaving(true);
@@ -40,49 +49,83 @@ export function QuoteChecklist({ lead }: { lead: Lead }) {
     router.refresh();
   }
 
-  function toggleObstacle(o: string) {
-    const cur = state.obstacles ?? [];
-    const next = cur.includes(o) ? cur.filter((x) => x !== o) : [...cur, o];
-    save({ obstacles: next });
-  }
+  const Dot = ({ ok }: { ok: boolean }) => (
+    <span className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border text-[11px] ${ok ? "border-sage bg-sage text-[#0a0a0a]" : "border-white/20"}`}>
+      {ok && <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>}
+    </span>
+  );
+  const Row = ({ id, label, value, ok, children }: { id: string; label: string; value: string; ok: boolean; children: React.ReactNode }) => (
+    <div className="border-t border-[color:var(--border)]">
+      <button type="button" onClick={() => setOpenRow(openRow === id ? null : id)} className="flex w-full items-center gap-3 py-2.5 text-left">
+        <Dot ok={ok} />
+        <span className="flex-1 text-[13.5px] text-[color:var(--ink)]">{label}</span>
+        <span className="mo-mono text-[11px] text-[color:var(--body)]">{value}</span>
+      </button>
+      {openRow === id && <div className="pb-3 pl-[30px]">{children}</div>}
+    </div>
+  );
+  const Seg = ({ options, value, onPick }: { options: { v: string; l: string }[]; value: string | null; onPick: (v: string) => void }) => (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button key={o.v} type="button" onClick={() => onPick(o.v)}
+          className={`rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition ${value === o.v ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>
+          {o.l}
+        </button>
+      ))}
+    </div>
+  );
+
+  const clippings = state.haul_clippings ? "bag · haul" : state.bags_clippings === true ? "bag" : state.bags_clippings === false ? "mulch" : "—";
+  const obstacles = state.obstacles == null ? "—" : state.obstacles.length ? state.obstacles.join(" · ") : "clear";
 
   return (
-    <div className="mo-card p-4">
-      <h2 className="mb-2 font-semibold">Personal-quote checklist {saving && <span className="text-xs font-normal text-slate">saving…</span>}</h2>
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={Boolean(state.has_dog)} onChange={(e) => save({ has_dog: e.target.checked })} /> Dog on property
-        </label>
-        <label className="flex items-center gap-1.5">
-          Gate width
-          <input type="number" min={0} className="w-16 rounded border border-[color:var(--border)] px-1.5 py-0.5"
-            defaultValue={state.gate_width_in ?? ""} onBlur={(e) => save({ gate_width_in: e.target.value ? Number(e.target.value) : null })} /> in
-        </label>
-        <label className="flex items-center gap-1.5">
-          Waters
-          <select className="rounded border border-[color:var(--border)] px-1.5 py-0.5" value={state.watering_day ?? ""} onChange={(e) => save({ watering_day: e.target.value || null })}>
-            <option value="">—</option>
-            {WATERING_DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={Boolean(state.bags_clippings)} onChange={(e) => save({ bags_clippings: e.target.checked })} /> Bags clippings (+$)
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={Boolean(state.premium_handling)} onChange={(e) => save({ premium_handling: e.target.checked })} /> Premium handling (+$)
-        </label>
-        <label className="flex items-center gap-1.5" title="Refused by default — needs staff override in pricing config">
-          <input type="checkbox" checked={Boolean(state.haul_clippings)} onChange={(e) => save({ haul_clippings: e.target.checked })} /> Haul clippings (refused by default)
-        </label>
+    <section className={`mo-card ${line ? "aiv-glow" : ""} px-4 pb-1 pt-3.5`}>
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <h2 className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">{title}</h2>
+        <span className="mo-eyebrow">{saving ? "Saving…" : `${progress.done} of ${progress.total}`}</span>
       </div>
-      <div className="mt-2 flex flex-wrap gap-3 text-sm">
-        <span className="text-slate">Obstacles:</span>
-        {OBSTACLE_OPTIONS.map((o) => (
-          <label key={o} className="flex items-center gap-1">
-            <input type="checkbox" checked={(state.obstacles ?? []).includes(o)} onChange={() => toggleObstacle(o)} /> {o}
-          </label>
-        ))}
-      </div>
-    </div>
+
+      <Row id="gate" label="Gate width" ok={state.gate_width_in != null} value={state.gate_width_in != null ? `${state.gate_width_in} in${state.gate_width_in >= 36 ? " · mower fits" : " · too narrow"}` : "—"}>
+        <div className="flex items-center gap-2">
+          <input type="number" min={0} inputMode="numeric" defaultValue={state.gate_width_in ?? ""} placeholder="inches"
+            onBlur={(e) => save({ gate_width_in: e.target.value ? Number(e.target.value) : null })}
+            className="w-28 rounded-full border border-[color:var(--border)] bg-black/30 px-3.5 py-2 text-[14px] text-[color:var(--ink)] outline-none placeholder:text-[color:var(--faint)] focus:border-white/30" />
+          <span className="text-[12px] text-[color:var(--body)]">in · 36 in clears the mower</span>
+        </div>
+      </Row>
+
+      <Row id="dog" label="Pets / access" ok={state.has_dog != null} value={state.has_dog == null ? "—" : state.has_dog ? "dog on property" : "no dog"}>
+        <Seg options={[{ v: "yes", l: "Dog on property" }, { v: "no", l: "No dog" }]} value={state.has_dog == null ? null : state.has_dog ? "yes" : "no"} onPick={(v) => save({ has_dog: v === "yes" })} />
+      </Row>
+
+      <Row id="obstacles" label="Slope / obstacles" ok={state.obstacles != null} value={obstacles}>
+        <div className="flex flex-wrap gap-1.5">
+          <button type="button" onClick={() => save({ obstacles: [] })}
+            className={`rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition ${state.obstacles && !state.obstacles.length ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>Clear</button>
+          {OBSTACLE_OPTIONS.map((o) => {
+            const on = (state.obstacles ?? []).includes(o);
+            return (
+              <button key={o} type="button" onClick={() => save({ obstacles: on ? (state.obstacles ?? []).filter((x) => x !== o) : [...(state.obstacles ?? []), o] })}
+                className={`rounded-full border px-3 py-1.5 text-[12.5px] font-semibold capitalize transition ${on ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>{o}</button>
+            );
+          })}
+        </div>
+      </Row>
+
+      <Row id="water" label="Sprinkler timing" ok={state.watering_day != null} value={state.watering_day ? `waters ${state.watering_day}` : "—"}>
+        <Seg options={WATERING_DAYS.map((d) => ({ v: d, l: d }))} value={state.watering_day} onPick={(v) => save({ watering_day: v })} />
+      </Row>
+
+      <Row id="clip" label="Clippings" ok={state.bags_clippings != null} value={clippings}>
+        <Seg options={[{ v: "mulch", l: "Mulch" }, { v: "bag", l: "Bag (+$)" }, { v: "haul", l: "Bag · haul (+$)" }]}
+          value={state.haul_clippings ? "haul" : state.bags_clippings === true ? "bag" : state.bags_clippings === false ? "mulch" : null}
+          onPick={(v) => save({ bags_clippings: v !== "mulch", haul_clippings: v === "haul" })} />
+        <p className="mt-1.5 text-[11.5px] text-[color:var(--body)]">Hauling is refused by default — needs a pricing override.</p>
+      </Row>
+
+      <Row id="premium" label="Premium handling" ok={state.premium_handling != null} value={state.premium_handling == null ? "—" : state.premium_handling ? "yes (+$)" : "standard"}>
+        <Seg options={[{ v: "no", l: "Standard" }, { v: "yes", l: "Premium (+$)" }]} value={state.premium_handling == null ? null : state.premium_handling ? "yes" : "no"} onPick={(v) => save({ premium_handling: v === "yes" })} />
+      </Row>
+    </section>
   );
 }
