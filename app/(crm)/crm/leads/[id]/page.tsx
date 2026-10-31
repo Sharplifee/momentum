@@ -67,10 +67,10 @@ export default async function LeadDetail({ params }: { params: { id: string } })
     lead.requested_window ?? null,
   ].filter(Boolean).join(" · ");
   const zoneLine = lead.zone_id
-    ? `${lead.zone_id}${zone?.name ? ` · ${zone.name}` : lead.city ? ` · ${lead.city}` : ""} · in area`
+    ? `${zone?.name ?? `Zone ${lead.zone_id}`}${lead.city && !(zone?.name ?? "").toLowerCase().includes(lead.city.toLowerCase()) ? ` · ${lead.city}` : ""} · in area`
     : lead.city ? `${lead.city} · no zone matched` : "not matched";
   const sourceLine = lead.source
-    ? `${lead.source === "website" ? "Website form" : SOURCE_NAME[lead.source]?.replace(/^\w/, (c: string) => c.toUpperCase()) ?? lead.source}${lead.fbclid ? " · fbclid captured" : lead.meta_lead_id ? " · Meta lead ID" : ""}`
+    ? `${lead.source === "website" ? "Website form" : SOURCE_NAME[lead.source]?.replace(/^\w/, (c: string) => c.toUpperCase()) ?? lead.source}${lead.fbclid ? " · fbclid captured" : lead.meta_lead_id ? " · lead ID on file" : ""}`
     : "—";
   const visit = lead.quote_visit_date
     ? `${new Date(lead.quote_visit_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}${lead.quote_visit_window ? ` · ${lead.quote_visit_window}` : ""}`
