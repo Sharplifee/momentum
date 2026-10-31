@@ -88,7 +88,7 @@ export default async function Accounting({ searchParams }: { searchParams: { ran
       <div className="mx-auto max-w-3xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <nav className="mo-eyebrow flex items-center gap-1.5">
-            <Link href="/crm" className="transition hover:text-[color:var(--ink)]">‹ Home</Link>
+            <Link href="/crm/more" className="transition hover:text-[color:var(--ink)]">‹ More</Link>
             <span className="text-[color:var(--faint)]">/</span>
             <span>Accounting</span>
           </nav>

@@ -162,6 +162,11 @@ export async function sendSms(input: SendSmsInput) {
     .select("id")
     .single();
   if (msgErr) console.error("messages insert failed", msgErr);
+  // Keep the thread's clock honest for outbound too — the inbox sorts on it and
+  // the stale sweep reads it, and until now only inbound texts moved it.
+  if (input.thread_id && msgRow) {
+    await db.from("threads").update({ last_message_at: new Date().toISOString() }).eq("id", input.thread_id);
+  }
 
   await db.from("sms_events").insert({
     provider: "pingram",

@@ -49,7 +49,10 @@ async function __POST(req: NextRequest) {
       // receipt: portal thread + SMS (dry-run rules apply)
       const { data: thread } = await db.from("threads").select("id").eq("phone", cust.phone).limit(1).maybeSingle();
       const receipt = `Payment received — $${amount.toFixed(2)} for invoice MOM-${invoice.number}. Thank you! 🌱`;
-      if (thread) await db.from("messages").insert({ thread_id: thread.id, channel: "portal", direction: "outbound", sender: "system", body: receipt });
+      if (thread) {
+        await db.from("messages").insert({ thread_id: thread.id, channel: "portal", direction: "outbound", sender: "system", body: receipt });
+        await db.from("threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread.id);
+      }
       await sendSms({ to: cust.phone, message: receipt, thread_id: thread?.id ?? null, sender: "system" });
 
       // Meta Purchase — ONLY if no Purchase already sent for this customer's closed-won lead

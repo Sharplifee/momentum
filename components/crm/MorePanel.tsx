@@ -62,7 +62,8 @@ export function MorePanel({ name, email, role, realRole, previewing, counts }: {
         s.onchange = () => setLoc(s.state as Perm);
       }).catch(() => setLoc("prompt"));
     } else setLoc("prompt");
-    setNotif("Notification" in window ? (Notification.permission as Perm) : "unsupported");
+    // Notification.permission says "default" where the Permissions API says "prompt".
+    setNotif("Notification" in window ? ((Notification.permission === "default" ? "prompt" : Notification.permission) as Perm) : "unsupported");
     setFaceId(bio.isEnrolled());
     const readQueue = () => { try { setQueued((JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) ?? "[]") as unknown[]).length); } catch { setQueued(0); } };
     readQueue();

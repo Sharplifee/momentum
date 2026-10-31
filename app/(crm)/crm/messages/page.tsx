@@ -56,13 +56,24 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
   const [{ data: allThreads }, { data: templates }, cfg, { data: runs }, { data: recentMsgs }, know, area] = await Promise.all([
     db.from("threads").select("id, phone, escalated, last_message_at, lead_id, customer_id, leads(id, full_name, address, city, service_interest, stage), customers(id, full_name)").order("last_message_at", { ascending: false, nullsFirst: false }).limit(80),
     db.from("sms_templates").select("id, name, body, active").order("id"),
-    db.from("system_config").select("key, value").in("key", ["sms_sandbox"]),
+    db.from("system_config").select("key, value").in("key", ["sms_sandbox", "launch_checklist"]),
     db.from("automation_runs").select("trigger, status, error, created_at").order("created_at", { ascending: false }).limit(80),
     db.from("messages").select("thread_id, created_at, direction, sender").gte("created_at", twoWeeksAgo).order("created_at"),
     db.from("nora_knowledge").select("id", { count: "exact", head: true }),
     getServiceArea(),
   ]);
   const sandbox = (cfg.data ?? []).find((r) => r.key === "sms_sandbox")?.value ?? {};
+  // Norma's real state comes from the launch checklist probes, not a hard-coded "live".
+  const checklistItems = ((((cfg.data ?? []).find((r) => r.key === "launch_checklist")?.value as any)?.items ?? []) as { id?: string; done?: boolean }[]);
+  const noCredits = checklistItems.some((i) => i.id === "anthropic_credits" && !i.done);
+  const noSms = checklistItems.some((i) => i.id === "sms_outbound" && !i.done);
+  const status = noCredits ? { pill: "DOWN", tone: "coral", line: "Not answering — Anthropic credits are out (Settings › Norma)" }
+    : noSms ? { pill: "MUTED", tone: "gold", line: "Reads texts but can't send — SMS budget cap reached (Settings › SMS status)" }
+    : sandbox.enabled ? { pill: "TESTING", tone: "gold", line: "Replies go to the sandbox number, not customers" }
+    : { pill: "LIVE", tone: "sage", line: "Answers every text within seconds" };
+  const toneBorder = status.tone === "coral" ? "border-coral/60 text-coral" : status.tone === "gold" ? "border-gold/60 text-gold" : "border-sage/60 text-sage";
+  const toneDot = status.tone === "coral" ? "bg-coral" : status.tone === "gold" ? "bg-gold" : "bg-sage";
+  const toneText = status.tone === "coral" ? "text-coral" : status.tone === "gold" ? "text-gold" : "text-teal";
 
   const nameOf = (t: any) => t.leads?.full_name ?? t.customers?.full_name ?? fmtPhone(t.phone);
   const isTest = (t: any) => (t.phone ?? "").startsWith("+1555") || /^zz/i.test(t.leads?.full_name ?? t.customers?.full_name ?? "");
@@ -136,14 +147,14 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
         <div className="mo-card aiv-glow mb-3 flex items-center gap-3.5 p-4">
           <div className="relative shrink-0">
             <div className="grid h-14 w-14 place-items-center rounded-xl bg-[color:var(--ink)] font-display text-[26px] font-semibold tracking-[-0.04em] text-[#0a0a0a]">N</div>
-            <span className={`mo-mono absolute -bottom-1.5 -right-1.5 flex items-center gap-1 rounded-full border bg-[#0a0a0a] px-1.5 py-0.5 text-[9px] tracking-[0.12em] ${sandbox.enabled ? "border-gold/60 text-gold" : "border-sage/60 text-sage"}`}>
-              <span className={`h-[5px] w-[5px] rounded-full ${sandbox.enabled ? "bg-gold" : "bg-sage"}`} />{sandbox.enabled ? "TESTING" : "LIVE"}
+            <span className={`mo-mono absolute -bottom-1.5 -right-1.5 flex items-center gap-1 rounded-full border bg-[#0a0a0a] px-1.5 py-0.5 text-[9px] tracking-[0.12em] ${toneBorder}`}>
+              <span className={`h-[5px] w-[5px] rounded-full ${toneDot}`} />{status.pill}
             </span>
           </div>
           <div className="min-w-0 flex-1">
             <div className="mo-eyebrow">Assistant</div>
             <h1 className="mt-1 font-display text-[22px] font-semibold tracking-[-0.03em] text-[color:var(--ink)]">Norma</h1>
-            <p className="mt-0.5 text-[12.5px] text-teal">Answers every text within seconds</p>
+            <p className={`mt-0.5 text-[12.5px] ${toneText}`}>{status.line}</p>
           </div>
         </div>
 
