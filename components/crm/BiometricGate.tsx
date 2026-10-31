@@ -43,7 +43,7 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
       // send them to sign in again rather than trapping them behind a prompt
       // that will never succeed.
       bio.clearEnrollment();
-      window.location.href = "/crm/login";
+      window.location.href = "/crm/login?reason=expired";
       return;
     }
     setFailed(true);   // cancelled — let them try again
@@ -75,34 +75,39 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
   if (locked === null) return null;      // nothing flashes before we know
   if (!locked) return <>{children}</>;
 
+  const email = bio.enrolledEmail();
+
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-[color:var(--bg)] px-6">
-      <div className="w-full max-w-[300px] text-center">
-        <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-ice/12">
-          <svg viewBox="0 0 24 24" className="h-8 w-8 stroke-teal" fill="none"
-               strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <div className="mo-rule-dots fixed inset-0 z-[100] flex flex-col bg-[color:var(--bg)] px-6"
+      style={{ paddingTop: "max(24px, env(safe-area-inset-top))", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}>
+      <div className="flex items-center gap-2.5">
+        <img src="/logo-mark.png" alt="" className="h-7 w-7 object-contain" />
+        <span className="font-display text-[20px] font-semibold tracking-[-0.04em] text-[color:var(--ink)]">Momentum<span className="ml-0.5 align-super text-[8px] font-medium tracking-normal text-[color:var(--body)]">©</span></span>
+      </div>
+
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <div className="mb-7 grid h-28 w-28 place-items-center rounded-[26px] border border-[color:var(--border)] bg-[#121212]">
+          <svg viewBox="0 0 24 24" className="h-12 w-12 text-[color:var(--ink)]" fill="none" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor">
             <path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2" />
             <path d="M9 10v1M15 10v1M12 9v4M9.5 15.5a4 4 0 005 0" />
           </svg>
         </div>
-        <h1 className="font-display text-2xl">Momentum</h1>
-        <p className="mt-1.5 text-sm text-[color:var(--body)]">
-          {failed ? "Unlock cancelled." : "Unlocking with Face ID…"}
-        </p>
+        <div className="mo-eyebrow mb-2">Unlock</div>
+        <h1 className="mo-h1 text-[30px]">{failed ? "Unlock cancelled" : "Look to open"}</h1>
+        <p className="mt-2 text-[14px] text-[color:var(--body)]">Signed in as</p>
+        {email && <p className="mt-0.5 max-w-full truncate px-4 text-[15px] text-[color:var(--ink)]">{email}</p>}
+      </div>
 
-        <button
-          onClick={prompt}
-          disabled={busy}
-          className="mt-6 min-h-[48px] w-full rounded-xl bg-teal text-base font-semibold text-navy disabled:opacity-60"
-        >
-          {busy ? "Waiting…" : failed ? "Try Face ID again" : "Use Face ID"}
+      <div className="mx-auto w-full max-w-[380px]">
+        <div className="mo-hairline-soft mb-5" />
+        <button onClick={prompt} disabled={busy} className="mo-primary h-[52px] w-full text-[15px] disabled:opacity-60">
+          {busy ? "Waiting…" : failed ? "Try Face ID again" : "Unlock"}
         </button>
-
         <button
           onClick={() => { bio.clearEnrollment(); window.location.href = "/crm/login"; }}
-          className="mt-3 min-h-[44px] w-full text-sm text-[color:var(--body)] underline decoration-ice/30 underline-offset-4"
+          className="mt-3 flex min-h-[44px] w-full items-center justify-center text-[14px] text-[color:var(--body)] transition hover:text-[color:var(--ink)]"
         >
-          Use my password instead
+          Use password instead
         </button>
       </div>
     </div>

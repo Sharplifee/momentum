@@ -1,122 +1,162 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button, PageHeader } from "@/components/ui";
+import { createBrowserClient } from "@supabase/ssr";
+import * as bio from "@/lib/biometric";
+import { INPUT } from "@/components/crm/Sheet";
+import { Avatar, Group, Row, RowCard } from "@/components/crm/settings/ui";
+import { Switch } from "@/components/crm/settings/client";
 
-type Profile = { full_name: string; email: string; phone: string; theme_pref: string; notif_prefs: Record<string, boolean>; role: string };
+type Profile = { full_name: string; email: string; phone: string; notif_prefs: Record<string, boolean>; role: string };
 
+/* Keys are the ones already stored in profiles.notif_prefs; only the words changed. */
 const NOTIF_ROWS: { key: string; label: string; roles: string[] }[] = [
-  { key: "new_lead", label: "New lead comes in", roles: ["owner", "manager"] },
-  { key: "job_exception", label: "A crew flags a job exception", roles: ["owner", "manager", "crew"] },
-  { key: "escalation", label: "Norma escalates a conversation", roles: ["owner", "manager"] },
-  { key: "daily_digest", label: "Evening digest", roles: ["owner"] },
+  { key: "new_lead", label: "New lead", roles: ["owner", "manager"] },
+  { key: "escalation", label: "Norma needs a human", roles: ["owner", "manager"] },
+  { key: "job_exception", label: "Exception needs you", roles: ["owner", "manager", "crew"] },
+  { key: "daily_digest", label: "Daily close-out", roles: ["owner"] },
 ];
 
-function strength(pw: string): { label: string; pct: number; ok: boolean } {
-  let s = 0;
-  if (pw.length >= 8) s++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++;
-  if (/\d/.test(pw)) s++;
-  if (/[^A-Za-z0-9]/.test(pw)) s++;
-  return { label: ["Too short", "Weak", "Okay", "Good", "Strong"][s], pct: (s / 4) * 100, ok: pw.length >= 8 };
-}
+const ROLE_WORD: Record<string, string> = { owner: "Owner", manager: "Manager", crew: "Crew", customer: "Customer" };
 
-export function AccountPanel({ profile, forcePassword }: { profile: Profile; forcePassword: boolean }) {
+export function AccountPanel({ profile, previewing, forcePassword }: { profile: Profile; previewing: boolean; forcePassword: boolean }) {
   const router = useRouter();
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(profile.full_name);
   const [phone, setPhone] = useState(profile.phone);
   const [notif, setNotif] = useState<Record<string, boolean>>(profile.notif_prefs ?? {});
-  const [cur, setCur] = useState(""); const [nw, setNw] = useState(""); const [nw2, setNw2] = useState("");
-  const [toast, setToast] = useState("");
+  const [faceId, setFaceId] = useState<boolean | null>(null);
+  const [canFaceId, setCanFaceId] = useState(false);
+  const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null);
   const [busy, setBusy] = useState("");
-  const st = strength(nw);
+
+  useEffect(() => {
+    setFaceId(bio.isEnrolled());
+    bio.isSupported().then(setCanFaceId).catch(() => setCanFaceId(false));
+  }, []);
+
+  const say = useCallback((text: string, bad = false) => {
+    setToast({ text, bad });
+    setTimeout(() => setToast(null), bad ? 6000 : 2500);
+  }, []);
+
+  async function post(body: Record<string, unknown>) {
+    const res = await fetch("/api/crm/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await res.json().catch(() => ({}));
+    return { ok: res.ok, error: j.error as string | undefined };
+  }
 
   async function saveProfile() {
     setBusy("profile");
-    const res = await fetch("/api/crm/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "profile", full_name: name, phone, notif_prefs: notif }) });
-    setToast(res.ok ? "Profile saved." : "Couldn't save profile."); setBusy(""); router.refresh();
-  }
-  async function changePassword() {
-    if (nw !== nw2) { setToast("New passwords don't match."); return; }
-    setBusy("pw");
-    const res = await fetch("/api/crm/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "password", current_password: cur, new_password: nw }) });
-    const j = await res.json().catch(() => ({}));
-    if (res.ok) { setToast("Password changed."); setCur(""); setNw(""); setNw2(""); setTimeout(() => router.push(profile.role === "crew" ? "/crm/today" : "/crm"), 1200); }
-    else setToast(j.error ?? "Couldn't change password.");
+    const r = await post({ action: "profile", full_name: name, phone, notif_prefs: notif });
     setBusy("");
+    if (r.ok) { say("Saved."); setEditing(false); router.refresh(); } else say(r.error ?? "Couldn't save.", true);
   }
+
+  async function toggleNotif(key: string, on: boolean) {
+    const next = { ...notif, [key]: on };
+    setNotif(next);
+    setBusy(key);
+    const r = await post({ action: "profile", notif_prefs: next });
+    setBusy("");
+    if (!r.ok) { setNotif(notif); say(r.error ?? "Couldn't save.", true); }
+  }
+
+  async function toggleFaceId(on: boolean) {
+    if (!on) { bio.clearEnrollment(); setFaceId(false); say("Face ID is off on this device."); return; }
+    setBusy("face");
+    try {
+      const client = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+      const { data } = await client.auth.getSession();
+      const token = data.session?.refresh_token;
+      if (!token) { say("Sign in again to turn Face ID on.", true); return; }
+      const ok = await bio.enroll(profile.email, token);
+      setFaceId(ok);
+      say(ok ? "Face ID is on for this device." : "Face ID wasn't set up.", !ok);
+    } finally { setBusy(""); }
+  }
+
+  const roleWord = ROLE_WORD[profile.role] ?? profile.role;
+  const viewWord = profile.role === "owner" || profile.role === "manager" ? (previewing ? "Crew view" : "Admin") : null;
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <PageHeader title="My account" />
+    <div className="space-y-5">
+      {/* header: back crumb, avatar + name, Edit */}
+      <div className="flex items-center justify-between">
+        <nav className="mo-eyebrow flex items-center gap-1.5">
+          <Link href="/crm/more" className="transition hover:text-[color:var(--ink)]">More</Link>
+          <span className="text-[color:var(--faint)]">/</span>
+          <span>My account</span>
+        </nav>
+        <button type="button" onClick={() => (editing ? saveProfile() : setEditing(true))} disabled={busy === "profile"}
+          className={`min-h-[36px] rounded-full px-4 text-[13px] font-semibold transition disabled:opacity-60 ${editing ? "mo-primary" : "border border-[color:var(--border-strong)] text-[color:var(--ink)] hover:border-white/30"}`}>
+          {busy === "profile" ? "Saving…" : editing ? "Save" : "Edit"}
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <Avatar name={name || profile.email} size={60} />
+        <div className="min-w-0">
+          {editing
+            ? <input className={`${INPUT} py-2 text-[20px] font-semibold`} value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" aria-label="Display name" />
+            : <h1 className="mo-h1 truncate text-[28px]">{name || profile.email}</h1>}
+          <div className="mo-eyebrow mt-1.5">{roleWord}{viewWord ? ` · ${viewWord}` : ""}</div>
+        </div>
+      </div>
+
       {forcePassword && (
-        <div className="mb-5 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm text-[color:var(--ink)]">
-          Welcome! You're signed in with a temporary password — please set your own below to continue.
+        <div className="rounded-xl border border-gold/40 bg-gold/10 p-4 text-[13px] leading-snug text-[color:var(--ink)]">
+          You&rsquo;re signed in with a temporary password. <Link href="/crm/account/password?first=1" className="font-semibold underline underline-offset-4">Set your own</Link> to continue.
         </div>
       )}
-      {toast && <div className="mb-4 rounded-xl border border-teal/40 px-4 py-2 text-sm text-teal">{toast}</div>}
+      {toast && <div role="status" className={`rounded-xl border px-4 py-2 text-[13px] ${toast.bad ? "border-coral/40 text-coral" : "border-teal/40 text-teal"}`}>{toast.text}</div>}
 
-      <Card className="mb-5">
-        <h2 className="mo-h1 mb-3 text-base">Change password</h2>
-        <div className="space-y-3">
-          <label className="block">
-            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Current password</span>
-            <span className="block text-[11px] text-[color:var(--body)]">The password you just used to sign in</span>
-            <input type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} placeholder="Type your current password" className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" />
-          </label>
-          <label className="block">
-            <span className="block text-[13px] font-medium text-[color:var(--ink)]">New password</span>
-            <span className="block text-[11px] text-[color:var(--body)]">At least 8 characters — make it something only you know</span>
-            <input type="password" autoComplete="new-password" value={nw} onChange={(e) => setNw(e.target.value)} placeholder="Type a new password" className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" />
-          </label>
-          {nw && (
-            <div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-ice/20"><div className="h-full rounded-full bg-teal transition-all" style={{ width: `${st.pct}%` }} /></div>
-              <span className="text-xs text-slate">{st.label}</span>
-            </div>
-          )}
-          <label className="block">
-            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Confirm new password</span>
-            <span className="block text-[11px] text-[color:var(--body)]">Type the same new password again</span>
-            <input type="password" autoComplete="new-password" value={nw2} onChange={(e) => setNw2(e.target.value)} placeholder="Type it once more" className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" />
-          </label>
-          <Button onClick={changePassword} disabled={busy === "pw" || !cur || !st.ok}>{busy === "pw" ? "Saving…" : "Update password"}</Button>
+      <section className="mo-card aiv-glow divide-y divide-[color:var(--border)] p-0">
+        <div className="px-4 py-3">
+          <div className="mo-eyebrow mb-1">Email</div>
+          <div className="text-[15px] text-[color:var(--ink)]">{profile.email || "—"}</div>
+          {editing && <div className="mt-1 text-[11px] text-[color:var(--body)]">Ask an owner to change the email on an account.</div>}
         </div>
-      </Card>
-
-      <Card className="mb-5">
-        <h2 className="mo-h1 mb-3 text-base">Profile</h2>
-        <div className="space-y-3">
-          <label className="block">
-            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Display name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" /></label>
-          <label className="block">
-            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Phone</span>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1.5 h-12 w-full rounded-2xl border border-[color:var(--border)] bg-white/[0.06] px-4 text-[15px] text-[color:var(--ink)] outline-none transition placeholder:text-[color:var(--body)]/40 focus:border-teal focus:bg-white/[0.09]" /></label>
-          <label className="block">
-            <span className="block text-[13px] font-medium text-[color:var(--ink)]">Email <span className="font-normal text-[color:var(--body)]/60">(contact an owner to change)</span></span>
-            <input value={profile.email} disabled className="mt-1.5 h-12 w-full cursor-not-allowed rounded-2xl border border-[color:var(--border)] bg-white/[0.03] px-4 text-[15px] text-[color:var(--body)]" /></label>
-          <Button onClick={saveProfile} disabled={busy === "profile"}>{busy === "profile" ? "Saving…" : "Save profile"}</Button>
+        <div className="px-4 py-3">
+          <div className="mo-eyebrow mb-1">Mobile</div>
+          {editing
+            ? <input className={INPUT} inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 and ten digits" aria-label="Mobile" />
+            : <div className="mo-mono text-[15px] text-[color:var(--ink)]">{profile.phone || "Not set"}</div>}
         </div>
-      </Card>
+        <div className="px-4 py-3">
+          <div className="mo-eyebrow mb-1">Role</div>
+          <div className="text-[15px] text-[color:var(--ink)]">{roleWord}{profile.role === "owner" || profile.role === "manager" ? " · can switch to Crew view" : ""}</div>
+        </div>
+      </section>
 
-      <Card className="mb-5">
-        <h2 className="mo-h1 mb-3 text-base">Notifications</h2>
-        <div className="space-y-2">
+      <Group label="Notifications on this phone">
+        <RowCard>
           {NOTIF_ROWS.filter((r) => r.roles.includes(profile.role)).map((r) => (
-            <label key={r.key} className="flex items-center justify-between text-sm text-slate">
-              {r.label}
-              <input type="checkbox" checked={notif[r.key] ?? true} onChange={(e) => { const n = { ...notif, [r.key]: e.target.checked }; setNotif(n); }} className="h-4 w-4 accent-teal" />
-            </label>
+            <div key={r.key} className="flex items-center gap-3 pr-4">
+              <Row label={r.label} className="flex-1 pr-0" />
+              <Switch on={notif[r.key] ?? true} label={r.label} disabled={busy === r.key} onChange={(v) => toggleNotif(r.key, v)} />
+            </div>
           ))}
-          <p className="pt-1 text-xs text-slate/60">Applies on top of the team alert list an owner controls in Settings.</p>
-          <Button variant="secondary" onClick={saveProfile} disabled={busy === "profile"}>Save preferences</Button>
-        </div>
-      </Card>
+        </RowCard>
+        <p className="mt-2 px-0.5 text-[12px] leading-relaxed text-[color:var(--body)]">Saved to your account. Applies on top of the team alert list an owner controls in Settings.</p>
+      </Group>
+
+      <Group label="Security">
+        <RowCard>
+          <Row href="/crm/account/password" label="Change password" />
+          <div className="flex items-center gap-3 pr-4">
+            <Row label="Face ID to open" className="flex-1 pr-0"
+              sub={!canFaceId ? "This browser can't do Face ID" : faceId ? "Locks the CRM after it has been away a while" : "Sign in with a look next time"} />
+            <Switch on={Boolean(faceId)} label="Face ID to open" disabled={!canFaceId || busy === "face" || faceId === null} onChange={toggleFaceId} />
+          </div>
+          <Row label="Signed in" sub={`${profile.email} · this device`} />
+        </RowCard>
+      </Group>
 
       <form action="/crm/logout" method="post">
-        <Button variant="danger" type="submit">Sign out</Button>
+        <button type="submit" className="flex min-h-[48px] w-full items-center justify-center rounded-full border border-coral/40 text-[15px] font-semibold text-coral transition hover:bg-coral/10">Sign out</button>
       </form>
     </div>
   );

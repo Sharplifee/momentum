@@ -21,6 +21,8 @@ export default function LoginPage() {
   const [canEnroll, setCanEnroll] = useState(false);
   const [offerEnroll, setOfferEnroll] = useState(false);
   const [pendingToken, setPendingToken] = useState<string | null>(null);
+  // /crm/login?reason=expired|signed_out — the "Your session ended" door.
+  const [reason, setReason] = useState<"expired" | "signed_out" | null>(null);
 
   const client = useCallback(
     () =>
@@ -64,6 +66,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     let alive = true;
+    let why: "expired" | "signed_out" | null = null;
+    try {
+      const r = new URLSearchParams(window.location.search).get("reason");
+      why = r === "expired" ? "expired" : r === "signed_out" ? "signed_out" : null;
+    } catch {}
+    setReason(why);
     (async () => {
       const supported = await bio.isSupported();
       if (!alive) return;
@@ -72,7 +80,7 @@ export default function LoginPage() {
       if (supported && who) {
         setSavedEmail(who);
         setMode("biometric");
-        void runUnlock(); // prompt immediately — one tap, no typing
+        if (!why) void runUnlock(); // prompt immediately — one tap, no typing
       } else {
         setMode("password");
       }
@@ -138,35 +146,67 @@ export default function LoginPage() {
       <path d="M9 10v1M15 10v1M12 10v3h-1M9 15.5s1 1 3 1 3-1 3-1" />
     </svg>
   );
-  const field = "flex items-center gap-2.5 rounded-lg border border-[color:var(--border)] bg-[#0e0e0e] px-4 transition focus-within:border-white/30";
+  const LockIcon = (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 text-[color:var(--body)]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+  const field = "flex items-center gap-2.5 rounded-xl border border-[color:var(--border)] bg-[#0e0e0e] px-4 transition focus-within:border-white/30";
   const link = "text-[12px] font-medium text-[color:var(--body)] transition hover:text-[color:var(--ink)]";
+  const ghost = "flex h-12 w-full items-center justify-center gap-2 rounded-full border border-teal/40 text-[14px] font-semibold text-[color:var(--ink)] transition hover:border-teal/70 hover:bg-white/[0.03] disabled:opacity-60";
+  const Brand = (
+    <div className="flex items-center gap-2.5">
+      <img src="/logo-mark.png" alt="" className="h-7 w-7 object-contain" />
+      <span className="font-display text-[20px] font-semibold tracking-[-0.04em] text-[color:var(--ink)]">Momentum<span className="ml-0.5 align-super text-[8px] font-medium tracking-normal text-[color:var(--body)]">©</span></span>
+    </div>
+  );
 
   return (
     <main className="grid min-h-screen bg-[color:var(--bg)] lg:grid-cols-[1.1fr_1fr]">
       {/* ribbon panel — the brand's gradient layers, drawn in CSS */}
-      <section className="mo-ribbon relative hidden min-h-screen lg:block">
-        <div className="relative z-10 flex h-full flex-col justify-between p-10">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo-mark.png" alt="" className="h-7 w-7 object-contain" />
-            <span className="font-display text-[20px] font-semibold tracking-[-0.04em] text-[color:var(--ink)]">Momentum<span className="ml-0.5 align-super text-[8px] font-medium tracking-normal text-[color:var(--body)]">©</span></span>
+      {reason === null && (
+        <section className="mo-ribbon relative min-h-[300px] lg:min-h-screen">
+          <div className="relative z-10 flex h-full min-h-[300px] flex-col justify-between p-6 lg:p-10" style={{ paddingTop: "max(24px, env(safe-area-inset-top))" }}>
+            <img src="/logo.png" alt="Momentum Landscaping" className="h-[60px] w-auto self-start object-contain lg:h-[72px]" />
+            <div className="max-w-md">
+              <h2 className="font-display text-[34px] font-semibold leading-[1.02] tracking-[-0.04em] text-[color:var(--ink)] lg:text-[40px]">Every yard,<br />every week,<br />on time.</h2>
+              <div className="mo-hairline mt-5 w-32 lg:mt-7 lg:w-40" />
+              <p className="mo-eyebrow mt-5 hidden leading-[1.8] lg:block">Momentum Landscaping LLC<br />Operations · South Salt Lake Valley</p>
+            </div>
           </div>
-          <div className="max-w-md">
-            <h2 className="font-display text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] text-[color:var(--ink)]">Every yard,<br />every week,<br />on time.</h2>
-            <div className="mo-hairline mt-7 w-40" />
-            <p className="mo-eyebrow mt-5 leading-[1.8]">Momentum Landscaping LLC<br />Operations · South Salt Lake Valley</p>
+        </section>
+      )}
+
+      {/* ---------- signed out / session ended ---------- */}
+      {reason !== null && (
+        <section className="mo-rule-dots relative flex min-h-screen flex-col px-6 lg:col-span-2" style={{ paddingTop: "max(24px, env(safe-area-inset-top))", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}>
+          {Brand}
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
+            <div className="mb-6 grid h-24 w-24 place-items-center rounded-[22px] border border-[color:var(--border)] bg-[#121212]">{LockIcon}</div>
+            <div className="mo-eyebrow mb-2">Signed out</div>
+            <h1 className="mo-h1 text-[30px]">{reason === "expired" ? "Your session ended" : "You're signed out"}</h1>
+            <p className="mt-3 max-w-[300px] text-[14px] leading-snug text-[color:var(--body)]">
+              {reason === "expired" ? "Nothing was lost — anything saved on this phone is still here." : "Sign back in whenever you're ready."}
+            </p>
           </div>
-        </div>
-      </section>
+          <div className="mx-auto w-full max-w-[380px] space-y-3">
+            <div className="mo-hairline-soft mb-5" />
+            {savedEmail && (
+              <button onClick={() => { setReason(null); setMode("biometric"); void runUnlock(); }} className="mo-primary h-12 w-full text-[14px]">Sign back in with Face ID</button>
+            )}
+            <button onClick={() => { setReason(null); setMode("password"); setError(""); }} className={savedEmail ? ghost : "mo-primary h-12 w-full text-[14px]"}>Use password</button>
+            <p className="mo-eyebrow pt-2 text-center text-[color:var(--faint)]">Trouble? Text Connor</p>
+          </div>
+        </section>
+      )}
 
       {/* door */}
-      <section className="flex flex-col items-center justify-center px-5 py-10">
+      {reason === null && (
+      <section className="flex flex-col items-center justify-center px-5 py-8 lg:py-10">
         <div className="w-full max-w-[380px]">
-          <div className="mb-8 lg:hidden">
-            <img src="/logo-mark.png" alt="Momentum Landscaping" className="mb-4 h-10 w-10 object-contain" />
-          </div>
-          <div className="mo-eyebrow mb-3">Sign in</div>
-          <h1 className="mo-h1 text-[30px]">Operations workspace</h1>
-          <div className="mo-hairline-soft my-6" />
+          <div className="mo-eyebrow mb-2">Sign in</div>
+          <h1 className="mo-h1 text-[28px] lg:text-[30px]">Crew workspace</h1>
+          <div className="mo-hairline-soft my-5" />
 
           {mode === "checking" && (
             <div className="mo-card flex items-center gap-2.5 p-5 text-[13px] text-[color:var(--body)]">
@@ -179,10 +219,11 @@ export default function LoginPage() {
           {mode === "biometric" && (
             <div className="space-y-5">
               <div className="flex items-center gap-4">
-                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg border border-[color:var(--border)]">{FaceIcon}</div>
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-[color:var(--border)] bg-[#121212]">{FaceIcon}</div>
                 <div className="min-w-0">
-                  <p className="text-[15px] font-medium text-[color:var(--ink)]">Unlock with Face ID</p>
-                  <p className="mt-0.5 truncate text-[13px] text-[color:var(--body)]">{savedEmail}</p>
+                  <p className="mo-eyebrow mb-1">Unlock</p>
+                  <p className="font-display text-[20px] font-semibold tracking-[-0.03em] text-[color:var(--ink)]">Look to open</p>
+                  <p className="mt-0.5 truncate text-[13px] text-[color:var(--body)]">Signed in as <span className="text-[color:var(--ink)]">{savedEmail}</span></p>
                 </div>
               </div>
               {error && (
@@ -262,16 +303,17 @@ export default function LoginPage() {
               </button>
 
               {savedEmail && (
-                <button type="button" onClick={() => { setMode("biometric"); setError(""); }} className={`${link} block w-full text-center`}>
-                  Use Face ID instead
+                <button type="button" onClick={() => { setMode("biometric"); setError(""); void runUnlock(); }} className={ghost}>
+                  <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" /><path d="M9 10v1M15 10v1M12 10v3h-1M9 15.5s1 1 3 1 3-1 3-1" /></svg>
+                  Use Face ID
                 </button>
               )}
 
-              <p className="pt-1 text-[12px] text-[color:var(--faint)]">Trouble signing in? Text Connor.</p>
+              <p className="pt-1 text-[12px] text-[color:var(--body)]">Trouble signing in? Text Connor.</p>
             </form>
           )}
 
-          <div className="mt-10 flex items-center justify-between gap-4">
+          <div className="mt-8 flex items-center justify-between gap-4 lg:mt-10">
             <div className="mo-hairline-soft max-w-[120px]" />
             <p className="mo-eyebrow text-right text-[color:var(--faint)]">
               © {new Date().getFullYear()} Momentum Landscaping LLC
@@ -279,6 +321,7 @@ export default function LoginPage() {
           </div>
         </div>
       </section>
+      )}
     </main>
   );
 }
