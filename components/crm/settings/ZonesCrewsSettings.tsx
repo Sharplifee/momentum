@@ -80,7 +80,7 @@ export function ZonesCrewsSettings({ zones, crews, staff }: { zones: ZoneRow[]; 
           {off.map((z) => (
             <button key={z.id} type="button" onClick={() => openZone(z)} title={z.name}
               className="mo-eyebrow rounded-full border border-dashed border-[color:var(--border)] px-3 py-1.5 text-[10px] text-[color:var(--faint)] transition hover:text-[color:var(--body)]">
-              + {(z.cities ?? [])[0] ?? shortZone(z.name)} · off
+              + {shortZone(z.name)} · off
             </button>
           ))}
           {zones.length === 0 && <span className="text-[13px] text-[color:var(--body)]">Add the first zone to define the service area.</span>}

@@ -1,3 +1,4 @@
+import { smsPausedReason } from "@/lib/smsStatus";
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { NewCustomerForm } from "@/components/crm/NewCustomerForm";
@@ -6,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NewCustomerPage() {
   const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
+  const smsPaused = await smsPausedReason(db);
   const [{ data: zones }, { data: services }] = await Promise.all([
     db.from("zones").select("id, cities").eq("active", true).order("id"),
     db.from("services").select("slug, base_price").in("slug", ["weekly-mow", "biweekly-mow"]),
@@ -16,7 +18,7 @@ export default async function NewCustomerPage() {
   };
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <NewCustomerForm zones={(zones ?? []).map((z) => ({ id: z.id, cities: (z.cities as string[]) ?? [] }))} defaultPrices={defaultPrices} />
+      <NewCustomerForm zones={(zones ?? []).map((z) => ({ id: z.id, cities: (z.cities as string[]) ?? [] }))} defaultPrices={defaultPrices} smsPaused={smsPaused} />
     </Shell>
   );
 }

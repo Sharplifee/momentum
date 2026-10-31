@@ -56,7 +56,7 @@ export default async function Expenses({ searchParams }: { searchParams: { cat?:
           <div className="text-right"><div className="mo-num text-[24px] leading-none text-[color:var(--ink)]">{money(monthTotal)}</div><div className="mo-eyebrow mt-1">this month</div></div>
         </div>
 
-        <div className="mo-card mb-3 flex flex-col gap-2 px-3.5 py-3">
+        {bars.length > 0 && <div className="mo-card mb-3 flex flex-col gap-2 px-3.5 py-3">
           {bars.map(([c, v]) => (
             <div key={c} className="flex items-center gap-2.5">
               <span className="w-[76px] truncate text-[13px] text-[color:var(--body)]">{label(c)}</span>
@@ -64,8 +64,7 @@ export default async function Expenses({ searchParams }: { searchParams: { cat?:
               <span className="mo-mono w-[60px] text-right text-[12px] text-[color:var(--ink)]">{money(v)}</span>
             </div>
           ))}
-          {!bars.length && <p className="py-1 text-[13px] text-[color:var(--body)]">Nothing logged in {period.short} yet.</p>}
-        </div>
+        </div>}
 
         <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
           {chips.map((c) => (

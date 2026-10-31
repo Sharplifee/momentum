@@ -86,7 +86,8 @@ export default async function NotificationsPage() {
     } else if (r.trigger === "invoice.drafted") {
       items.push({ id: `run-${r.id}`, cat: "money", ts: r.created_at, href: "/crm/money", tone: "teal", done: true, title: `Invoice drafted${d.number ? ` — #${d.number}` : ""}`, sub: d.total != null ? money(d.total) : null });
     } else if (r.trigger === "verification.eod_all_clear") {
-      items.push({ id: `run-${r.id}`, cat: "crew", ts: r.created_at, href: "/crm/tracker", tone: "sage", done: true, title: "Route verified · all clear", sub: d.date ? `Every visit on ${new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} checked out` : null });
+      if (d.total === 0) continue;   // no visits that day — nothing was verified, nothing to announce
+      items.push({ id: `run-${r.id}`, cat: "crew", ts: r.created_at, href: "/crm/tracker", tone: "sage", done: true, title: "Route verified · all clear", sub: d.date ? `${d.total ? `All ${d.total} visit${d.total === 1 ? "" : "s"}` : "Every visit"} on ${new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} checked out` : null });
     } else if (r.trigger === "verification.eod_followup") {
       items.push({ id: `run-${r.id}`, cat: "crew", ts: r.created_at, href: "/crm/tracker", tone: "gold", title: `${d.unresolved ?? "Some"} visit${d.unresolved === 1 ? "" : "s"} unverified at end of day`, sub: Array.isArray(d.crews) && d.crews.length ? d.crews.join(", ") : null });
     } else if (r.trigger === "cron.weather" && Array.isArray(d.flagged) && d.flagged.length) {

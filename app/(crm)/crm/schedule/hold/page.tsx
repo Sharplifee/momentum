@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { smsPausedReason } from "@/lib/smsStatus";
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { RainHold, type HoldStop } from "@/components/crm/RainHold";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function HoldPage({ searchParams }: { searchParams: Promise<{ date?: string; zones?: string }> }) {
   const [{ profile, role, realRole, previewing, db }, sp] = await Promise.all([requireStaff(["owner", "manager"]), searchParams]);
+  const smsPaused = await smsPausedReason(db);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? (sp.date as string) : today;
   const zones = (sp.zones ?? "").split(",").map(Number).filter((n) => n > 0);
@@ -83,7 +85,7 @@ export default async function HoldPage({ searchParams }: { searchParams: Promise
           </div>
         </section>
 
-        <RainHold date={date} dateLabel={dateLabel} stops={stops} crewName={crewName} />
+        <RainHold date={date} dateLabel={dateLabel} stops={stops} crewName={crewName} smsPaused={smsPaused} />
       </div>
     </Shell>
   );

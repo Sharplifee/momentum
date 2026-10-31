@@ -1,3 +1,4 @@
+import { smsPausedReason } from "@/lib/smsStatus";
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { MonthCalendar } from "@/components/crm/MonthCalendar";
@@ -17,6 +18,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   ]);
 
   const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
+  const smsPaused = await smsPausedReason(db);
   const month = /^\d{4}-\d{2}$/.test(sp.m ?? "") ? (sp.m as string) : todayIso.slice(0, 7);
   const [y, m] = month.split("-").map(Number);
   const first = new Date(Date.UTC(y, m - 1, 1));
@@ -127,7 +129,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           todayIso={todayIso}
           selectedIso={/^\d{4}-\d{2}-\d{2}$/.test(sp.d ?? "") ? sp.d : undefined}
           basePath="/crm/schedule?"
-          action={role !== "crew" ? <NewJobButton services={(services ?? []) as any} crews={(crews ?? []) as any} defaultDate={todayIso} /> : undefined}
+          action={role !== "crew" ? <NewJobButton services={(services ?? []) as any} crews={(crews ?? []) as any} defaultDate={todayIso} smsPaused={smsPaused} /> : undefined}
         />
       </div>
     </Shell>

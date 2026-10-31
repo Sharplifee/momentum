@@ -32,7 +32,7 @@ export default async function LeadDetail({ params }: { params: { id: string } })
   const [{ data: events }, { data: thread }, { data: zone }, { data: service }] = await Promise.all([
     db.from("lead_events").select("type, detail, actor, created_at").eq("lead_id", lead.id).order("created_at", { ascending: false }).limit(60),
     db.from("threads").select("id, escalated").eq("lead_id", lead.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    lead.zone_id ? db.from("zones").select("id, name").eq("id", lead.zone_id).maybeSingle() : Promise.resolve({ data: null as { id: number; name: string } | null }),
+    lead.zone_id ? db.from("zones").select("id, name, active").eq("id", lead.zone_id).maybeSingle() : Promise.resolve({ data: null as { id: number; name: string; active: boolean } | null }),
     lead.service_interest ? db.from("services").select("name").eq("slug", lead.service_interest).maybeSingle() : Promise.resolve({ data: null as { name: string } | null }),
   ]);
   const { data: messages } = thread
@@ -66,9 +66,10 @@ export default async function LeadDetail({ params }: { params: { id: string } })
     lead.requested_days?.length ? (lead.requested_days as string[]).join(", ") : null,
     lead.requested_window ?? null,
   ].filter(Boolean).join(" · ");
+  const zoneName = (zone?.name ?? `Zone ${lead.zone_id}`).replace(/^Zone \d+ — /, "");
   const zoneLine = lead.zone_id
-    ? `${zone?.name ?? `Zone ${lead.zone_id}`}${lead.city && !(zone?.name ?? "").toLowerCase().includes(lead.city.toLowerCase()) ? ` · ${lead.city}` : ""} · in area`
-    : lead.city ? `${lead.city} · no zone matched` : "not matched";
+    ? `${zoneName}${lead.city && !zoneName.toLowerCase().includes(lead.city.toLowerCase()) ? ` · ${lead.city}` : ""} · ${zone && zone.active === false ? "zone not served" : "in area"}`
+    : lead.city ? `${lead.city} · no zone matched` : "no zone matched · check the address";
   const sourceLine = lead.source
     ? `${lead.source === "website" ? "Website form" : SOURCE_NAME[lead.source]?.replace(/^\w/, (c: string) => c.toUpperCase()) ?? lead.source}${lead.fbclid ? " · fbclid captured" : lead.meta_lead_id ? " · lead ID on file" : ""}`
     : "—";

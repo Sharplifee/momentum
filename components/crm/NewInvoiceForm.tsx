@@ -18,7 +18,7 @@ const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits
  * the one-off cleanup, the thing you agreed on the driveway. Lines, a due
  * date, and whether to text the pay link right now.
  */
-export function NewInvoiceForm({ taxRate, taxLabel, netDays, initialCustomer }: { taxRate: number; taxLabel: string; netDays: number; initialCustomer: Hit | null }) {
+export function NewInvoiceForm({ taxRate, taxLabel, netDays, initialCustomer, smsPaused = null }: { taxRate: number; taxLabel: string; netDays: number; initialCustomer: Hit | null; smsPaused?: string | null }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -28,7 +28,7 @@ export function NewInvoiceForm({ taxRate, taxLabel, netDays, initialCustomer }: 
   const [visitId, setVisitId] = useState("");
   const [lines, setLines] = useState<Line[]>([{ service: "", price: "" }]);
   const [due, setDue] = useState(String([0, 7, 14, 30].includes(netDays) ? netDays : 7));
-  const [send, setSend] = useState(true);
+  const [send, setSend] = useState(!smsPaused);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
@@ -144,7 +144,7 @@ export function NewInvoiceForm({ taxRate, taxLabel, netDays, initialCustomer }: 
 
       <Field label="Due"><Segmented options={DUE} value={due} onChange={setDue} /></Field>
 
-      <ToggleRow title="Send by text with pay link" help={phone ? `To ${phone} · past-due reminders go automatically` : customer ? "No mobile on file — save as a draft" : "Pick a customer first"} on={send && Boolean(phone)} onChange={(v) => setSend(v)} />
+      <ToggleRow title="Send by text with pay link" help={smsPaused ? `Texting is paused · ${smsPaused}` : phone ? `To ${phone} · past-due reminders go automatically` : customer ? "No mobile on file — save as a draft" : "Pick a customer first"} on={send && Boolean(phone)} onChange={(v) => setSend(v)} />
 
       {err && <p className="mb-3 text-[13px] text-coral">{err}</p>}
 

@@ -61,12 +61,12 @@ export function RouteMap({ token, stops }: { token: string | null; stops: RouteS
   const allHref = next ? `https://maps.apple.com/?daddr=${next.lat && next.lng ? `${next.lat},${next.lng}` : encodeURIComponent(`${next.address} ${next.city ?? ""}`)}` : null;
 
   return (
-    <div className="relative -mx-4 -mt-6 h-[52dvh] min-h-[320px] overflow-hidden md:mx-0 md:mt-0 md:h-[460px] md:rounded-2xl md:border md:border-[color:var(--border)]">
+    <div className="relative -mx-4 h-[48dvh] min-h-[300px] overflow-hidden border-y border-[color:var(--border)] md:mx-0 md:h-[460px] md:rounded-2xl md:border">
       {token ? <div ref={el} className="h-full w-full" /> : (
         <div className="grid h-full place-items-center text-sm text-[color:var(--body)]">The map needs its Apple Maps token before it can draw.</div>
       )}
       {err && <div className="absolute inset-x-0 bottom-0 bg-black/70 px-4 py-2 text-sm text-white">{err}</div>}
-      <div className="pointer-events-none absolute inset-x-4 bottom-3 flex items-center justify-between gap-2">
+      <div className="pointer-events-none absolute inset-x-4 top-3 flex items-center justify-between gap-2">
         <span className="mo-eyebrow rounded-full border border-[color:var(--border)] bg-[#0a0a0a]/90 px-3 py-1.5 text-[color:var(--ink)]">
           {stops.length} stop{stops.length === 1 ? "" : "s"}{placed < stops.length ? ` · ${stops.length - placed} unmapped` : ""}{allHref ? " · Apple Maps" : ""}
         </span>

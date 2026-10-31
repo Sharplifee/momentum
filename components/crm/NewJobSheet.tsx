@@ -26,7 +26,8 @@ const WINDOWS = [
  * "+ Job" from the Schedule. Customer → service → date/window → crew, with
  * the two decisions that matter as toggles: make it weekly, and text them now.
  */
-export function NewJobSheet({ services, crews, defaultDate, open, onClose }: {
+export function NewJobSheet({ services, crews, defaultDate, open, onClose, smsPaused = null }: {
+  smsPaused?: string | null;
   services: Service[]; crews: Crew[]; defaultDate: string; open: boolean; onClose: () => void;
 }) {
   const router = useRouter();
@@ -40,7 +41,7 @@ export function NewJobSheet({ services, crews, defaultDate, open, onClose }: {
   const [win, setWin] = useState(WINDOWS[1].value);
   const [crewId, setCrewId] = useState<string>(crews.length === 1 ? String(crews[0].id) : String(crews[0]?.id ?? ""));
   const [repeat, setRepeat] = useState(false);
-  const [text, setText] = useState(true);
+  const [text, setText] = useState(!smsPaused);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -162,7 +163,7 @@ export function NewJobSheet({ services, crews, defaultDate, open, onClose }: {
       {service?.recurring && (
         <ToggleRow title="Repeat weekly" help="Same day and window until paused" on={repeat} onChange={setRepeat} />
       )}
-      <ToggleRow title="Text confirmation now" help="Norma sends the date, window and what to expect" on={text} onChange={setText} />
+      <ToggleRow title="Text confirmation now" help={smsPaused ? `Texting is paused · ${smsPaused}` : "Norma sends the date, window and what to expect"} on={text} onChange={setText} />
     </Sheet>
   );
 }

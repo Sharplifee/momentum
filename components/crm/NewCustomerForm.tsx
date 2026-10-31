@@ -14,7 +14,7 @@ const DAYS: { value: string; label: string }[] = [{ value: "1", label: "M" }, { 
  * and whether to text them a welcome. Won leads never come through here —
  * closing a quote already makes the customer.
  */
-export function NewCustomerForm({ zones, defaultPrices }: { zones: Zone[]; defaultPrices: Record<string, number | null> }) {
+export function NewCustomerForm({ zones, defaultPrices, smsPaused = null }: { zones: Zone[]; defaultPrices: Record<string, number | null>; smsPaused?: string | null }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -25,7 +25,7 @@ export function NewCustomerForm({ zones, defaultPrices }: { zones: Zone[]; defau
   const [day, setDay] = useState("2");
   const [price, setPrice] = useState<string>(defaultPrices.weekly != null ? String(defaultPrices.weekly) : "");
   const [priceTouched, setPriceTouched] = useState(false);
-  const [welcome, setWelcome] = useState(true);
+  const [welcome, setWelcome] = useState(!smsPaused);
   const [notesNext, setNotesNext] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -109,7 +109,7 @@ export function NewCustomerForm({ zones, defaultPrices }: { zones: Zone[]; defau
         <p className="mb-4 text-[13px] text-[color:var(--body)]">One-off work gets priced on the job. Add it from the schedule with + Job once they're saved.</p>
       )}
 
-      <ToggleRow title="Send welcome text" help="What to expect and how to reach us" on={welcome} onChange={setWelcome} />
+      <ToggleRow title="Send welcome text" help={smsPaused ? `Texting is paused · ${smsPaused}` : "What to expect and how to reach us"} on={welcome} onChange={setWelcome} />
       <ToggleRow title="Property notes next" help="Gate, pets, clippings, watering days — open right after saving" on={notesNext} onChange={setNotesNext} />
 
       {err && (

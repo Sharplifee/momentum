@@ -11,11 +11,11 @@ export type HoldStop = { id: string; name: string; service: string; recurring: b
  * (cleanups, aeration) is kept by default because wet grass doesn't stop it.
  * Nothing moves until the button is pressed.
  */
-export function RainHold({ date, dateLabel, stops, crewName }: { date: string; dateLabel: string; stops: HoldStop[]; crewName: string | null }) {
+export function RainHold({ date, dateLabel, stops, crewName, smsPaused = null }: { date: string; dateLabel: string; stops: HoldStop[]; crewName: string | null; smsPaused?: string | null }) {
   const router = useRouter();
   const [keep, setKeep] = useState<Set<string>>(new Set(stops.filter((s) => !s.recurring).map((s) => s.id)));
-  const [textCustomers, setTextCustomers] = useState(true);
-  const [tellCrew, setTellCrew] = useState(true);
+  const [textCustomers, setTextCustomers] = useState(!smsPaused);
+  const [tellCrew, setTellCrew] = useState(!smsPaused);
   const [busy, setBusy] = useState<"hold" | "run" | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -50,7 +50,7 @@ export function RainHold({ date, dateLabel, stops, crewName }: { date: string; d
         {!stops.length && <div className="border-t border-[color:var(--border)] px-4 py-6 text-center text-sm text-[color:var(--body)]">Nothing scheduled that day.</div>}
       </section>
 
-      <ToggleRow title="Text affected customers" help="Norma sends the rain-hold wording with the new day" on={textCustomers} onChange={setTextCustomers} />
+      <ToggleRow title="Text affected customers" help={smsPaused ? `Texting is paused · ${smsPaused}` : "Norma sends the rain-hold wording with the new day"} on={textCustomers} onChange={setTextCustomers} />
       <ToggleRow title={crewName ? `Tell ${crewName}` : "Tell the crew"} help={`SMS · "${dateLabel} is a rain day, new route posted"`} on={tellCrew} onChange={setTellCrew} />
 
       <p className="mb-4 mt-1 text-[13px] leading-snug text-[color:var(--body)]">

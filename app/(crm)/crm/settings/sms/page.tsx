@@ -1,4 +1,5 @@
 import { requireStaff } from "@/lib/crm";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { Shell } from "@/components/crm/Shell";
 import { PageHeader } from "@/components/ui";
 import { todayDenver, TZ } from "@/lib/day";
@@ -23,17 +24,21 @@ function denverDayStart(day: string): string {
  */
 export default async function SmsStatusPage() {
   const { profile, role, realRole, previewing, db } = await requireStaff(["owner"]);
+  // sms_events has RLS on with no read policy, so the signed-in client sees
+  // nothing and the page would report 0 / — forever. This screen is owner-only
+  // (checked above), so the provider log is read with the service client.
+  const events = supabaseAdmin();
   const today = todayDenver();
   const since = denverDayStart(today);
-  const count = (types: string[]) => db.from("sms_events").select("id", { count: "exact", head: true }).in("event_type", types).gte("created_at", since);
+  const count = (types: string[]) => events.from("sms_events").select("id", { count: "exact", head: true }).in("event_type", types).gte("created_at", since);
   const [{ data: config }, { data: cl }, sent, delivered, failed, { data: lastIn }, { data: lastOut }, { count: optOuts }] = await Promise.all([
     db.from("system_config").select("key, value, updated_at").in("key", ["sms_sandbox", "sms_provider", "quiet_hours"]),
     db.from("system_config").select("value").eq("key", "launch_checklist").single(),
     count(["send_attempted"]),
     count(["sms_delivered"]),
     count(["send_failed", "sms_failed"]),
-    db.from("sms_events").select("created_at").in("event_type", ["inbound", "sms_inbound"]).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    db.from("sms_events").select("created_at").eq("event_type", "send_attempted").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    events.from("sms_events").select("created_at").in("event_type", ["inbound", "sms_inbound"]).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    events.from("sms_events").select("created_at").eq("event_type", "send_attempted").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     db.from("customers").select("id", { count: "exact", head: true }).eq("sms_opt_out", true),
   ]);
   const cfg = (k: string) => (config ?? []).find((c) => c.key === k);

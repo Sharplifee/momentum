@@ -31,8 +31,10 @@ async function __GET(req: NextRequest) {
 
   const unresolved = ((jobs ?? []) as any[]).filter((j) => !["completed", "exception"].includes(j.status));
   if (!unresolved.length) {
-    await logAutomation({ trigger: "verification.eod_all_clear", detail: { date: todayIso } });
-    return NextResponse.json({ ok: true, unresolved: 0 });
+    // A day with no visits is not a verified route — say so in the record so
+    // nothing downstream dresses it up as "all clear".
+    await logAutomation({ trigger: "verification.eod_all_clear", detail: { date: todayIso, total: (jobs ?? []).length } });
+    return NextResponse.json({ ok: true, unresolved: 0, total: (jobs ?? []).length });
   }
 
   // Group by crew so each person gets one message about their own stops.
