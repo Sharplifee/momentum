@@ -98,7 +98,7 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
                 <span className={`mo-eyebrow ${e.severity === "critical" ? "text-coral" : "text-gold"}`}>{SEV_LABEL[e.severity] ?? "Open"}</span>
                 <span className="mo-eyebrow">{when(e)}</span>
               </div>
-              <div className="font-display text-[17px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">{titleFor(e)}</div>
+              <Link href={`/crm/tracker/${e.id}`} className="block font-display text-[17px] font-semibold tracking-[-0.02em] text-[color:var(--ink)] hover:text-teal">{titleFor(e)} <span className="text-[color:var(--faint)]">›</span></Link>
               <p className="mt-1 text-[14px] leading-snug text-[color:var(--body)]">
                 {e.detail}{e.crew ? ` ${e.crew}.` : ""}{e.address ? ` ${e.address}.` : ""}
               </p>

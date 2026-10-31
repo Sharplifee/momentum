@@ -158,6 +158,11 @@ export function MonthCalendar({ month, jobs, crews, todayIso, basePath = "/crm/s
               {new Date(selected + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </h3>
             <p className="mb-3 text-xs text-[color:var(--body)]">{dayJobs.length ? `${dayJobs.length} stop${dayJobs.length === 1 ? "" : "s"} — in route order` : "No jobs scheduled."}</p>
+            {dayJobs.some((j) => j.weather_flag) && (
+              <Link href={`/crm/schedule/hold?date=${selected}`} className="mb-3 flex items-center justify-between rounded-lg border border-gold/50 px-3 py-2 text-[13px] text-gold">
+                <span>Rain flagged · review the hold</span><span>›</span>
+              </Link>
+            )}
             <div className="flex flex-col gap-2">
               {dayJobs.map((j, idx) => (
                 <div key={j.id} className="rounded-lg border border-[color:var(--border)] p-3">

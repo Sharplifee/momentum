@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { RescheduleButton, type DayOption } from "@/components/crm/RescheduleSheet";
 import { JobActions } from "@/components/crm/JobActions";
+import { VisitActions } from "@/components/crm/VisitActions";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,25 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
     db.from("crews").select("id, max_daily_jobs").eq("id", j.crew_id ?? -1).maybeSingle(),
     db.from("threads").select("id").eq("phone", cust?.phone ?? "—").order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+
+  // Finished visit: GPS proof, photos, completion text, device — the visit record.
+  const completed = j.status === "completed";
+  const [{ data: proof }, { data: photoEvents }, { data: flagged }, { data: device }] = completed
+    ? await Promise.all([
+        db.from("service_proofs").select("statement, arrival_at, departure_at, minutes_on_site, ping_count, closest_meters, method, sms_sent_at").eq("job_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        db.from("job_events").select("photo_url, note, created_at").eq("job_id", id).eq("type", "photo").order("created_at"),
+        db.from("exceptions").select("id").eq("job_id", id).eq("type", "flagged").limit(1).maybeSingle(),
+        crew ? db.from("tracked_devices").select("label, model, battery_level, last_seen_at").eq("profile_id", (await db.from("crews").select("lead_profile").eq("id", j.crew_id).single()).data?.lead_profile ?? "00000000-0000-0000-0000-000000000000").order("last_seen_at", { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null as any }),
+      ])
+    : [{ data: null }, { data: [] }, { data: null }, { data: null }] as any;
+  const photos: string[] = [];
+  for (const e of (photoEvents ?? []) as any[]) {
+    if (!e.photo_url) continue;
+    const { data: signed } = await db.storage.from("job-photos").createSignedUrl(e.photo_url, 3600);
+    if (signed?.signedUrl) photos.push(signed.signedUrl);
+  }
+  const tclock = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Denver" }) : "";
+  const onSiteMin = proof?.minutes_on_site ?? (j.arrival_at && j.departure_at ? Math.max(1, Math.round((new Date(j.departure_at).getTime() - new Date(j.arrival_at).getTime()) / 60000)) : null);
 
   const stopIdx = (dayJobs ?? []).findIndex((d) => d.id === id);
   const stops = dayJobs?.length ?? 0;
@@ -94,6 +114,78 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       <span className="text-right text-[color:var(--ink)]">{v}</span>
     </div>
   );
+
+  if (completed) {
+    const arrive = proof?.arrival_at ?? j.arrival_at; const leave = proof?.departure_at ?? j.departure_at;
+    const verified = Boolean(proof) && (proof?.method ?? "") !== "manual";
+    const completionText = confirm && leave && new Date(confirm.created_at).getTime() >= new Date(leave).getTime() - 60_000 ? confirm : null;
+    const dev: any = device;
+    return (
+      <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+        <div className="mx-auto max-w-3xl">
+          <nav className="mo-eyebrow mb-4 flex items-center gap-1.5">
+            <Link href="/crm/customers" className="transition hover:text-[color:var(--ink)]">‹ Customers</Link>
+            <span className="text-[color:var(--faint)]">/</span>
+            {cust?.id ? <Link href={`/crm/customers/${cust.id}`} className="transition hover:text-[color:var(--ink)]">{(cust.full_name ?? "Customer").split(" ").slice(-1)[0]}</Link> : <span>Customer</span>}
+            <span className="text-[color:var(--faint)]">/</span>
+            <span>{base.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+          </nav>
+
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className={`mo-eyebrow ${verified ? "text-sage" : ""}`}>{verified ? "GPS-verified" : "Completed"}{crew?.name ? ` · ${crew.name}` : ""}</div>
+              <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.03em] text-[color:var(--ink)]">{dateLabel}</h1>
+              <p className="text-[14px] text-[color:var(--body)]">{svc?.name ?? "Visit"}{prop?.address ? ` · ${prop.address}` : ""}</p>
+            </div>
+            {onSiteMin != null && (
+              <div className="shrink-0 text-right">
+                <div className="font-display text-[24px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">{onSiteMin}<span className="text-[15px] font-normal text-[color:var(--body)]"> m</span></div>
+                <div className="mo-eyebrow">on site</div>
+              </div>
+            )}
+          </div>
+
+          <section className="mo-card aiv-glow mb-3 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-[16px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Dwell</h2>
+              <span className="mo-eyebrow">{arrive ? `${tclock(arrive)} → ${tclock(leave)}` : "no clock times"}</span>
+            </div>
+            {arrive && leave && (
+              <div className="mt-3">
+                <div className="flex justify-between"><span className="mo-eyebrow">arrive {tclock(arrive)}</span><span className="mo-eyebrow">leave {tclock(leave)}</span></div>
+                <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-teal/25"><div className="h-full rounded-full bg-sage" style={{ width: "100%" }} /></div>
+              </div>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-3 text-[14px]">
+              <span className="text-[color:var(--body)]">{proof?.statement ?? (proof?.ping_count ? `${proof.ping_count} pings · closest ${Math.round(proof.closest_meters ?? 0)} m` : "No GPS record for this visit")}</span>
+              <span className={verified ? "shrink-0 text-sage" : "shrink-0 text-[color:var(--faint)]"}>{verified ? "Verified" : "Unverified"}</span>
+            </div>
+          </section>
+
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            {[0, 1, 2].map((i) => photos[i] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={i} src={photos[i]} alt={`Photo ${i + 1}`} className="aspect-square w-full rounded-xl border border-[color:var(--border)] object-cover" />
+            ) : (
+              <div key={i} className="mo-eyebrow grid aspect-square place-items-center rounded-xl border border-dashed border-[color:var(--border)] text-[color:var(--faint)]">{i === 0 ? "No photo" : ""}</div>
+            ))}
+          </div>
+
+          <section className="mo-card mb-3 px-4 py-3">
+            <h2 className="mb-1 font-display text-[16px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Record</h2>
+            <Row k="Crew note" v={(events ?? []).find((e) => e.type === "departed" && e.note)?.note ?? j.notes ?? "—"} />
+            <Row k="Completion text" v={completionText
+              ? <span className={completionText.meta?.delivery === "SMS_DELIVERED" ? "text-sage" : completionText.meta?.delivery === "SMS_FAILED" ? "text-coral" : ""}>Sent {tclock(completionText.created_at)}{completionText.meta?.delivery === "SMS_DELIVERED" ? " · delivered" : completionText.meta?.delivery === "SMS_FAILED" ? " · failed" : ""}</span>
+              : proof?.sms_sent_at ? `Sent ${tclock(proof.sms_sent_at)}` : "Not sent"} />
+            <Row k="Invoice" v={invoice ? `INV-${String(invoice.number).padStart(4, "0")} · $${Number(invoice.total).toFixed(0)} · ${invoice.status}` : "Not drafted"} />
+            <Row k="Device" v={dev ? <span className="mo-mono text-[13px]">{dev.label ?? dev.model ?? "Phone"}{dev.battery_level != null ? ` · battery ${Math.round(Number(dev.battery_level) <= 1 ? Number(dev.battery_level) * 100 : Number(dev.battery_level))}%` : ""}</span> : "—"} />
+          </section>
+
+          <VisitActions jobId={id} threadHref={cust?.phone ? (thread ? `/crm/messages?thread=${thread.id}` : `/crm/messages?new=${encodeURIComponent(cust.phone)}`) : null} alreadyFlagged={Boolean(flagged)} />
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>

@@ -135,6 +135,63 @@ async function __POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Rain hold: move the chosen stops to the next day their crew has room for
+  // (never Sunday), clear the flags, and tell the people affected — only if asked.
+  if (body.action === "hold_day") {
+    const { date, job_ids, text_customers, notify_crew, reason } = body as { date: string; job_ids: string[]; text_customers?: boolean; notify_crew?: boolean; reason?: string };
+    if (!date || !Array.isArray(job_ids) || !job_ids.length) return NextResponse.json({ error: "date and job_ids required" }, { status: 400 });
+    const { data: jobs } = await db.from("jobs").select("id, crew_id, window_start, window_end, customer_id, services(name), customers(full_name, phone)").in("id", job_ids).eq("scheduled_date", date).neq("status", "cancelled");
+    const moved: { id: string; to: string }[] = [];
+    const roomCache = new Map<string, number>();
+    for (const j of jobs ?? []) {
+      let target: string | null = null;
+      for (let i = 1; i <= 10 && !target; i++) {
+        const d = new Date(new Date(date + "T12:00:00").getTime() + i * 86400_000);
+        if (d.getDay() === 0) continue;
+        const iso = d.toLocaleDateString("en-CA");
+        const key = `${j.crew_id}:${iso}`;
+        if (!roomCache.has(key)) {
+          const { data: crew } = await db.from("crews").select("max_daily_jobs").eq("id", j.crew_id ?? -1).maybeSingle();
+          const { count } = await db.from("jobs").select("id", { count: "exact", head: true }).eq("crew_id", j.crew_id ?? -1).eq("scheduled_date", iso).neq("status", "cancelled");
+          roomCache.set(key, (crew?.max_daily_jobs ?? 12) - (count ?? 0));
+        }
+        if ((roomCache.get(key) ?? 0) > 0) { target = iso; roomCache.set(key, (roomCache.get(key) ?? 0) - 1); }
+      }
+      if (!target) continue;
+      const { error } = await db.from("jobs").update({ scheduled_date: target, weather_flag: false, status: "scheduled" }).eq("id", j.id);
+      if (error) continue;
+      moved.push({ id: j.id, to: target });
+      await db.from("job_events").insert({ job_id: j.id, type: "rain_hold", note: `${date} → ${target}${reason ? ` · ${reason}` : ""}`, actor: staff.full_name ?? "staff" });
+      const cust: any = Array.isArray(j.customers) ? j.customers[0] : j.customers;
+      if (text_customers && cust?.phone) {
+        const { sendSms } = await import("@/lib/sms");
+        const first = (cust.full_name ?? "").split(" ")[0];
+        await sendSms({ to: cust.phone, sender: "system", template: "rain_hold",
+          message: `Momentum Landscaping — ${first ? first + ", " : ""}rain is in the forecast for ${fmtDay(date)}, so we've moved your visit to ${fmtDay(target)}${j.window_start ? `, ${fmtWin(j.window_start, j.window_end)}` : ""}. Reply here if that doesn't work.` });
+      }
+    }
+    if (notify_crew && moved.length) {
+      const crewIds = [...new Set((jobs ?? []).map((j) => j.crew_id).filter(Boolean))] as number[];
+      const { data: crews } = await db.from("crews").select("id, name, phone").in("id", crewIds);
+      const { sendSms } = await import("@/lib/sms");
+      for (const c of crews ?? []) {
+        if (!c.phone) continue;
+        await sendSms({ to: c.phone, sender: "system", bypassQuietHours: true, message: `Momentum — ${fmtDay(date)} is a rain day. ${moved.length} stop${moved.length === 1 ? "" : "s"} moved; the new route is in the app.` });
+      }
+    }
+    await logAutomation({ trigger: "crm.rain_hold", detail: { date, requested: job_ids.length, moved: moved.length, text_customers: Boolean(text_customers), notify_crew: Boolean(notify_crew) } });
+    return NextResponse.json({ ok: true, moved });
+  }
+
+  if (body.action === "run_anyway") {
+    const { date } = body as { date: string };
+    if (!date) return NextResponse.json({ error: "date required" }, { status: 400 });
+    const { data, error } = await db.from("jobs").update({ weather_flag: false }).eq("scheduled_date", date).eq("weather_flag", true).select("id");
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await logAutomation({ trigger: "crm.rain_run_anyway", detail: { date, cleared: data?.length ?? 0 } });
+    return NextResponse.json({ ok: true, cleared: data?.length ?? 0 });
+  }
+
   if (body.action === "push_day") {
     const zones = (body.zones as number[]) ?? [];
     const date = body.date as string;
