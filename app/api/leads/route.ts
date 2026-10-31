@@ -66,10 +66,18 @@ async function __POST(req: NextRequest) {
   // CRM and report it to Meta, but never text the person or page the team.
   const isBackfill = internal && req.headers.get("x-momentum-backfill") === "1";
   const declaredSource = req.headers.get("x-momentum-source");
+  // A lead typed in by staff (phone call, referral, door knock) names its own
+  // source; only a signed-in staff member can do that, never the public form.
+  const STAFF_SOURCES = ["phone", "referral", "door", "other"];
+  const staffEntered = declaredSource && STAFF_SOURCES.includes(declaredSource)
+    ? Boolean(await (await import("@/lib/apiAuth")).staffFromSession(["owner", "manager", "crew"]))
+    : false;
   const source = isTest
     ? "test"
     : declaredSource === "meta_lead_ad" && internal
     ? "meta_lead_ad"
+    : staffEntered
+    ? declaredSource!
     : "website";
 
   // Attribution signals. These were being read for the CAPI call but never stored,

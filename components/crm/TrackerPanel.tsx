@@ -2,12 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, Chip, EmptyState } from "@/components/ui";
 
 type Exception = {
   id: number; type: string; severity: string; detail: string;
-  occurred_on: string | null; crew: string | null; address: string | null;
+  occurred_on: string | null; created_at?: string | null; job_id?: string | null;
+  crew: string | null; address: string | null;
   customer: string | null; customer_phone: string | null;
+};
+
+const TYPE_TITLE: Record<string, string> = {
+  access_blocked: "Access blocked", yard_not_ready: "Yard not ready", crew_reported: "Crew reported",
+  no_gps: "No GPS record", short_visit: "Visit too short", missed: "Missed visit", unverified: "Not verified",
+};
+const titleFor = (e: Exception) => `${TYPE_TITLE[e.type] ?? e.type.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}${e.customer ? ` — ${e.customer.split(" ").slice(-1)[0]}` : ""}`;
+const when = (e: Exception) => {
+  const d = e.created_at ? new Date(e.created_at) : e.occurred_on ? new Date(e.occurred_on + "T12:00:00") : null;
+  if (!d) return "";
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
+  const day = d.toLocaleDateString("en-CA", { timeZone: "America/Denver" });
+  const time = e.created_at ? d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Denver" }) : "";
+  return `${day === today ? "Today" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Denver" })}${time ? ` · ${time}` : ""}`;
 };
 type CrewRow = {
   profile_id: string; full_name: string | null; crew: string | null;
@@ -59,42 +75,42 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
 
   return (
     <>
-      <div className="mb-4 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]{display:none}">
+      <div className="mb-4 flex gap-1 overflow-x-auto rounded-full border border-[color:var(--border)] bg-black/30 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map(([k, label, n]) => (
           <button key={k} onClick={() => setTab(k as any)}
-            className={`shrink-0 whitespace-nowrap rounded-xl px-3.5 py-1.5 text-sm font-medium transition ${
-              tab === k ? "bg-teal/15 text-navy ring-1 ring-teal/40 dark:text-ice" : "text-slate hover:bg-ice/15"
+            className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-semibold transition ${
+              tab === k ? "bg-[color:var(--ink)] text-[#0a0a0a]" : "text-[color:var(--body)]"
             }`}>
-            {label}{n !== null && <span className="ml-1.5 text-xs text-slate/60">{n}</span>}
+            {label}{n !== null && <span className={`ml-1.5 text-[11px] ${tab === k ? "text-[#0a0a0a]/60" : "text-[color:var(--faint)]"}`}>{n}</span>}
           </button>
         ))}
       </div>
 
-      {err && <div className="mb-3 text-sm text-red">{err}</div>}
+      {err && <div className="mb-3 text-sm text-coral">{err}</div>}
 
       {tab === "exceptions" && (exceptions.length === 0 ? (
         <EmptyState icon="Exceptions" title="Queue is clear" hint="No open service exceptions." />
       ) : (
         <div className="space-y-2">
           {exceptions.map((e) => (
-            <Card key={e.id} className={`flex items-start gap-3 p-4 ${SEV_BORDER[e.severity] ?? ""}`}>
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <span className={`mo-eyebrow text-[9px] ${e.severity === "critical" ? "text-coral" : "text-gold"}`}>{SEV_LABEL[e.severity] ?? "Open"}</span>
-                  <span className="text-xs text-slate">{e.type.replace(/_/g, " ")}</span>
-                  {e.occurred_on && <span className="text-xs text-slate/60">{e.occurred_on}</span>}
-                </div>
-                <div className="text-sm font-medium text-navy dark:text-ice">{e.detail}</div>
-                {(e.customer || e.address) && (
-                  <div className="mt-0.5 text-sm text-slate">
-                    {[e.customer, e.address].filter(Boolean).join(" · ")}
-                  </div>
-                )}
+            <Card key={e.id} className={`p-4 ${SEV_BORDER[e.severity] ?? ""}`}>
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <span className={`mo-eyebrow ${e.severity === "critical" ? "text-coral" : "text-gold"}`}>{SEV_LABEL[e.severity] ?? "Open"}</span>
+                <span className="mo-eyebrow">{when(e)}</span>
               </div>
-              <button onClick={() => resolve(e.id)} disabled={busy === e.id}
-                className="shrink-0 rounded-xl border border-[color:var(--border)] bg-white/70 px-3 py-1.5 text-xs font-medium text-navy transition hover:bg-white disabled:opacity-50 dark:bg-white/10 dark:text-ice">
-                {busy === e.id ? "…" : "Resolve"}
-              </button>
+              <div className="font-display text-[17px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">{titleFor(e)}</div>
+              <p className="mt-1 text-[14px] leading-snug text-[color:var(--body)]">
+                {e.detail}{e.crew ? ` ${e.crew}.` : ""}{e.address ? ` ${e.address}.` : ""}
+              </p>
+              <div className="mt-3 flex gap-2">
+                {e.job_id && (
+                  <Link href={`/crm/jobs/${e.job_id}`} className="flex-1 rounded-full border border-teal/50 py-2.5 text-center text-[14px] font-semibold text-[color:var(--ink)]">Reschedule</Link>
+                )}
+                <button onClick={() => resolve(e.id)} disabled={busy === e.id}
+                  className="mo-primary flex-1 rounded-full py-2.5 text-[14px] font-semibold disabled:opacity-50">
+                  {busy === e.id ? "…" : "Resolve"}
+                </button>
+              </div>
             </Card>
           ))}
         </div>
@@ -109,17 +125,17 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
             return (
               <Card key={c.profile_id} className="flex items-center gap-3 p-4">
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-navy dark:text-ice">
+                  <div className="text-[15px] font-semibold text-[color:var(--ink)]">
                     {c.full_name ?? "Crew member"}{c.crew ? ` · ${c.crew}` : ""}
                   </div>
-                  <div className="text-sm text-slate">
+                  <div className="text-sm text-[color:var(--body)]">
                     {c.at_address ? `On site: ${c.at_address}${c.minutes_on_site != null ? ` (${c.minutes_on_site} min)` : ""}` : "Not on a property"}
                   </div>
-                  <div className="mt-0.5 text-xs text-slate/70">
+                  <div className="mt-0.5 text-xs text-[color:var(--faint)]">
                     Last ping {ago(c.minutes_since_ping)} · {c.jobs_done_today}/{c.jobs_today} done today
                   </div>
                 </div>
-                <Chip className={live ? "bg-teal/20 text-teal" : "bg-red/15 text-red"}>{live ? "Live" : "Dark"}</Chip>
+                <Chip className={live ? "border border-teal/60 text-teal" : "border border-coral/60 text-coral"}>{live ? "Live" : "Dark"}</Chip>
               </Card>
             );
           })}
@@ -133,18 +149,18 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
           {devices.map((d) => (
             <Card key={d.device_id} className="flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-navy dark:text-ice">{d.full_name ?? "—"}</div>
-                <div className="text-sm text-slate">
+                <div className="text-[15px] font-semibold text-[color:var(--ink)]">{d.full_name ?? "—"}</div>
+                <div className="text-sm text-[color:var(--body)]">
                   {d.model ?? "unknown device"} · iOS {d.os_version ?? "?"} · app {d.app_version ?? "?"}
                 </div>
-                <div className="mt-0.5 text-xs text-slate/70">
+                <div className="mt-0.5 text-xs text-[color:var(--faint)]">
                   Permission: {d.permission_state ?? "none"} · last ping {ago(d.minutes_since_ping)} · {d.pings_received} pings
                   {d.last_error ? ` · ${d.last_error}` : ""}
                 </div>
               </div>
-              <Chip className={d.health === "healthy" ? "border border-sage/60 text-sage" : d.health === "dark" ? "border border-red/60 text-red" : "border border-gold/60 text-gold"}>
-                {d.health.replace(/_/g, " ")}
-              </Chip>
+              {d.health === "healthy"
+                ? <Chip className="border border-sage/60 text-sage">OK</Chip>
+                : <Chip className="border border-gold/60 text-gold">Fix</Chip>}
             </Card>
           ))}
         </div>
@@ -154,7 +170,7 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[color:var(--border)] mo-eyebrow text-left text-slate/60">
+              <tr className="border-b border-[color:var(--border)] mo-eyebrow text-left text-[color:var(--faint)]">
                 <th className="px-4 py-3">Day</th><th className="px-4 py-3">Scheduled</th><th className="px-4 py-3">Completed</th>
                 <th className="px-4 py-3">Verified</th><th className="px-4 py-3">Rate</th><th className="px-4 py-3">Avg min</th><th className="px-4 py-3">Revenue</th>
               </tr>
@@ -163,12 +179,12 @@ export function TrackerPanel({ exceptions, crew, devices, health }: {
               {health.filter((h) => h.jobs_scheduled > 0).map((h) => (
                 <tr key={h.day} className="border-b border-[color:var(--border)] last:border-0">
                   <td className="px-4 py-2.5 text-navy dark:text-ice">{h.day}</td>
-                  <td className="px-4 py-2.5 text-slate">{h.jobs_scheduled}</td>
-                  <td className="px-4 py-2.5 text-slate">{h.jobs_completed}</td>
-                  <td className="px-4 py-2.5 text-slate">{h.gps_verified}</td>
-                  <td className="px-4 py-2.5 text-slate">{h.verification_rate != null ? `${h.verification_rate}%` : "—"}</td>
-                  <td className="px-4 py-2.5 text-slate">{h.avg_minutes_on_site ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-slate">{h.revenue_serviced != null ? `$${h.revenue_serviced}` : "—"}</td>
+                  <td className="px-4 py-2.5 text-[color:var(--body)]">{h.jobs_scheduled}</td>
+                  <td className="px-4 py-2.5 text-[color:var(--body)]">{h.jobs_completed}</td>
+                  <td className="px-4 py-2.5 text-[color:var(--body)]">{h.gps_verified}</td>
+                  <td className="px-4 py-2.5 text-[color:var(--body)]">{h.verification_rate != null ? `${h.verification_rate}%` : "—"}</td>
+                  <td className="px-4 py-2.5 text-[color:var(--body)]">{h.avg_minutes_on_site ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-[color:var(--body)]">{h.revenue_serviced != null ? `$${h.revenue_serviced}` : "—"}</td>
                 </tr>
               ))}
             </tbody>

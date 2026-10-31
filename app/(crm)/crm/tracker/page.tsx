@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
-import { PageHeader, StatCard } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
+import { Tile } from "@/components/crm/Charts";
 import { TrackerPanel } from "@/components/crm/TrackerPanel";
 import { AddressSuggestions } from "@/components/crm/AddressSuggestions";
 
@@ -45,13 +46,12 @@ export default async function Tracker() {
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <PageHeader eyebrow="Field" title="Tracker" sub="Exceptions, crew devices, and GPS-verified visits." />
+      <PageHeader eyebrow="Field" title="Tracker" />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Open" value={exceptions.length} icon="◎" />
-        <StatCard label="Needs you" value={needsYou} icon="▲" tone={needsYou > 0 ? "warn" : "default"} />
-        <StatCard label="Verified" value={`${verifiedToday}/${jobsToday.length}`} icon="✓" tone={verifiedToday > 0 ? "win" : "default"} />
-        <StatCard label="Devices" value={needsAttention} icon="▤" />
+      <div className="mb-5 grid grid-cols-3 gap-3">
+        <Tile label="Open" value={exceptions.length} note={needsYou ? `${needsYou} need you` : "exceptions"} />
+        <Tile label="Verified" value={<>{verifiedToday}<span className="text-[15px] font-normal text-[color:var(--body)]">/{jobsToday.length}</span></>} note="today" />
+        <Tile label="Devices" value={needsAttention} note={needsAttention === 1 ? "needs a fix" : "need a fix"} />
       </div>
 
       <AddressSuggestions groups={grouped} />

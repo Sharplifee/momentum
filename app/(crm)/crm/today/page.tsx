@@ -29,6 +29,15 @@ export default async function Today() {
   const { data: jobs } = await q;
 
   const list = jobs ?? [];
+  const { data: photoRows } = list.length
+    ? await db.from("job_events").select("job_id, photo_url").eq("type", "photo").in("job_id", list.map((j: any) => j.id))
+    : { data: [] as { job_id: string; photo_url: string | null }[] };
+  const photosByJob: Record<string, string[]> = {};
+  for (const r of photoRows ?? []) {
+    if (!r.photo_url) continue;
+    const { data: signed } = await db.storage.from("job-photos").createSignedUrl(r.photo_url, 3600);
+    if (signed?.signedUrl) (photosByJob[r.job_id] ??= []).push(signed.signedUrl);
+  }
   const done = list.filter((j: any) => j.departure_at).length;
   const first = list.find((j: any) => !j.departure_at) as any;
 
@@ -55,7 +64,6 @@ export default async function Today() {
 
   const day = wx?.days?.[0];
   const rain = day?.precipitationChance ?? null;
-  const pct = list.length ? Math.round((done / list.length) * 100) : 0;
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing}
@@ -69,15 +77,15 @@ export default async function Today() {
         <div className="mo-hairline-soft mt-4" />
 
         <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-          {/* the work */}
+          {/* the work — one dot per stop, filled as they finish */}
           <div className="mo-card flex items-center gap-4 p-4">
-            <div className="relative grid h-14 w-14 shrink-0 place-items-center">
-              <svg viewBox="0 0 36 36" className="absolute inset-0 h-14 w-14 -rotate-90">
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--border)" strokeWidth="4" />
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#7ac1c9" strokeWidth="4"
-                        strokeLinecap="round" strokeDasharray={`${pct * 0.974} 100`} />
-              </svg>
-              <span className="mo-num text-[15px] font-semibold text-[color:var(--ink)]">{done}</span>
+            <div className="shrink-0">
+              <div className="flex max-w-[84px] flex-wrap gap-1">
+                {Array.from({ length: Math.max(list.length, 1) }).slice(0, 12).map((_, i) => (
+                  <span key={i} className={`h-2.5 w-2.5 rounded-[3px] ${list.length === 0 ? "bg-white/10" : i < done ? "bg-teal" : "bg-white/15"}`} />
+                ))}
+              </div>
+              <div className="mo-eyebrow mt-1.5">Stops</div>
             </div>
             <div className="min-w-0">
               <div className="font-display text-xl font-semibold leading-tight tracking-[-0.02em] text-[color:var(--ink)]">
@@ -120,7 +128,7 @@ export default async function Today() {
         </div>
       </header>
 
-      <TodayStops jobs={list as any} />
+      <TodayStops jobs={list as any} photos={photosByJob} />
     </Shell>
   );
 }

@@ -30,11 +30,13 @@ const MIN_GATE_IN = 30; // system_config.equipment.min_gate_width_in
  * they are the rare case and were competing with the action you actually came
  * to press.
  */
-export function TodayStops({ jobs }: { jobs: Stop[] }) {
+export function TodayStops({ jobs, photos = {} }: { jobs: Stop[]; photos?: Record<string, string[]> }) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [queued, setQueued] = useState(0);
   const [showTrouble, setShowTrouble] = useState<string | null>(null);
+  const [trouble, setTrouble] = useState<{ event: string; label: string } | null>(null);
+  const [troubleNote, setTroubleNote] = useState("");
   const [now, setNow] = useState(() => Date.now());
 
   // ── offline queue replay — carried over unchanged ──────────────
@@ -156,8 +158,9 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
           <div className={`mo-card p-5 ${gateBlocked ? "border border-red/60" : active.weather_flag ? "border border-gold/50" : "border border-teal/40"}`}>
             <div className="mb-1 flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <div className="mo-eyebrow text-teal">
-                  {active.arrival_at ? "On site" : "Next stop"}
+                <div className="mo-eyebrow flex items-center gap-1.5 text-teal">
+                  {active.arrival_at && <span className="h-1.5 w-1.5 rounded-full bg-teal" />}
+                  {active.arrival_at ? "On site · verifying" : `Next stop · ${done.length + 1} of ${jobs.length}`}
                 </div>
                 <div className="mt-1 font-display text-2xl font-semibold leading-tight tracking-[-0.03em] text-[color:var(--ink)]">{active.customers?.full_name ?? "Customer"}</div>
                 <p className="mt-0.5 text-sm text-slate">
@@ -202,6 +205,17 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
                 </>
               ) : (
                 <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[0, 1, 2].map((i) => {
+                      const src = (photos[active.id] ?? [])[i];
+                      return src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={src} alt={`Photo ${i + 1}`} className="aspect-[4/3] w-full rounded-lg border border-[color:var(--border)] object-cover" />
+                      ) : (
+                        <div key={i} className="mo-eyebrow grid aspect-[4/3] place-items-center rounded-lg border border-dashed border-[color:var(--border)] text-[color:var(--faint)]">Photo {i + 1}</div>
+                      );
+                    })}
+                  </div>
                   <label className="grid min-h-[52px] cursor-pointer place-items-center rounded-full border border-[color:var(--border-strong)] text-base font-semibold text-[color:var(--ink)]">
                     {busy === active.id + "-photo" ? "Uploading…" : "Add a photo"}
                     <input type="file" accept="image/*" capture="environment" className="hidden"
@@ -222,16 +236,30 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
               Something&apos;s wrong here
             </button>
             {showTrouble === active.id && (
-              <div className="mt-2 grid gap-2">
-                <button disabled={busy === active.id}
-                  onClick={() => { const n = prompt("What's not ready? (optional)") ?? ""; fire("/api/crm/clock", { job_id: active.id, event: "yard_not_ready", note: n || null }, active.id); }}
-                  className="min-h-[44px] rounded-full border border-[color:var(--border-strong)] px-4 text-sm text-[color:var(--ink)]">Yard not ready</button>
-                <button disabled={busy === active.id}
-                  onClick={() => { const n = prompt("What's blocking access? (optional)") ?? ""; fire("/api/crm/clock", { job_id: active.id, event: "access_blocked", note: n || null }, active.id); }}
-                  className="min-h-[44px] rounded-full border border-[color:var(--border-strong)] px-4 text-sm text-[color:var(--ink)]">Access blocked</button>
-                <button disabled={busy === active.id}
-                  onClick={() => { const n = prompt("What's the issue?"); if (n) fire("/api/crm/clock", { job_id: active.id, event: "exception", note: n }, active.id); }}
-                  className="min-h-[44px] rounded-full border border-[color:var(--border-strong)] px-4 text-sm text-[color:var(--ink)]">Other issue</button>
+              <div className="mt-2">
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { event: "yard_not_ready", label: "Yard not ready" },
+                    { event: "access_blocked", label: "Access blocked" },
+                    { event: "exception", label: "Other issue" },
+                  ].map((t) => (
+                    <button key={t.event} disabled={busy === active.id}
+                      onClick={() => { setTrouble(trouble?.event === t.event ? null : t); setTroubleNote(""); }}
+                      className={`min-h-[48px] rounded-full border px-2 text-[13px] font-medium leading-tight text-[color:var(--ink)] ${trouble?.event === t.event ? "border-teal" : "border-[color:var(--border-strong)]"}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                {trouble && (
+                  <div className="mt-2 flex gap-2">
+                    <input value={troubleNote} onChange={(e) => setTroubleNote(e.target.value)}
+                      placeholder={trouble.event === "exception" ? "What's the issue?" : "Add a note (optional)"}
+                      className="min-w-0 flex-1 rounded-full border border-[color:var(--border)] bg-black/30 px-4 text-[14px] text-[color:var(--ink)] outline-none placeholder:text-[color:var(--faint)]" />
+                    <button disabled={busy === active.id || (trouble.event === "exception" && !troubleNote.trim())}
+                      onClick={() => { fire("/api/crm/clock", { job_id: active.id, event: trouble.event, note: troubleNote.trim() || null }, active.id); setTrouble(null); setShowTrouble(null); }}
+                      className="mo-primary min-h-[44px] rounded-full px-4 text-[13px] disabled:opacity-50">Send</button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -253,9 +281,9 @@ export function TodayStops({ jobs }: { jobs: Stop[] }) {
                 <div className="truncate text-sm font-medium text-[color:var(--ink)]">{j.customers?.full_name ?? "Customer"}</div>
                 <div className="truncate text-xs text-slate">{j.properties?.address}</div>
               </div>
-              {j.properties?.gate_width_in != null && j.properties.gate_width_in < MIN_GATE_IN && <span title="Narrow gate">🔒</span>}
-              {j.properties?.has_dog && <span title="Dog on property">🐕</span>}
-              {j.weather_flag && <span title="Weather flagged">☔</span>}
+              {j.weather_flag && <span className="mo-eyebrow shrink-0 text-gold">Rain flag</span>}
+              {!j.weather_flag && j.properties?.gate_width_in != null && j.properties.gate_width_in < MIN_GATE_IN && <span className="mo-eyebrow shrink-0 text-coral">Narrow gate</span>}
+              {!j.weather_flag && j.properties?.has_dog && <span className="mo-eyebrow shrink-0">Dog</span>}
             </div>
           ))}
         </div>

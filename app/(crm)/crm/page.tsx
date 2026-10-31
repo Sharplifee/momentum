@@ -3,7 +3,7 @@ import { Shell } from "@/components/crm/Shell";
 import { PageHeader } from "@/components/ui";
 import { STAGE_LABEL, STAGE_COLOR, SERIES } from "@/lib/theme";
 import Link from "next/link";
-import { Tile, CompareBars, DayStrip, TrendLine, HBars, AreaChart, DonutChart, BandCard } from "@/components/crm/Charts";
+import { Tile, CompareBars, DayStrip, TrendLine, HBars, BandCard } from "@/components/crm/Charts";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +99,11 @@ export default async function Dashboard() {
   const avgResp = rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length / 60) : null;
 
   // pipeline bar (teal scale)
+  // Midnight in Denver, DST-safe: shift by the live offset rather than hardcoding one.
+  const denverNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Denver" }));
+  const denverMidnight = new Date(denverNow); denverMidnight.setHours(0, 0, 0, 0);
+  const dayStart = denverMidnight.getTime() + (Date.now() - denverNow.getTime());
+  const newToday = (activity.data ?? []).filter((a: any) => new Date(a.created_at).getTime() >= dayStart).length;
   const byStage: Record<string, number> = { new: newL.count ?? 0, contacted: contacted.count ?? 0, quote_sent: quoted.count ?? 0, closed_won: won.count ?? 0 };
 
 
@@ -107,7 +112,6 @@ export default async function Dashboard() {
       <PageHeader
         eyebrow={`Dashboard · ${new Date().toLocaleDateString("en-US", { timeZone: "America/Denver", weekday: "short", month: "short", day: "numeric" })}`}
         title={`Welcome back, ${(profile.full_name ?? "").split(" ")[0]}`}
-        action={<Link href="/crm/leads" className="mo-primary inline-flex items-center gap-1.5 px-4 py-2 text-[13px]">View pipeline <span aria-hidden>↗</span></Link>}
       />
 
       {/* Four tiles, four different pictures. Titles are one or two words so
@@ -127,8 +131,9 @@ export default async function Dashboard() {
         </Tile>
       </div>
 
-      <div className="mb-5 grid gap-5 lg:grid-cols-5">
-        <BandCard title="Leads by stage" sub={`${totalLeads} total`} className="lg:col-span-2">
+      {/* Two bands, as designed: the pipeline by stage, then what just happened. */}
+      <div className="grid gap-5 lg:grid-cols-5">
+        <BandCard title="Leads by stage" sub={`Pipeline · ${totalLeads} total`} className="lg:col-span-2">
           <HBars rows={[
             { k: "New", v: byStage.new, c: STAGE_COLOR.new },
             { k: "Contacted", v: byStage.contacted, c: STAGE_COLOR.contacted },
@@ -137,21 +142,12 @@ export default async function Dashboard() {
             ...(stale ? [{ k: "Stale", v: stale, c: "#66635c" }] : []),
             ...(lost ? [{ k: "Not qualified", v: lost, c: "#d9775c" }] : []),
           ]} />
-        </BandCard>
-        <BandCard title="Leads over time" sub="last 14 days" className="lg:col-span-3">
-          <AreaChart points={dayCounts} height={130} label={`${dayCounts.reduce((a, b) => a + b, 0)} total · ${thisWk} this week vs ${prevWk} last week`} />
-        </BandCard>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-5">
-        <BandCard title="Leads by source" sub="where they find you" className="lg:col-span-2">
-          {srcSegs.length ? <DonutChart segs={srcSegs} /> : <p className="py-6 text-sm text-[color:var(--body)]">Sources appear as leads arrive.</p>}
           <div className="mt-4 flex items-center justify-between border-t border-[color:var(--border)] pt-3 text-sm">
             <span className="text-[color:var(--body)]">Avg first response</span>
             <span className="mo-num text-xl font-semibold text-[color:var(--ink)]">{avgResp != null ? `${avgResp}m` : "—"}</span>
           </div>
         </BandCard>
-        <BandCard title="Live activity" sub="as it happens" className="lg:col-span-3">
+        <BandCard title="Live activity" sub={newToday ? `All · ${newToday} new today` : "All"} className="lg:col-span-3">
           <div>
             {(activity.data ?? []).slice(0, 7).map((a, i) => (
               <Link key={i} href={a.lead_id ? `/crm/leads/${a.lead_id}` : "/crm/messages"}

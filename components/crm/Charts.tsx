@@ -29,7 +29,7 @@ function GradDefs({ id, vertical = false }: { id: string; vertical?: boolean }) 
     for one of the simple visuals below. Titles must be short enough never to
     wrap at phone width — pick the label accordingly. */
 export function Tile({ label, value, note, href, children }: {
-  label: string; value: string | number; note?: string; href?: string; children?: React.ReactNode;
+  label: string; value: React.ReactNode; note?: string; href?: string; children?: React.ReactNode;
 }) {
   const body = (
     <div className="mo-card flex h-full flex-col gap-3 p-4 transition hover:border-white/20">
