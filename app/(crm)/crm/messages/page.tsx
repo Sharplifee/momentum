@@ -135,8 +135,8 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
   } : null;
 
   const Tile = ({ label, value, warn }: { label: string; value: number; warn?: boolean }) => (
-    <div className={`mo-card p-2.5 ${warn ? "border-gold/50" : ""}`}>
-      <div className={`mo-eyebrow text-[9px] ${warn ? "text-gold" : ""}`}>{label}</div>
+    <div className={`mo-card min-w-0 overflow-hidden p-2.5 ${warn ? "border-gold/50" : ""}`}>
+      <div className={`mo-eyebrow break-words text-[9px] leading-[1.35] ${warn ? "text-gold" : ""}`}>{label}</div>
       <div className={`mo-num mt-1.5 text-[22px] font-semibold leading-none ${warn ? "text-gold" : "text-[color:var(--ink)]"}`}>{value}</div>
     </div>
   );

@@ -28,15 +28,20 @@ function GradDefs({ id, vertical = false }: { id: string; vertical?: boolean }) 
 /** A stat tile with a one-line title, the number, a short note, and a slot
     for one of the simple visuals below. Titles must be short enough never to
     wrap at phone width — pick the label accordingly. */
-export function Tile({ label, value, note, href, children }: {
+export function Tile({ label, value, note, href, children, dense = false }: {
   label: string; value: React.ReactNode; note?: string; href?: string; children?: React.ReactNode;
+  /** Four-across on a phone (~85 px each): smaller label tracking and number so whole words still fit. */
+  dense?: boolean;
 }) {
   const body = (
-    <div className="mo-card flex h-full flex-col gap-3 p-4 transition hover:border-white/20">
-      <span className="mo-eyebrow whitespace-nowrap">{label}</span>
-      <div className="flex items-baseline gap-2 whitespace-nowrap">
-        <span className="mo-num text-[28px] font-semibold leading-none text-[color:var(--ink)]">{value}</span>
-        {note && <span className="mo-mono text-[11px] text-[color:var(--body)]">{note}</span>}
+    <div className={`mo-card flex h-full min-w-0 flex-col overflow-hidden transition hover:border-white/20 ${dense ? "gap-2 p-3" : "gap-3 p-3.5 sm:p-4"}`}>
+      {/* Nothing in a tile is allowed to run past its border: the label and the
+          note wrap when the column is narrow (four across on a phone), and the
+          note drops under the number instead of pushing past the edge. */}
+      <span className={`mo-eyebrow min-w-0 break-words leading-[1.35] ${dense ? "text-[9px] tracking-[0.1em]" : ""}`}>{label}</span>
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className={`mo-num shrink-0 font-semibold leading-none text-[color:var(--ink)] ${dense ? "text-[22px]" : "text-[28px]"}`}>{value}</span>
+        {note && <span className="mo-mono min-w-0 break-words text-[11px] leading-[1.3] text-[color:var(--body)]">{note}</span>}
       </div>
       {children}
     </div>

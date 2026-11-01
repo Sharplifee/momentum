@@ -79,10 +79,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
         } />
 
       <div className="mb-4 grid grid-cols-4 gap-2">
-        <Tile label="New" value={weekCount ?? 0} note="this wk" />
-        <Tile label="Waiting" value={<span className="text-teal">{counts["new"] ?? 0}</span>} href={qs({ stage: "new" })} />
-        <Tile label="Quoted" value={counts["quote_sent"] ?? 0} href={qs({ stage: "quote_sent" })} />
-        <Tile label="Won" value={<span className="text-gold">{counts["closed_won"] ?? 0}</span>} href={qs({ stage: "closed_won" })} />
+        <Tile dense label="New" value={weekCount ?? 0} note="this wk" />
+        <Tile dense label="Waiting" value={<span className="text-teal">{counts["new"] ?? 0}</span>} href={qs({ stage: "new" })} />
+        <Tile dense label="Quoted" value={counts["quote_sent"] ?? 0} href={qs({ stage: "quote_sent" })} />
+        <Tile dense label="Won" value={<span className="text-gold">{counts["closed_won"] ?? 0}</span>} href={qs({ stage: "closed_won" })} />
       </div>
 
       <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">

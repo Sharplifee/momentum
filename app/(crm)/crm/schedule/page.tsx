@@ -3,6 +3,7 @@ import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { MonthCalendar } from "@/components/crm/MonthCalendar";
 import { BandCard, Tile } from "@/components/crm/Charts";
+import { WeekBoard } from "@/components/crm/WeekBoard";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { NewJobButton } from "@/components/crm/NewJobSheet";
@@ -92,32 +93,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         </div>
 
         <BandCard title="This week" sub={`${week[0].dow} ${week[0].num} → ${week[4].dow} ${week[4].num}`} className="mb-6">
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-            {week.map((d) => {
-              const svc = service.filter((j) => j.scheduled_date === d.iso);
-              const qts = quotes.filter((j) => j.scheduled_date === d.iso);
-              const isToday = d.iso === todayIso;
-              return (
-                <Link key={d.iso} href={`/crm/schedule?m=${d.iso.slice(0, 7)}&d=${d.iso}`}
-                  className={`min-h-[150px] rounded-lg border p-2 transition hover:border-white/25 sm:min-h-[170px] ${isToday ? "border-white/25 bg-white/[0.04]" : "border-[color:var(--border)]"}`}>
-                  <div className="mb-1.5 text-center">
-                    <div className="mo-eyebrow">{d.dow}</div>
-                    <div className={`mx-auto grid h-8 w-8 place-items-center rounded-full text-[15px] font-bold ${isToday ? "bg-[color:var(--ink)] text-[#0a0a0a]" : "text-[color:var(--ink)]"}`}>{d.num}</div>
-                  </div>
-                  <div className="space-y-1">
-                    {svc.slice(0, 3).map((j) => (
-                      <div key={j.id} title={j.customer} className="truncate rounded border border-teal/40 px-1.5 py-1 text-[10px] font-medium leading-tight text-teal">{j.customer}</div>
-                    ))}
-                    {qts.slice(0, 3).map((j) => (
-                      <div key={j.id} title={j.customer} className="truncate rounded border border-gold/40 px-1.5 py-1 text-[10px] font-medium leading-tight text-gold">{j.customer}</div>
-                    ))}
-                    {svc.length + qts.length === 0 && <div className="pt-2 text-center text-[10px] text-[color:var(--body)]/40">—</div>}
-                    {svc.length + qts.length > 6 && <div className="text-center text-[10px] text-[color:var(--body)]/60">+{svc.length + qts.length - 6} more</div>}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <WeekBoard week={week} service={service} quotes={quotes} todayIso={todayIso} />
         </BandCard>
 
         {/* One calendar: service visits as glacier dots, quote visits amber,
