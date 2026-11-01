@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/crm";
+import { knownPhone } from "@/lib/phone";
 import { Shell } from "@/components/crm/Shell";
 import { MoneyActions } from "@/components/crm/MoneyActions";
 import { getBillingConfig, displayNumber } from "@/lib/invoices";
@@ -125,7 +126,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
           )}
         </section>
 
-        <MoneyActions invoice={{ id: i.id, status: i.status, total: Number(i.total), phone: cust?.phone ?? null, firstName: (cust?.full_name ?? "customer").split(" ")[0], threadId: thread?.id ?? null }} />
+        <MoneyActions invoice={{ id: i.id, status: i.status, total: Number(i.total), phone: knownPhone(cust?.phone), firstName: (cust?.full_name ?? "customer").split(" ")[0], threadId: thread?.id ?? null }} />
       </div>
     </Shell>
   );

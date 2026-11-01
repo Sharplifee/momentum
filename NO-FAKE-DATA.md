@@ -60,6 +60,38 @@ Also stored in `system_config.no_fake_data_rule` so the app carries the rule its
 
 ---
 
+## Existing clients are not fake data
+
+The original client book (20 accounts, loaded 2026-07-23 and confirmed real by Connor
+on 2026-07-23 and again 2026-10-31) was deleted by the 2026-10-28 purge because it
+carried `source = legacy_import` and placeholder phones. **That was the wrong call.**
+A real client whose phone we have not collected yet is a real client. The purge should
+have blanked the phones, not removed the people.
+
+Restored 2026-10-31 with `source = existing_client`,
+`external_id = restored-2026-10-31:corpus-snapshot-2026-10-27`. Never delete rows with
+that source or external_id as "fake"; if one is wrong, Connor or the crew says so.
+
+### Unknown phone
+
+`customers.phone` is `NOT NULL UNIQUE`, and the migration that relaxes it could not be
+run from the sandbox. Until it is, a client with no number carries the marker
+`unknown:<name-slug>` (for example `unknown:andy-anderson`). It is a marker, not a
+value: `lib/phone.ts` (`isRealPhone`, `knownPhone`) treats it as blank, `sendSms`
+refuses it (`reason: "no_phone"`), the UI shows "No phone on file · add", and
+Stripe/Meta never see it. Replace it with the real number from the customer page.
+
+Follow-up when a shell with the service key is available:
+
+```sql
+alter table public.customers alter column phone drop not null;
+update public.customers set phone = null where phone like 'unknown:%';
+```
+
+The helpers keep working after that (null is already "no phone").
+
+---
+
 ## Writing metrics
 
 - If the number is zero, show zero. Do not hide an empty panel behind a sample.

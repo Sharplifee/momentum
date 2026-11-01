@@ -3,7 +3,7 @@ import { staffFromSession } from "@/lib/apiAuth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
 import { withEventLog } from "@/lib/eventLog";
-import { toE164 } from "@/lib/phone";
+import { toE164, knownPhone } from "@/lib/phone";
 import { resolveZone } from "@/lib/zones";
 
 export const runtime = "nodejs";
@@ -102,6 +102,32 @@ async function __POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Phone / email on an existing account — the restored clients came back with
+  // no number on file and this is the one place to fill it in.
+  if (body.action === "contact") {
+    const customerId = String(body.customer_id ?? "");
+    if (!customerId) return NextResponse.json({ error: "customer_id required" }, { status: 400 });
+    const patch: Record<string, unknown> = {};
+    if ("phone" in body) {
+      const phone = toE164(String(body.phone ?? ""));
+      if (!phone) return NextResponse.json({ error: "That mobile number doesn't look right." }, { status: 400 });
+      const { data: dupe } = await db.from("customers").select("id, full_name").eq("phone", phone).neq("id", customerId).maybeSingle();
+      if (dupe) return NextResponse.json({ error: `${dupe.full_name} already has this number.`, customer_id: dupe.id }, { status: 409 });
+      patch.phone = phone;
+    }
+    if ("email" in body) {
+      const email = String(body.email ?? "").trim() || null;
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "That email doesn't look right." }, { status: 400 });
+      patch.email = email;
+    }
+    if (!Object.keys(patch).length) return NextResponse.json({ error: "nothing to change" }, { status: 400 });
+    const { error } = await db.from("customers").update(patch).eq("id", customerId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (patch.phone) await db.from("threads").update({ customer_id: customerId }).eq("phone", patch.phone).is("customer_id", null);
+    await logAutomation({ trigger: "crm.customer_contact", ref_id: customerId, detail: { by: staff.full_name, fields: Object.keys(patch) } });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
 }
 
@@ -117,7 +143,7 @@ async function __GET(req: NextRequest) {
     db.from("customers").select("id, full_name, phone, email").eq("id", customerId).maybeSingle(),
   ]);
   return NextResponse.json({
-    customer,
+    customer: customer ? { ...customer, phone: knownPhone(customer.phone) } : null,
     jobs: (jobs ?? []).map((j: any) => ({ id: j.id, date: j.scheduled_date, status: j.status, price: j.price, service: j.services?.name ?? "Visit", crew: j.crews?.name ?? null })),
   });
 }

@@ -35,7 +35,7 @@ export async function ensureStripeCustomer(customer: { id: string; full_name: st
   if (customer.stripe_customer_id) return customer.stripe_customer_id;
   const created = await stripeApi("customers", {
     name: customer.full_name,
-    phone: customer.phone,
+    ...(/^\+1\d{10}$/.test(customer.phone ?? "") ? { phone: customer.phone } : {}),
     ...(customer.email ? { email: customer.email } : {}),
     "metadata[momentum_customer_id]": customer.id,
   });

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
+import { CustomerContact } from "@/components/crm/CustomerContact";
+import { knownPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,7 @@ export default async function CustomerDetail({ params }: { params: { id: string 
   const balance = (open ?? []).reduce((s, i) => s + Number(i.total), 0);
   const since = ag?.season_start ?? ag?.created_at ?? c.created_at;
   const grade = c.behavior_grade_override ?? c.behavior_grade ?? null;
+  const phone = knownPhone(c.phone);
   const minGateIn = 30; // system_config.equipment.min_gate_width_in
 
   const minutesFor = (j: any) => {
@@ -92,12 +95,24 @@ export default async function CustomerDetail({ params }: { params: { id: string 
         </div>
 
         <div className="mb-4 grid grid-cols-3 gap-2">
-          <Link href={thread ? `/crm/messages?thread=${thread.id}` : "/crm/messages"} className={act}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.9A8 8 0 1 1 21 12z" /></svg>Text
-          </Link>
-          <a href={`tel:${c.phone}`} className={act}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" /></svg>Call
-          </a>
+          {thread || phone ? (
+            <Link href={thread ? `/crm/messages?thread=${thread.id}` : `/crm/messages?new=${encodeURIComponent(phone!)}`} className={act}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.9A8 8 0 1 1 21 12z" /></svg>Text
+            </Link>
+          ) : (
+            <span className={`${act} opacity-40`} title="No phone on file" aria-disabled="true">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.9A8 8 0 1 1 21 12z" /></svg>Text
+            </span>
+          )}
+          {phone ? (
+            <a href={`tel:${phone}`} className={act}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" /></svg>Call
+            </a>
+          ) : (
+            <span className={`${act} opacity-40`} title="No phone on file" aria-disabled="true">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" /></svg>Call
+            </span>
+          )}
           <Link href={upcoming[0] ? `/crm/jobs/${upcoming[0].id}` : "/crm/schedule"} className={act}>
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /></svg>Schedule
           </Link>
@@ -171,9 +186,9 @@ export default async function CustomerDetail({ params }: { params: { id: string 
         )}
 
         <section className="mo-card mb-6 px-4 pb-1 pt-3.5">
-          <div className="mb-1.5 flex items-baseline justify-between">
+          <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3">
             <h2 className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Messages</h2>
-            <span className="mo-eyebrow">{c.phone}{c.email ? ` · ${c.email}` : ""}</span>
+            <CustomerContact customerId={c.id} phone={phone} email={c.email ?? null} />
           </div>
           {(messages ?? []).map((m: any, i: number) => (
             <div key={i} className="border-t border-[color:var(--border)] py-2.5 text-[13px]">

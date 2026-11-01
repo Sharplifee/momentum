@@ -23,7 +23,7 @@ async function __GET(req: NextRequest) {
 
   const hits = [
     ...(leads.data ?? []).map((l) => ({ type: "lead", id: l.id, label: l.full_name ?? l.phone, sub: `${l.city ?? ""} · ${l.stage}`, href: `/crm/leads/${l.id}` })),
-    ...(customers.data ?? []).map((c) => ({ type: "customer", id: c.id, label: c.full_name, sub: c.phone, href: `/crm/customers/${c.id}` })),
+    ...(customers.data ?? []).map((c) => ({ type: "customer", id: c.id, label: c.full_name, sub: c.phone?.startsWith("unknown:") ? "no phone on file" : c.phone, href: `/crm/customers/${c.id}` })),
     ...(jobs.data ?? []).map((j: any) => ({ type: "job", id: j.id, label: j.customers?.full_name ?? j.properties?.address ?? "Job", sub: `${j.scheduled_date} · ${j.status}`, href: `/crm/jobs` })),
     ...(threads.data ?? []).map((t: any) => ({ type: "thread", id: t.id, label: t.customers?.full_name ?? t.leads?.full_name ?? t.phone, sub: t.phone, href: `/crm/messages?thread=${t.id}` })),
   ];

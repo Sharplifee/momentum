@@ -16,7 +16,7 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: {
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <NewInvoiceForm smsPaused={smsPaused} taxRate={cfg.tax_rate} taxLabel={cfg.tax_label} netDays={cfg.net_days}
-        initialCustomer={c ? { type: "customer", id: c.id, label: c.full_name, sub: c.phone } : null} />
+        initialCustomer={c ? { type: "customer", id: c.id, label: c.full_name, sub: c.phone?.startsWith("unknown:") ? "no phone on file" : c.phone } : null} />
     </Shell>
   );
 }

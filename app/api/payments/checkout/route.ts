@@ -54,7 +54,7 @@ async function __POST(req: NextRequest) {
     display_number: displayNumber(cfg.invoice_prefix, invoice.number),
     amount_cents: Math.round(Number(invoice.total) * 100),
     customer_email: cust?.email,
-    customer_phone: cust?.phone ?? "",
+    customer_phone: /^\+1\d{10}$/.test(cust?.phone ?? "") ? cust!.phone : "",
     stripe_customer_id: stripeCustomerId,
     base_url: base,
   });

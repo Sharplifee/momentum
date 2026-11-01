@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/crm";
+import { knownPhone } from "@/lib/phone";
 import { Shell } from "@/components/crm/Shell";
 import { RescheduleButton, type DayOption } from "@/components/crm/RescheduleSheet";
 import { JobActions } from "@/components/crm/JobActions";
@@ -181,7 +182,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
             <Row k="Device" v={dev ? <span className="mo-mono text-[13px]">{dev.label ?? dev.model ?? "Phone"}{dev.battery_level != null ? ` · battery ${Math.round(Number(dev.battery_level) <= 1 ? Number(dev.battery_level) * 100 : Number(dev.battery_level))}%` : ""}</span> : "—"} />
           </section>
 
-          <VisitActions jobId={id} threadHref={cust?.phone ? (thread ? `/crm/messages?thread=${thread.id}` : `/crm/messages?new=${encodeURIComponent(cust.phone)}`) : null} alreadyFlagged={Boolean(flagged)} />
+          <VisitActions jobId={id} threadHref={knownPhone(cust?.phone) ? (thread ? `/crm/messages?thread=${thread.id}` : `/crm/messages?new=${encodeURIComponent(cust.phone)}`) : null} alreadyFlagged={Boolean(flagged)} />
         </div>
       </Shell>
     );
@@ -216,8 +217,8 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         </div>
 
         <div className="mb-4 grid grid-cols-3 gap-2">
-          {cust?.phone && <Link href={thread ? `/crm/messages?thread=${thread.id}` : `/crm/messages?new=${encodeURIComponent(cust.phone)}`} className="rounded-full border border-teal/50 py-3 text-center text-[14px] font-semibold text-[color:var(--ink)]">Text</Link>}
-          {cust?.phone && <a href={`tel:${cust.phone}`} className="rounded-full border border-teal/50 py-3 text-center text-[14px] font-semibold text-[color:var(--ink)]">Call</a>}
+          {knownPhone(cust?.phone) && <Link href={thread ? `/crm/messages?thread=${thread.id}` : `/crm/messages?new=${encodeURIComponent(cust.phone)}`} className="rounded-full border border-teal/50 py-3 text-center text-[14px] font-semibold text-[color:var(--ink)]">Text</Link>}
+          {knownPhone(cust?.phone) && <a href={`tel:${cust.phone}`} className="rounded-full border border-teal/50 py-3 text-center text-[14px] font-semibold text-[color:var(--ink)]">Call</a>}
           <a href={mapsHref} target="_blank" rel="noreferrer" className="rounded-full border border-teal/50 py-3 text-center text-[14px] font-semibold text-[color:var(--ink)]">Apple Maps</a>
         </div>
 

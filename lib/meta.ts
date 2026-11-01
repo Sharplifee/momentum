@@ -61,7 +61,7 @@ export async function sendMetaCapiEvent(input: CapiEventInput) {
   const userData: Record<string, unknown> = {};
   if (metaLeadId) userData.lead_id = Number(metaLeadId);
   if (input.email) userData.em = [sha256(input.email)];
-  if (input.phone) userData.ph = [sha256(input.phone.replace(/[^\d]/g, ""))];
+  if (input.phone && /^\+1\d{10}$/.test(input.phone)) userData.ph = [sha256(input.phone.replace(/[^\d]/g, ""))];
   if (input.fbp) userData.fbp = input.fbp;
   // A form lead never touched a browser of ours — the IP/UA here would be our server's.
   if (input.client_ip && !isFormLead) userData.client_ip_address = input.client_ip;

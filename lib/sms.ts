@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAutomation } from "@/lib/automation";
+import { isRealPhone } from "@/lib/phone";
 
 type SendSmsInput = {
   to: string; // E.164
@@ -50,6 +51,12 @@ function nextMorningUtc(cfg: QuietHours): string {
  * Every send lands in messages + sms_events + automation_runs.
  */
 export async function sendSms(input: SendSmsInput) {
+  // 0. No number, no send. A customer restored without a phone carries the
+  //    `unknown:` marker (lib/phone.ts); it is not a recipient.
+  if (!isRealPhone(input.to)) {
+    await logAutomation({ trigger: "sms.send.no_phone", status: "skipped", detail: { to: input.to ?? null, template: input.template ?? null } });
+    return { ok: false, reason: "no_phone" as const };
+  }
   const db = supabaseAdmin();
   let to = input.to;
   let message = input.message;
