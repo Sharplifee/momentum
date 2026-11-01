@@ -18,7 +18,10 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
   // forward the request id to the handler / server components
   const fwdHeaders = new Headers(req.headers);
   fwdHeaders.set("x-request-id", requestId);
-  const res = NextResponse.next({ request: { headers: fwdHeaders } });
+  // Only this middleware may vouch for who is signed in: strip anything a
+  // client sent under the same name before deciding.
+  fwdHeaders.delete("x-mo-uid");
+  let res = NextResponse.next({ request: { headers: fwdHeaders } });
   res.headers.set("x-request-id", requestId);
 
   let userId: string | null = null;
@@ -30,10 +33,20 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
       {
         cookies: {
           get: (name: string) => req.cookies.get(name)?.value,
+          // A refreshed token has to reach BOTH the browser (response cookie)
+          // and the server components rendering this same request (request
+          // cookie), or the page renders once with an expired token and every
+          // RLS query comes back empty until the next load.
           set: (name: string, value: string, options: CookieOptions) => {
+            req.cookies.set({ name, value, ...options });
+            res = NextResponse.next({ request: { headers: fwdHeaders } });
+            res.headers.set("x-request-id", requestId);
             res.cookies.set({ name, value, ...options });
           },
           remove: (name: string, options: CookieOptions) => {
+            req.cookies.set({ name, value: "", ...options });
+            res = NextResponse.next({ request: { headers: fwdHeaders } });
+            res.headers.set("x-request-id", requestId);
             res.cookies.set({ name, value: "", ...options });
           },
         },
@@ -43,6 +56,13 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
       data: { user },
     } = await supabase.auth.getUser();
     userId = user?.id ?? null;
+    if (userId) {
+      // Hand the verified id to the server components so requireStaff can
+      // skip a second round trip to Supabase Auth on every page.
+      fwdHeaders.set("x-mo-uid", userId);
+      res = NextResponse.next({ request: { headers: fwdHeaders } });
+      res.headers.set("x-request-id", requestId);
+    }
   }
 
   const log = (status: string, extra: Record<string, unknown> = {}) =>

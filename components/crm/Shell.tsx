@@ -66,11 +66,22 @@ function NavIcon({ name }: { name: string }) {
   );
 }
 
-function useBlockers() {
+/* Settings badge count for the desktop sidebar. Owners only, and remembered
+   for ten minutes per tab so a page change doesn't cost a round trip. */
+function useBlockers(enabled: boolean) {
   const [n, setN] = useState(0);
   useEffect(() => {
-    fetch("/api/crm/status").then((r) => r.json()).then((d) => setN(d.blockers ?? 0)).catch(() => {});
-  }, []);
+    if (!enabled) return;
+    const KEY = "mo_blockers";
+    try {
+      const c = JSON.parse(sessionStorage.getItem(KEY) ?? "null") as { n: number; at: number } | null;
+      if (c && Date.now() - c.at < 10 * 60_000) { setN(c.n); return; }
+    } catch { /* storage unavailable */ }
+    fetch("/api/crm/status").then((r) => r.json()).then((d) => {
+      const v = d.blockers ?? 0; setN(v);
+      try { sessionStorage.setItem(KEY, JSON.stringify({ n: v, at: Date.now() })); } catch { /* ignore */ }
+    }).catch(() => {});
+  }, [enabled]);
   return n;
 }
 
@@ -135,7 +146,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const blockerCount = useBlockers();
+  const blockerCount = useBlockers(realRole === "owner");
   const [drawer, setDrawer] = useState(false);
   const can = (item: NavItem) => item.roles.includes(role);
   const isActive = (href: string) => (href === "/crm" ? pathname === "/crm" : pathname === href || pathname.startsWith(href + "/"));

@@ -29,7 +29,17 @@ export const CAN_PREVIEW: Role[] = ["owner", "manager"];
  */
 export const requireStaff = cache(async function requireStaff(minRoles: Role[] = ["crew", "manager", "owner"], allowMustChange = false) {
   const db = supabaseServer();
-  const { data: { user } } = await db.auth.getUser();
+  // The middleware already verified the session with Supabase Auth for this
+  // request and vouches for the id in x-mo-uid (it strips any client-sent
+  // copy). Reuse it and save the second Auth round trip; fall back to the full
+  // check when the header is missing (direct server calls, tests).
+  const { headers } = await import("next/headers");
+  const vouched = (await headers()).get("x-mo-uid");
+  let user: { id: string } | null = vouched ? { id: vouched } : null;
+  if (!user) {
+    const { data } = await db.auth.getUser();
+    user = data.user;
+  }
   if (!user) redirect("/crm/login");
   const { data: profile } = await db
     .from("profiles")

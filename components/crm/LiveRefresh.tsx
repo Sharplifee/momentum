@@ -7,12 +7,12 @@ import { usePathname, useRouter } from "next/navigation";
  *
  * Pages are server-rendered from the database on each request, so the numbers
  * are always real — but only as of the moment the page opened. This re-fetches
- * the server component tree every 30 s while the tab is visible, and the
+ * the server component tree every 60 s while the tab is visible, and the
  * instant the app comes back to the foreground (the crew's phones spend most of
  * the day backgrounded in a pocket). router.refresh() keeps scroll position
  * and any form state; it only swaps the data.
  */
-const INTERVAL_MS = 30_000;
+const INTERVAL_MS = 60_000;
 
 export function LiveRefresh() {
   const router = useRouter();

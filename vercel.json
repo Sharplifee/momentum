@@ -12,5 +12,8 @@
       "path": "/api/cron/service-verification",
       "schedule": "0 2 * * *"
     }
+  ],
+  "regions": [
+    "sfo1"
   ]
 }
