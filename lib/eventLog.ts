@@ -88,22 +88,31 @@ export async function logEvents(events: EventInput[]): Promise<void> {
     payload: bounded(e.payload ?? {}),
     error_message: e.error_message ? String(e.error_message).slice(0, 4000) : undefined,
   }));
-  try {
-    const res = await fetch(`${ep.url}/rest/v1/rpc/log_events`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: ep.key,
-        Authorization: `Bearer ${ep.key}`,
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({ p: body }),
-    });
-    if (!res.ok) {
-      console.error("[event_log] write failed", res.status, (await res.text()).slice(0, 300));
+  // An append-only log that drops rows is not append-only. The sfo1 → Supabase
+  // hop occasionally resets the socket before TLS completes (ECONNRESET /
+  // "other side closed"); one write attempt lost those rows, so a thrown fetch
+  // or a 5xx is retried twice with a short back-off before giving up.
+  const payload = JSON.stringify({ p: body });
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(`${ep.url}/rest/v1/rpc/log_events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: ep.key,
+          Authorization: `Bearer ${ep.key}`,
+          Prefer: "return=minimal",
+        },
+        body: payload,
+        cache: "no-store",
+      });
+      if (res.ok) return;
+      const text = (await res.text()).slice(0, 300);
+      if (res.status < 500 || attempt === 3) { console.error("[event_log] write failed", res.status, text); return; }
+    } catch (err) {
+      if (attempt === 3) { console.error("[event_log] write threw after 3 attempts", err); return; }
     }
-  } catch (err) {
-    console.error("[event_log] write threw", err);
+    await new Promise((r) => setTimeout(r, 150 * attempt));
   }
 }
 

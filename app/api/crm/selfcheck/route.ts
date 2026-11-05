@@ -47,16 +47,19 @@ async function __GET(req: NextRequest) {
     db.from("service_agreements").select("id", { count: "exact", head: true }).eq("active", true),
     db.from("jobs").select("id, scheduled_date, customer_id, customers(full_name)").gte("scheduled_date", todayIso).lte("scheduled_date", weekEnd).neq("status", "cancelled").order("scheduled_date").limit(20),
     db.from("profiles").select("id, email, full_name, role").eq("role", "owner").order("created_at").limit(1).maybeSingle(),
-    db.from("event_log").select("name, status, ts").eq("surface", "cron").eq("event_type", "response").gte("ts", new Date(Date.now() - 36 * 3600_000).toISOString()).order("ts", { ascending: false }).limit(400),
+    // automation_runs is written by the cron handlers themselves (inside the
+    // request), so it is the record of what ran; event_log is the HTTP trace.
+    db.from("automation_runs").select("trigger, status, created_at").like("trigger", "cron.%").gte("created_at", new Date(Date.now() - 36 * 3600_000).toISOString()).order("created_at", { ascending: false }).limit(400),
   ]);
   const lastCron = new Map<string, { status: string; ts: string }>();
-  for (const c of (crons ?? []) as any[]) if (!lastCron.has(c.name)) lastCron.set(c.name, { status: c.status, ts: c.ts });
-  const cronView = Object.fromEntries([...lastCron].map(([k, v]) => [k.replace("GET /api/cron/", ""), `${v.status} · ${v.ts}`]));
+  for (const c of (crons ?? []) as any[]) if (!lastCron.has(c.trigger)) lastCron.set(c.trigger, { status: c.status, ts: c.created_at });
+  const cronView = Object.fromEntries([...lastCron].map(([k, v]) => [k.replace("cron.", ""), `${v.status} · ${v.ts}`]));
   checks.push({ name: "db.customers", ok: (customers ?? 0) > 0, detail: customers });
   checks.push({ name: "db.properties", ok: (properties ?? 0) > 0, detail: properties });
   checks.push({ name: "db.agreements_active", ok: (agreements ?? 0) > 0, detail: agreements });
   checks.push({ name: "db.jobs_next_7d", ok: (jobs ?? []).length > 0, detail: (jobs ?? []).map((j: any) => `${j.scheduled_date} ${j.customers?.full_name ?? ""}`) });
-  checks.push({ name: "cron.materialize_ran_24h", ok: /ok/.test(lastCron.get("GET /api/cron/materialize")?.status ?? "") && Date.now() - new Date(lastCron.get("GET /api/cron/materialize")?.ts ?? 0).getTime() < 26 * 3600_000, detail: cronView });
+  const mat = lastCron.get("cron.materialize");
+  checks.push({ name: "cron.materialize_ran_24h", ok: /ok/.test(mat?.status ?? "") && Date.now() - new Date(mat?.ts ?? 0).getTime() < 26 * 3600_000, detail: cronView });
   if (!owner?.email) {
     checks.push({ name: "owner.profile", ok: false, detail: "no owner profile with an email" });
     return finish(checks, started, null);
@@ -117,7 +120,8 @@ async function __GET(req: NextRequest) {
       const html = r.status === 200 ? await r.text() : "";
       const errorPage = /Application error|Something went wrong|__next_error__/.test(html);
       const ok = r.status === 200 && s.marker.test(html) && !errorPage;
-      checks.push({ name: `screen ${s.path.replace(/\/[0-9a-f-]{36}$/, "/[id]")}`, ok, ms: t0() - t, detail: ok ? `${html.length} chars` : { status: r.status, location: r.headers.get("location"), marker: s.marker.source, errorPage, bytes: html.length } });
+      const headings = ok ? undefined : [...html.matchAll(/<h[12][^>]*>(.*?)<\/h[12]>/g)].map((m) => m[1].replace(/<[^>]+>/g, "")).slice(0, 8);
+      checks.push({ name: `screen ${s.path.replace(/\/[0-9a-f-]{36}$/, "/[id]")}`, ok, ms: t0() - t, detail: ok ? `${html.length} chars` : { status: r.status, location: r.headers.get("location"), marker: s.marker.source, errorPage, bytes: html.length, streamed: html.includes("__next_f"), headings, tail: html.slice(-400).replace(/\s+/g, " ") } });
     } catch (e) {
       checks.push({ name: `screen ${s.path}`, ok: false, ms: t0() - t, detail: e instanceof Error ? e.message : String(e) });
     }
