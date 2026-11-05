@@ -139,7 +139,7 @@ export default async function Dashboard() {
             <span className="mo-num text-xl font-semibold text-[color:var(--ink)]">{avgResp != null ? `${avgResp}m` : "—"}</span>
           </div>
         </BandCard>
-        <div className="lg:col-span-3"><WeekStrip days={week} todayIso={todayIso} /></div>
+        <div className="min-w-0 lg:col-span-3"><WeekStrip days={week} todayIso={todayIso} /></div>
       </div>
     </Shell>
   );

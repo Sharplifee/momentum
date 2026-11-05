@@ -65,7 +65,7 @@ export function LocationReporter({ intervalSeconds = 60 }: { intervalSeconds?: n
 
   if (state === "denied") {
     return (
-      <div className="mo-mono fixed bottom-20 left-1/2 z-40 max-w-[calc(100%-32px)] -translate-x-1/2 rounded-full border border-gold/50 bg-[#0a0a0a] px-4 py-2 text-[11px] text-gold shadow-pop md:bottom-4">
+      <div className="mo-mono fixed bottom-20 left-1/2 z-40 max-w-[calc(100%-32px)] -translate-x-1/2 rounded-full border border-gold/50 bg-[#0a0a0a] px-4 py-2 text-[11px] text-gold shadow-pop md:bottom-4 md:left-auto md:right-4 md:max-w-[380px] md:translate-x-0">
         Location is off — service visits won&apos;t auto-verify. Enable location for this site.
       </div>
     );

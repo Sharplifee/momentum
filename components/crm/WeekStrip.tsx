@@ -38,7 +38,7 @@ export function WeekStrip({ days, todayIso }: { days: WeekDay[]; todayIso: strin
     : null;
 
   return (
-    <div className="mo-card aiv-glow px-3 pb-2 pt-4">
+    <div className="mo-card aiv-glow min-w-0 max-w-full overflow-hidden px-3 pb-2 pt-4">
       <div className="mx-1 mb-2.5 flex items-baseline justify-between">
         <h2 className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">This week</h2>
         <Link href={`/crm/schedule?m=${todayIso.slice(0, 7)}&d=${todayIso}`} className="mo-eyebrow text-teal">{span} · Schedule</Link>
@@ -81,9 +81,10 @@ export function WeekStrip({ days, todayIso }: { days: WeekDay[]; todayIso: strin
             <span className="mo-mono text-[11px] text-[color:var(--body)]">{day.stops.length ? `${day.stops.length} stop${day.stops.length === 1 ? "" : "s"}${range ? ` · ${range}` : ""}` : day.off ? "Day off" : "Nothing scheduled"}</span>
           </div>
           {shown.map((s) => (
-            <Link key={s.id} href={`/crm/jobs/${s.id}`} className="flex items-center gap-2.5 border-t border-[color:var(--border)] py-2.5">
+            <Link key={s.id} href={`/crm/jobs/${s.id}`} className="flex min-w-0 items-center gap-2.5 border-t border-[color:var(--border)] py-2.5">
               <span className="mo-mono w-[46px] shrink-0 text-[11px] text-[color:var(--body)]">{fmt(s.time)}</span>
-              <span className="min-w-0 flex-1 truncate text-[13px] text-[color:var(--ink)]">{s.name} · {s.service.toLowerCase()}{s.quote ? <span className="text-gold"> · quote</span> : null}</span>
+              <span className="min-w-0 flex-1 truncate text-[13px] text-[color:var(--ink)]">{s.name} · {s.service.toLowerCase()}</span>
+              {s.quote && <span className="mo-eyebrow shrink-0 text-[8.5px] text-gold">quote</span>}
               <span className="mo-mono shrink-0 text-[11px] text-[color:var(--body)]">{s.city ?? ""}</span>
             </Link>
           ))}

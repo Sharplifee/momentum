@@ -199,3 +199,8 @@ table.mo-grid td, table.mo-grid th { border-color: var(--border) !important; }
    been away it stays invisible until the gate decides (set before first paint by
    the inline script in app/(crm)/layout.tsx, cleared by BiometricGate). */
 html.mo-locked [data-mo-gate] { visibility: hidden; }
+
+/* A card placed in a grid or flex row must shrink with its column. Without
+   this, one long unbreakable line (a name, a URL) widens the column past the
+   screen — seen on the Home week strip between 744 and 1023 px. */
+.mo-card { min-width: 0; max-width: 100%; }
