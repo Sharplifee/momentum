@@ -5,6 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import * as bio from "@/lib/biometric";
 
 type Mode = "checking" | "biometric" | "password";
+const LAST_EMAIL = "mo_last_email";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -72,6 +73,14 @@ export default function LoginPage() {
       why = r === "expired" ? "expired" : r === "signed_out" ? "signed_out" : null;
     } catch {}
     setReason(why);
+    // The password form never opens with an empty name field: the last
+    // account that signed in on this device is already typed in. (A blank
+    // field plus `required` meant a tap on Sign in did nothing at all in the
+    // iOS app, which shows no "fill this in" bubble — that was "not loading".)
+    try {
+      const last = bio.enrolledEmail() ?? localStorage.getItem(LAST_EMAIL);
+      if (last) setEmail((e) => e || last);
+    } catch {}
     (async () => {
       const supported = await bio.isSupported();
       if (!alive) return;
@@ -92,26 +101,47 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError("");
+
+    // Validation happens here, in words on the screen — never through the
+    // browser's `required` bubble, which WKWebView does not draw.
+    const id = email.trim();
+    if (!id) { setError("Enter your email or your first and last name."); return; }
+    if (!password) { setError("Enter your password."); return; }
+    setBusy(true);
 
     // A crew member can sign in with just their name ("Peter Zaragoza"):
     // anything without an @ maps to name@momentumlandscapingut.com, which is
     // how name-only crew accounts are created. Real emails pass through as-is.
-    const id = email.trim();
     const loginEmail = id.includes("@")
       ? id
       : `${id.toLowerCase().replace(/[^a-z0-9]/g, "")}@momentumlandscapingut.com`;
-    const { data, error } = await client().auth.signInWithPassword({
-      email: loginEmail,
-      password,
-    });
+    let data: { session: { refresh_token: string } | null } = { session: null };
+    let error: { message?: string; status?: number } | null = null;
+    try {
+      const r = await client().auth.signInWithPassword({ email: loginEmail, password });
+      data = r.data as typeof data; error = r.error;
+    } catch (err) {
+      error = { message: err instanceof Error ? err.message : String(err) };
+    }
 
     if (error || !data.session) {
-      setError("That email and password don't match — try again.");
+      // Say what actually happened: a wrong password and a dead network are
+      // not the same problem, and the old message blamed the password for both.
+      const m = (error?.message ?? "").toLowerCase();
+      if (error?.status === 400 || m.includes("invalid login") || m.includes("invalid_credentials")) {
+        setError("That email and password don't match — try again.");
+      } else if (m.includes("fetch") || m.includes("network") || m.includes("load failed")) {
+        setError("Couldn't reach the sign-in service — check the connection and try again.");
+      } else if (m.includes("rate") || error?.status === 429) {
+        setError("Too many tries in a row — wait a minute, then try again.");
+      } else {
+        setError(`Sign-in failed: ${error?.message ?? "no session returned"}.`);
+      }
       setBusy(false);
       return;
     }
+    try { localStorage.setItem(LAST_EMAIL, loginEmail); } catch {}
 
     // Offer Face ID on any successful sign-in so the next visit is one tap.
     let declined = false;
@@ -255,7 +285,7 @@ export default function LoginPage() {
 
           {/* ---------- password form ---------- */}
           {mode === "password" && !offerEnroll && (
-            <form onSubmit={handleSubmit} method="post" action="#" className="space-y-4">
+            <form onSubmit={handleSubmit} method="post" action="#" noValidate className="space-y-4">
               <label className="block" htmlFor="email">
                 <span className="mo-eyebrow mb-2 block">Email or name</span>
                 <div className={field}>
@@ -265,7 +295,6 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     type="text"
-                    required
                     autoComplete="username"
                     autoCapitalize="none"
                     autoCorrect="off"
@@ -285,7 +314,6 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     type={showPw ? "text" : "password"}
-                    required
                     autoComplete="current-password"
                     placeholder="••••••••"
                     className="h-12 w-full bg-transparent text-[15px] text-[color:var(--ink)] outline-none placeholder:text-[color:var(--faint)]"

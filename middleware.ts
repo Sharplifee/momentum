@@ -39,12 +39,14 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
           // RLS query comes back empty until the next load.
           set: (name: string, value: string, options: CookieOptions) => {
             req.cookies.set({ name, value, ...options });
+            fwdHeaders.set("cookie", req.cookies.toString());
             res = NextResponse.next({ request: { headers: fwdHeaders } });
             res.headers.set("x-request-id", requestId);
             res.cookies.set({ name, value, ...options });
           },
           remove: (name: string, options: CookieOptions) => {
             req.cookies.set({ name, value: "", ...options });
+            fwdHeaders.set("cookie", req.cookies.toString());
             res = NextResponse.next({ request: { headers: fwdHeaders } });
             res.headers.set("x-request-id", requestId);
             res.cookies.set({ name, value: "", ...options });
