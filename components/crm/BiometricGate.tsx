@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as bio from "@/lib/biometric";
+
+// Decide the lock before the first paint on the client; on the server this
+// is a no-op (useLayoutEffect would only warn there).
+const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
  * Face ID on the way in, every time.
@@ -49,18 +53,21 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
     setFailed(true);   // cancelled — let them try again
   }, [busy, pass]);
 
-  useEffect(() => {
-    if (!bio.isEnrolled()) { setLocked(false); return; }
+  useBeforePaint(() => {
+    // The inline script in app/(crm)/layout.tsx made the same decision before
+    // any paint and set html.mo-locked; from here React owns the state.
+    const done = () => document.documentElement.classList.remove("mo-locked");
+    if (!bio.isEnrolled()) { setLocked(false); done(); return; }
     const seen = Number(sessionStorage.getItem(KEY) ?? 0);
     if (seen && Date.now() - seen < AWAY_MS) {
       // Still in use: every screen refreshes the stamp, so the lock only
       // comes back after the app has actually been away, not after five
       // minutes of walking around inside it.
       sessionStorage.setItem(KEY, String(Date.now()));
-      setLocked(false);
+      setLocked(false); done();
       return;
     }
-    setLocked(true);
+    setLocked(true); done();
     void prompt();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -81,12 +88,17 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [prompt]);
 
-  if (locked === null) return null;      // nothing flashes before we know
-  if (!locked) return <>{children}</>;
+  // The page is always server-rendered — a blank body until JavaScript ran
+  // was why the CRM felt slow and, on a cold WebView, "never loaded". While
+  // the decision is pending the layout's inline script hides the content with
+  // html.mo-locked (only on devices that enrolled Face ID), so nothing flashes.
+  if (!locked) return <div data-mo-gate="">{children}</div>;
 
   const email = bio.enrolledEmail();
 
   return (
+    <>
+    <div data-mo-gate="" className="invisible" aria-hidden="true">{children}</div>
     <div className="mo-rule-dots fixed inset-0 z-[100] flex flex-col bg-[color:var(--bg)] px-6"
       style={{ paddingTop: "max(24px, env(safe-area-inset-top))", paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}>
       <div className="flex items-center gap-2.5">
@@ -120,5 +132,6 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
         </button>
       </div>
     </div>
+    </>
   );
 }

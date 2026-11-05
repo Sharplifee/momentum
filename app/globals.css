@@ -194,3 +194,8 @@ table.mo-grid td, table.mo-grid th { border-color: var(--border) !important; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
 *::-webkit-scrollbar-track { background: transparent; }
+
+/* Face ID gate: the page is server-rendered, but on an enrolled device that has
+   been away it stays invisible until the gate decides (set before first paint by
+   the inline script in app/(crm)/layout.tsx, cleared by BiometricGate). */
+html.mo-locked [data-mo-gate] { visibility: hidden; }

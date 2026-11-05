@@ -118,9 +118,13 @@ async function __GET(req: NextRequest) {
     try {
       const r = await fetch(`${base}${s.path}`, { headers: { cookie, "user-agent": "momentum-selfcheck" }, redirect: "manual", cache: "no-store" });
       const html = r.status === 200 ? await r.text() : "";
+      // Markers must be in the HTML a browser paints, not merely in the RSC
+      // payload inside <script> tags — a page that ships an empty body and
+      // renders itself later with JavaScript does not count as rendered.
+      const visible = html.replace(/<script[\s\S]*?<\/script>/g, "");
       const errorPage = /Application error|Something went wrong|__next_error__/.test(html);
-      const ok = r.status === 200 && s.marker.test(html) && !errorPage;
-      const headings = ok ? undefined : [...html.matchAll(/<h[12][^>]*>(.*?)<\/h[12]>/g)].map((m) => m[1].replace(/<[^>]+>/g, "")).slice(0, 8);
+      const ok = r.status === 200 && s.marker.test(visible) && !errorPage;
+      const headings = ok ? undefined : [...visible.matchAll(/<h[12][^>]*>(.*?)<\/h[12]>/g)].map((m) => m[1].replace(/<[^>]+>/g, "")).slice(0, 8);
       checks.push({ name: `screen ${s.path.replace(/\/[0-9a-f-]{36}$/, "/[id]")}`, ok, ms: t0() - t, detail: ok ? `${html.length} chars` : { status: r.status, location: r.headers.get("location"), marker: s.marker.source, errorPage, bytes: html.length, streamed: html.includes("__next_f"), headings, tail: html.slice(-400).replace(/\s+/g, " ") } });
     } catch (e) {
       checks.push({ name: `screen ${s.path}`, ok: false, ms: t0() - t, detail: e instanceof Error ? e.message : String(e) });
