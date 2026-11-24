@@ -74,7 +74,7 @@ async function __GET() {
   } else {
     try {
       const r = await withTimeout(
-        fetch("https://api.anthropic.com/v1/messages", {
+        fetch(`${process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com"}/v1/messages`, {
           method: "POST",
           headers: {
             "x-api-key": anthropicKey,
