@@ -4,6 +4,7 @@ import { Shell } from "@/components/crm/Shell";
 import { BandCard } from "@/components/crm/Charts";
 import { LinkButton } from "@/components/ui";
 import { parseRange, periodFor, money } from "@/lib/periods";
+import { ReadyInvoiceRow } from "@/components/crm/ReadyInvoiceRow";
 
 export const dynamic = "force-dynamic";
 
@@ -151,15 +152,7 @@ export default async function Accounting({ searchParams }: { searchParams: { ran
                 <span className="block truncate text-[14px] font-semibold text-[color:var(--ink)]">{custName(j.customer_id)} · {j.services?.name ?? "Visit"}</span>
                 <span className="block truncate text-[12px] text-[color:var(--body)]">{mdy(j.scheduled_date)}{j.price != null ? ` · $${Number(j.price).toFixed(0)}` : ""}</span>
               </span>
-              <form action="/api/crm/money" method="post" className="shrink-0">
-                <input type="hidden" name="action" value="create" />
-                <input type="hidden" name="send" value="true" />
-                <input type="hidden" name="customer_id" value={j.customer_id} />
-                <input type="hidden" name="job_id" value={j.id} />
-                <input type="hidden" name="due_days" value="7" />
-                <input type="hidden" name="line_items" value={JSON.stringify([{ service: j.services?.name ?? "Visit", price: Number(j.price ?? 0), job_id: j.id, date: j.scheduled_date }])} />
-                <button className="rounded-full border border-teal/50 px-3 py-1.5 text-[12px] font-semibold text-[color:var(--ink)]">Create &amp; text</button>
-              </form>
+              <ReadyInvoiceRow job={{ id: j.id, customer_id: j.customer_id, date: j.scheduled_date, service: j.services?.name ?? "Visit", price: j.price ?? null }} />
             </div>
           ))}
           {!ready.length && <p className="px-4 py-4 text-[13px] text-[color:var(--body)]">No completed visits waiting on an invoice.</p>}
