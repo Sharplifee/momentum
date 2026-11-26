@@ -199,15 +199,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
             <aside className="absolute inset-y-0 left-0 w-64 overflow-y-auto border-r border-[color:var(--border)] bg-[color:var(--bg)] px-3 py-4" onClick={(e) => e.stopPropagation()}>
               {/* The header is cramped on a phone, so the switch lives here too —
                   the drawer is where a phone user looks for anything not a tab. */}
-              {(realRole === "owner" || realRole === "manager") && (
-                <div className="mb-5 px-1">
-                  <div className="mo-eyebrow px-2 pb-2 text-[color:var(--faint)]">View</div>
-                  {/* The view switch now lives in Account menu and /crm/more; keep a quick link here */}
-                  <Link href={previewing ? "/crm" : "/crm/today"} className="mo-segment-item block rounded-full px-3 py-2 text-center text-[13px] font-semibold text-[color:var(--ink)]">
-                    {previewing ? "Back to admin" : "View as crew"}
-                  </Link>
-                </div>
-              )}
+              {(realRole === "owner" || realRole === "manager") && <DrawerViewSwitch previewing={previewing} />}
               {NAV.map((g) => {
                 const items = g.items.filter(can);
                 if (!items.length) return null;
@@ -258,6 +250,29 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
       </nav>
       <LocationReporter />
       <LiveRefresh />
+    </div>
+  );
+}
+
+function DrawerViewSwitch({ previewing }: { previewing?: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    await fetch("/api/crm/view-as", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ view: previewing ? null : "crew" }),
+    }).catch(() => null);
+    window.location.href = previewing ? "/crm" : "/crm/today";
+  };
+  return (
+    <div className="mb-5 px-1">
+      <div className="mo-eyebrow px-2 pb-2 text-[color:var(--faint)]">View</div>
+      <button onClick={toggle} disabled={busy}
+        className="mo-segment-item block w-full rounded-full px-3 py-2 text-center text-[13px] font-semibold text-[color:var(--ink)]">
+        {previewing ? "Back to admin" : "View as crew"}
+      </button>
     </div>
   );
 }
