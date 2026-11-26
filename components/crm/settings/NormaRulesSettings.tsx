@@ -37,7 +37,7 @@ const HANDOFF = [
   "She isn't sure the property is in the service area",
 ];
 
-type Editing = "quiet" | "hours" | "season" | null;
+type Editing = "quiet" | "hours" | "season" | "response" | "windows" | null;
 
 export function NormaRulesSettings({ quiet, hours, season, model, blocker }: { quiet: Quiet | null; hours: Hours | null; season: Season | null; model: Model | null; blocker: string | null }) {
   const { save, busy, msg } = useSettingsSave();
@@ -51,18 +51,24 @@ export function NormaRulesSettings({ quiet, hours, season, model, blocker }: { q
     if (what === "quiet") { setA(quiet?.no_sends_after ?? "21:00"); setB(quiet?.no_sends_before ?? "08:00"); }
     if (what === "hours") { setA(hours?.start ?? "08:00"); setB(hours?.end ?? "20:00"); }
     if (what === "season") { setA(season?.start ?? "04-01"); setB(season?.end ?? "11-15"); }
+    if (what === "response") { setA(""); setB(""); }
+    if (what === "windows") { setA(""); setB(""); }
     setEditing(what);
   };
 
   async function submit() {
     if (!editing) return;
-    const value = editing === "quiet" ? { no_sends_after: a, no_sends_before: b } : { start: a, end: b };
-    const key = editing === "quiet" ? "quiet_hours" : editing === "hours" ? "business_hours" : "season";
+    let value: any, key: string;
+    if (editing === "quiet") { value = { no_sends_after: a, no_sends_before: b }; key = "quiet_hours"; }
+    else if (editing === "hours") { value = { start: a, end: b }; key = "business_hours"; }
+    else if (editing === "season") { value = { start: a, end: b }; key = "season"; }
+    else if (editing === "response") { value = { seconds: Math.round(Math.max(60, Number(a))) }; key = "lead_response_target_s"; }
+    else { value = { windows: a.split(",").map((s) => s.trim()).filter(Boolean) }; key = "quote_visit_windows"; }
     const r = await save("config_update", { key, value });
     if (r.ok) setEditing(null); else setErr(r.error);
   }
 
-  const titles: Record<Exclude<Editing, null>, string> = { quiet: "Quiet hours", hours: "Business hours", season: "Season" };
+  const titles: Record<Exclude<Editing, null>, string> = { quiet: "Quiet hours", hours: "Business hours", season: "Season", response: "Response target (seconds)", windows: "Quote visit windows" };
 
   return (
     <div className="space-y-5">
@@ -80,6 +86,10 @@ export function NormaRulesSettings({ quiet, hours, season, model, blocker }: { q
           sub={hours ? `${clock(hours.start)} – ${clock(hours.end)} Mountain` : "Not set"} />
         <Row onClick={() => open("season")} chevron label="Season"
           sub={season ? `${monthDay(season.start)} – ${monthDay(season.end)} · off-season leads are noted for spring` : "Not set"} />
+        <Row onClick={() => open("response")} chevron label="Speed‑to‑lead target"
+          sub="AI + human. Used for the response clock and Needs‑you list." />
+        <Row onClick={() => open("windows")} chevron label="Quote visit windows"
+          sub="Comma‑separated labels · e.g. 12–2 PM, 2–4 PM, 4–6 PM, 6–8 PM" />
         <Row label="Replies to new leads" sub="Right away, inside quiet hours it waits · offers only days the schedule has open" />
         <Row label="Books the quote visit" sub="Confirms the day only · never a price · pricing is set in person" />
       </RowCard>
@@ -113,18 +123,30 @@ export function NormaRulesSettings({ quiet, hours, season, model, blocker }: { q
         footer={<Button className="h-12 w-full text-[14px]" onClick={submit} disabled={busy}>{busy ? "Saving…" : "Save"}</Button>}>
         {editing && (
           <div className="pt-1">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={editing === "quiet" ? "No texts after" : editing === "hours" ? "Open from" : "Starts · MM-DD"}>
-                <input className={INPUT} type={editing === "season" ? "text" : "time"} value={a} onChange={(e) => setA(e.target.value)} placeholder={editing === "season" ? "04-01" : undefined} />
+            {["quiet", "hours", "season"].includes(editing) ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={editing === "quiet" ? "No texts after" : editing === "hours" ? "Open from" : "Starts · MM-DD"}>
+                  <input className={INPUT} type={editing === "season" ? "text" : "time"} value={a} onChange={(e) => setA(e.target.value)} placeholder={editing === "season" ? "04-01" : undefined} />
+                </Field>
+                <Field label={editing === "quiet" ? "Texts resume at" : editing === "hours" ? "Until" : "Ends · MM-DD"}>
+                  <input className={INPUT} type={editing === "season" ? "text" : "time"} value={b} onChange={(e) => setB(e.target.value)} placeholder={editing === "season" ? "11-15" : undefined} />
+                </Field>
+              </div>
+            ) : editing === "response" ? (
+              <Field label="Seconds">
+                <input className={INPUT} type="number" min={60} step={30} value={a} onChange={(e) => setA(e.target.value)} placeholder="300" />
               </Field>
-              <Field label={editing === "quiet" ? "Texts resume at" : editing === "hours" ? "Until" : "Ends · MM-DD"}>
-                <input className={INPUT} type={editing === "season" ? "text" : "time"} value={b} onChange={(e) => setB(e.target.value)} placeholder={editing === "season" ? "11-15" : undefined} />
+            ) : (
+              <Field label="Windows (comma‑separated)">
+                <input className={INPUT} type="text" value={a} onChange={(e) => setA(e.target.value)} placeholder="12–2 PM, 2–4 PM, 4–6 PM, 6–8 PM" />
               </Field>
-            </div>
+            )}
             <p className="mb-3 text-[12px] text-[color:var(--body)]">
               {editing === "quiet" && "Customer texts due in this window are queued and sent the next morning. Team alerts still come through."}
               {editing === "hours" && "Mountain time. Shown to customers as when the team is reachable."}
               {editing === "season" && "Outside the season Norma takes the lead's details and says the team will reach out at season start."}
+              {editing === "response" && "Used for the response clock and the Needs‑you filter on the Leads page and Home."}
+              {editing === "windows" && "Displayed in the Book visit sheet. Keep to 4–5 windows that match the crew’s quoting time."}
             </p>
             {err && <p className="mb-3 text-[13px] text-coral">{err}</p>}
           </div>

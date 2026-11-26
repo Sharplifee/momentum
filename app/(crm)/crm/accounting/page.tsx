@@ -21,11 +21,11 @@ export default async function Accounting({ searchParams }: { searchParams: { ran
   const period = periodFor(parseRange(searchParams.range));
 
   const [{ data: invoices }, { data: payments }, { data: expenses }, { data: customers }, { data: jobs }, { data: proofs }, { data: margins }, { data: payroll }] = await Promise.all([
-    db.from("invoices").select("id, number, customer_id, total, status, due_date, sent_at, created_at, line_items, customers(full_name)").order("created_at", { ascending: false }).limit(2000),
+    db.from("invoices").select("id, number, customer_id, job_id, total, status, due_date, sent_at, created_at, line_items, customers(full_name)").order("created_at", { ascending: false }).limit(2000),
     db.from("payments").select("invoice_id, amount, paid_at").order("paid_at", { ascending: false }).limit(5000),
     db.from("expenses").select("amount, expense_date").limit(5000),
     db.from("customers").select("id, full_name, phone").neq("status", "opted_out").order("full_name"),
-    db.from("jobs").select("customer_id, status, scheduled_date"),
+    db.from("jobs").select("id, customer_id, status, scheduled_date, price, services(name)").order("scheduled_date", { ascending: false }).limit(2000),
     db.from("service_proofs").select("id, statement, minutes_on_site, departure_at, method, closest_meters, customers(full_name)").order("created_at", { ascending: false }).limit(8),
     db.from("v_client_margin").select("*").order("margin_per_visit", { ascending: true }).limit(6),
     db.from("v_payroll_rollup").select("*").order("period_start", { ascending: false }).limit(4),
@@ -82,6 +82,16 @@ export default async function Accounting({ searchParams }: { searchParams: { ran
   const seg = (k: string) => `/crm/accounting${k === "month" ? "" : `?range=${k}`}`;
   const firstLine = (i: any) => (Array.isArray(i.line_items) && i.line_items[0]?.service) || "Invoice";
   const cell = "px-4 py-3.5";
+  // Ready to invoice: completed jobs with no invoice referencing them
+  const invoicedJobIds = new Set<string>();
+  for (const invRow of inv) {
+    if (invRow.job_id) invoicedJobIds.add(invRow.job_id);
+    for (const li of (Array.isArray(invRow.line_items) ? invRow.line_items : [])) {
+      if (li.job_id) invoicedJobIds.add(li.job_id);
+    }
+  }
+  const recentCompleted = (jobs ?? []).filter((j: any) => j.status === "completed" && j.scheduled_date >= new Date(Date.now() - 60 * 86400_000).toLocaleDateString("en-CA"));
+  const ready = recentCompleted.filter((j: any) => !invoicedJobIds.has(j.id)).slice(0, 10);
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
@@ -128,6 +138,31 @@ export default async function Accounting({ searchParams }: { searchParams: { ran
             <div className={`mo-num mt-2 text-[24px] leading-none ${net < 0 ? "text-coral" : "text-[color:var(--ink)]"}`}>{money(net)}</div>
             <div className={`mo-mono mt-1.5 text-[11px] ${netDelta == null ? "text-[color:var(--body)]" : netDelta >= 0 ? "text-sage" : "text-coral"}`}>{netDelta == null ? `no ${period.prev.short} to compare` : `${netDelta >= 0 ? "+" : ""}${netDelta}% vs ${period.prev.short}`}</div>
           </div>
+        </div>
+
+        <div className="mo-card mb-4 p-0">
+          <div className="flex items-baseline justify-between px-4 pb-1.5 pt-3">
+            <span className="font-display text-[15px] font-semibold text-[color:var(--ink)]">Ready to invoice</span>
+            <Link href="/crm/accounting/invoices/new" className="mo-eyebrow text-teal">New invoice</Link>
+          </div>
+          {ready.map((j: any) => (
+            <div key={j.id} className="flex items-center gap-3 border-t border-[color:var(--border)] px-4 py-3">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-semibold text-[color:var(--ink)]">{custName(j.customer_id)} · {j.services?.name ?? "Visit"}</span>
+                <span className="block truncate text-[12px] text-[color:var(--body)]">{mdy(j.scheduled_date)}{j.price != null ? ` · $${Number(j.price).toFixed(0)}` : ""}</span>
+              </span>
+              <form action="/api/crm/money" method="post" className="shrink-0">
+                <input type="hidden" name="action" value="create" />
+                <input type="hidden" name="send" value="true" />
+                <input type="hidden" name="customer_id" value={j.customer_id} />
+                <input type="hidden" name="job_id" value={j.id} />
+                <input type="hidden" name="due_days" value="7" />
+                <input type="hidden" name="line_items" value={JSON.stringify([{ service: j.services?.name ?? "Visit", price: Number(j.price ?? 0), job_id: j.id, date: j.scheduled_date }])} />
+                <button className="rounded-full border border-teal/50 px-3 py-1.5 text-[12px] font-semibold text-[color:var(--ink)]">Create &amp; text</button>
+              </form>
+            </div>
+          ))}
+          {!ready.length && <p className="px-4 py-4 text-[13px] text-[color:var(--body)]">No completed visits waiting on an invoice.</p>}
         </div>
 
         <div className="mb-4">

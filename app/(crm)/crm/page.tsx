@@ -5,6 +5,7 @@ import { STAGE_COLOR, SERIES } from "@/lib/theme";
 import { Tile, CompareBars, DayStrip, TrendLine, HBars, BandCard } from "@/components/crm/Charts";
 import { WeekStrip, type WeekDay } from "@/components/crm/WeekStrip";
 import { HealthCard } from "@/components/crm/HealthCard";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,18 @@ export default async function Dashboard() {
   const byStage: Record<string, number> = { new: newL.count ?? 0, contacted: contacted.count ?? 0, quote_sent: quoted.count ?? 0, closed_won: won.count ?? 0 };
 
 
+  // Needs-you list: escalated threads + new leads with no first_response_at
+  const [{ data: threads }, { data: nyLeads }, { data: todayLeads }, { data: todayJobs }] = await Promise.all([
+    db.from("threads").select("id, phone, last_message_at, escalated, lead_id, leads(full_name, city)").eq("escalated", true).order("last_message_at", { ascending: false }).limit(6),
+    db.from("leads").select("id, full_name, city, created_at").eq("stage", "new").is("first_response_at", null).order("created_at").limit(6),
+    db.from("leads").select("id, full_name, city, quote_visit_date, quote_visit_window").eq("quote_visit_date", todayIso).order("quote_visit_window"),
+    db.from("jobs").select("id, scheduled_date, window_start, status, customers(full_name), properties(city)").eq("scheduled_date", todayIso).neq("status", "cancelled").order("window_start", { ascending: true }),
+  ]);
+  const needs = [
+    ...(threads ?? []).map((t: any) => ({ k: `t-${t.id}`, name: t.leads?.full_name ?? t.phone, city: t.leads?.city ?? null, href: `/crm/messages?thread=${t.id}`, action: "Open", age: t.last_message_at })),
+    ...(nyLeads ?? []).map((l: any) => ({ k: `l-${l.id}`, name: l.full_name ?? "Lead", city: l.city, href: `/crm/leads/${l.id}`, action: "Reply", age: l.created_at })),
+  ].slice(0, 6);
+
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <PageHeader
@@ -142,6 +155,43 @@ export default async function Dashboard() {
         </BandCard>
         <div className="min-w-0 lg:col-span-3"><WeekStrip days={week} todayIso={todayIso} /></div>
       </div>
+      <div className="grid gap-5 lg:grid-cols-5">
+        <div className="mo-card lg:col-span-3 p-0">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Needs you</div>
+            <Link href="/crm/leads" className="mo-eyebrow text-teal">View all</Link>
+          </div>
+          {needs.map((n) => (
+            <Link key={n.k} href={n.href} className="flex items-center justify-between gap-3 border-t border-[color:var(--border)] px-4 py-3 transition hover:bg-white/[0.03]">
+              <div className="min-w-0">
+                <div className="truncate text-[14px] font-medium text-[color:var(--ink)]">{n.name}</div>
+                {n.city && <div className="truncate text-[12px] text-[color:var(--body)]">{n.city}</div>}
+              </div>
+              <span className="mo-eyebrow rounded-full border border-teal/50 px-2 py-0.5 text-teal">{n.action}</span>
+            </Link>
+          ))}
+          {!needs.length && <p className="px-4 py-4 text-[13px] text-[color:var(--body)]">Nobody is waiting on you.</p>}
+        </div>
+        <div className="mo-card p-0">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="font-display text-[15px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">Today</div>
+            <Link href="/crm/schedule" className="mo-eyebrow text-teal">Open schedule</Link>
+          </div>
+          {[...(todayLeads ?? []).map((l: any) => ({ k: `ql-${l.id}`, label: "Quote visit", name: l.full_name ?? "Lead", sub: `${l.city ?? ""} · ${l.quote_visit_window ?? ""}` })),
+            ...(todayJobs ?? []).map((j: any) => ({ k: `j-${j.id}`, label: j.status === "scheduled" ? "Scheduled" : j.status, name: j.customers?.full_name ?? "Customer", sub: `${j.properties?.city ?? ""} · ${j.window_start ?? ""}` }))
+          ].map((r) => (
+            <div key={r.k} className="flex items-center justify-between gap-3 border-t border-[color:var(--border)] px-4 py-3">
+              <div className="min-w-0">
+                <div className="truncate text-[14px] font-medium text-[color:var(--ink)]">{r.name}</div>
+                <div className="truncate text-[12px] text-[color:var(--body)]">{r.sub}</div>
+              </div>
+              <span className="mo-eyebrow rounded-full border border-[color:var(--border)] px-2 py-0.5">{r.label}</span>
+            </div>
+          ))}
+          {!((todayLeads ?? []).length || (todayJobs ?? []).length) && <p className="px-4 py-4 text-[13px] text-[color:var(--body)]">Nothing booked today.</p>}
+        </div>
+      </div>
+
       <div className="mt-5">
         <HealthCard />
       </div>
