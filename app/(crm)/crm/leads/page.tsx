@@ -44,12 +44,14 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
   let leads = (leadsRaw ?? []) as any[];
 
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [{ data: allStages }, { count: weekCount }, { data: zones }, { data: threads }] = await Promise.all([
+  const [{ data: allStages }, { count: weekCount }, { data: zones }, { data: threads }, { data: respCfg }] = await Promise.all([
     real<any>(db.from("leads").select("stage")),
     real<any>(db.from("leads").select("id", { count: "exact", head: true })).gte("created_at", weekAgo),
     db.from("zones").select("id, name").eq("active", true).order("id"),
     leads.length ? db.from("threads").select("lead_id, escalated, last_message_at").in("lead_id", leads.map((l) => l.id)) : Promise.resolve({ data: [] as any[] }),
+    db.from("system_config").select("value").eq("key", "lead_response_target_s").maybeSingle(),
   ]);
+  const targetSeconds = Math.round((respCfg?.value as any)?.seconds ?? 300);
   const counts: Record<string, number> = {};
   for (const l of allStages ?? []) counts[l.stage] = (counts[l.stage] ?? 0) + 1;
   const threadBy = new Map((threads ?? []).map((t: any) => [t.lead_id, t]));
@@ -74,7 +76,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
     if (tab === "closed") return ["closed_won", "not_qualified", "stale"].includes(l.stage);
     // Needs you: escalated thread or new with no first response
     const t = threadBy.get(l.id);
-    return Boolean(t?.escalated) || (l.stage === "new" && !l.first_response_at);
+    const ageOk = (Date.now() - new Date(l.created_at).getTime()) / 1000 > targetSeconds;
+    return Boolean(t?.escalated) || (l.stage === "new" && !l.first_response_at && ageOk);
   });
 
   const tabLink = (t: string) => {
@@ -138,7 +141,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
                   <Chip className={STAGE_STYLE[l.stage as StageKey]}>{CHIP_LABEL[l.stage] ?? STAGE_LABEL[l.stage as StageKey] ?? l.stage}</Chip>
                 </div>
                 <div className="truncate text-[13px] text-[color:var(--body)]">{sub || l.phone}</div>
-                <ResponseClock createdAt={l.created_at} />
+                 <ResponseClock createdAt={l.created_at} targetSeconds={targetSeconds} />
               </div>
               <div className="shrink-0 text-right">
                 <LeadRowActions lead={l} />

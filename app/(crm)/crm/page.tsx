@@ -102,15 +102,19 @@ export default async function Dashboard() {
 
 
   // Needs-you list: escalated threads + new leads with no first_response_at
-  const [{ data: threads }, { data: nyLeads }, { data: todayLeads }, { data: todayJobs }] = await Promise.all([
+  const [{ data: threads }, { data: nyLeads }, { data: todayLeads }, { data: todayJobs }, { data: respCfg }] = await Promise.all([
     db.from("threads").select("id, phone, last_message_at, escalated, lead_id, leads(full_name, city)").eq("escalated", true).order("last_message_at", { ascending: false }).limit(6),
-    db.from("leads").select("id, full_name, city, created_at").eq("stage", "new").is("first_response_at", null).order("created_at").limit(6),
+    db.from("leads").select("id, full_name, city, created_at").eq("stage", "new").is("first_response_at", null).order("created_at").limit(40),
     db.from("leads").select("id, full_name, city, quote_visit_date, quote_visit_window").eq("quote_visit_date", todayIso).order("quote_visit_window"),
     db.from("jobs").select("id, scheduled_date, window_start, status, customers(full_name), properties(city)").eq("scheduled_date", todayIso).neq("status", "cancelled").order("window_start", { ascending: true }),
+    db.from("system_config").select("value").eq("key", "lead_response_target_s").maybeSingle(),
   ]);
+  const targetSeconds = Math.round((respCfg?.value as any)?.seconds ?? 300);
   const needs = [
     ...(threads ?? []).map((t: any) => ({ k: `t-${t.id}`, name: t.leads?.full_name ?? t.phone, city: t.leads?.city ?? null, href: `/crm/messages?thread=${t.id}`, action: "Open", age: t.last_message_at })),
-    ...(nyLeads ?? []).map((l: any) => ({ k: `l-${l.id}`, name: l.full_name ?? "Lead", city: l.city, href: `/crm/leads/${l.id}`, action: "Reply", age: l.created_at })),
+    ...(nyLeads ?? []).filter((l: any) => (Date.now() - new Date(l.created_at).getTime()) / 1000 > targetSeconds)
+      .slice(0, 12)
+      .map((l: any) => ({ k: `l-${l.id}`, name: l.full_name ?? "Lead", city: l.city, href: `/crm/leads?id=${l.id}`, action: "Reply", age: l.created_at })),
   ].slice(0, 6);
 
   return (
