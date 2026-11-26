@@ -182,6 +182,34 @@ export async function sendSms(input: SendSmsInput) {
     message_id: msgRow?.id ?? null,
   });
 
+  // Phase 1: stamp first_response_at on first outbound to a lead's phone.
+  // Idempotent: only set when null. Also compute response_time_seconds.
+  try {
+    // Use the original intended recipient (pre-sandbox) to find the lead.
+    const leadPhone = (sandboxed ? input.to : to) as string;
+    if (leadPhone) {
+      const { data: target } = await db
+        .from("leads")
+        .select("id, created_at, first_response_at")
+        .eq("phone", leadPhone)
+        .is("first_response_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (target?.id) {
+        const nowIso = new Date().toISOString();
+        const created = new Date(target.created_at).getTime();
+        const seconds = Math.max(0, Math.round((Date.now() - created) / 1000));
+        await db
+          .from("leads")
+          .update({ first_response_at: nowIso, response_time_seconds: seconds })
+          .eq("id", target.id);
+      }
+    }
+  } catch {
+    // best-effort; never block an SMS because of this bookkeeping
+  }
+
   if (!dryRun && sendOk && sandbox?.enabled) {
     // burn one build credit (read-modify-write; low contention)
     await db.from("system_config").update({

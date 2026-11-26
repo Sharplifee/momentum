@@ -5,10 +5,11 @@ import { STAGE_STYLE, STAGE_LABEL, StageKey } from "@/lib/theme";
 import Link from "next/link";
 import { Tile } from "@/components/crm/Charts";
 import { LeadFilterButton, type LeadFilterState } from "@/components/crm/LeadFilters";
+import { ResponseClock } from "@/components/crm/ResponseClock";
 
 export const dynamic = "force-dynamic";
-const STAGES: StageKey[] = ["new", "contacted", "quote_sent", "closed_won", "not_qualified", "stale"];
-const CHIP_LABEL: Record<string, string> = { new: "New", contacted: "Contacted", quote_sent: "Quote sent", closed_won: "Won", not_qualified: "Lost", stale: "Stale" };
+const STAGES: StageKey[] = ["new", "contacted", "quote_scheduled", "quote_sent", "closed_won", "not_qualified", "stale"];
+const CHIP_LABEL: Record<string, string> = { new: "New", contacted: "Contacted", quote_scheduled: "Visit booked", quote_sent: "Quote sent", closed_won: "Won", not_qualified: "Lost", stale: "Stale" };
 const SOURCE_LABEL: Record<string, string> = { website: "website", meta_lead_ad: "Meta", phone: "phone", referral: "referral", door: "door", other: "other" };
 
 function ageLabel(iso: string): string {
@@ -117,6 +118,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
                   <Chip className={STAGE_STYLE[l.stage as StageKey]}>{CHIP_LABEL[l.stage] ?? STAGE_LABEL[l.stage as StageKey] ?? l.stage}</Chip>
                 </div>
                 <div className="truncate text-[13px] text-[color:var(--body)]">{sub || l.phone}</div>
+                <ResponseClock createdAt={l.created_at} />
               </div>
               <div className="shrink-0 text-right">
                 <div className="mo-mono text-[12px] text-[color:var(--body)]">{ageLabel(l.created_at)}</div>

@@ -50,12 +50,13 @@ export const STAGE_COLOR: Record<"new" | "contacted" | "quote_sent" | "closed_wo
   closed_won: "#e3a35f",
 };
 
-export type StageKey = "new" | "contacted" | "quote_sent" | "closed_won" | "not_qualified" | "stale";
+export type StageKey = "new" | "contacted" | "quote_scheduled" | "quote_sent" | "closed_won" | "not_qualified" | "stale";
 
 /** Stage → chip classes. Hairline chips: tinted border, tinted text, no fill. */
 export const STAGE_STYLE: Record<StageKey, string> = {
   new: "border border-teal/50 text-teal",
   contacted: "border border-teal/30 text-ice",
+  quote_scheduled: "border border-ice/40 text-info",
   quote_sent: "border border-ice/40 text-navy",
   closed_won: "border border-gold/60 text-gold",
   not_qualified: "border border-white/10 text-slate",
@@ -63,7 +64,7 @@ export const STAGE_STYLE: Record<StageKey, string> = {
 };
 
 export const STAGE_LABEL: Record<StageKey, string> = {
-  new: "New", contacted: "Contacted", quote_sent: "Quote Sent",
+  new: "New", contacted: "Contacted", quote_scheduled: "Visit Booked", quote_sent: "Quote Sent",
   closed_won: "Won", not_qualified: "Not Qualified", stale: "Stale",
 };
 
