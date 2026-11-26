@@ -28,20 +28,9 @@ export async function runStageAutomation(leadId: string, newStage: string, actor
   }
 
   if (newStage === "quote_sent") {
-    // attach/create quote
-    let { data: quote } = await db.from("quotes").select("id, total").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-    if (!quote) {
-      const { data: svc } = await db.from("services").select("id, name, base_price").eq("slug", lead.service_interest ?? "weekly-mow").maybeSingle();
-      const price = svc?.base_price ?? 45;
-      const { data: created } = await db
-        .from("quotes")
-        .insert({ lead_id: leadId, line_items: [{ service: svc?.name ?? "Weekly Lawn Maintenance", qty: 1, price }], total: price, status: "sent", sent_at: new Date().toISOString() })
-        .select("id, total")
-        .single();
-      quote = created;
-    } else {
-      await db.from("quotes").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", quote.id);
-    }
+    // After redesign: do NOT auto-create fallback quotes. Only mark existing quote as sent.
+    const { data: quote } = await db.from("quotes").select("id, total").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (quote) await db.from("quotes").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", quote.id);
     await db.from("leads").update({ quote_amount: quote?.total ?? null }).eq("id", leadId);
 
     // auto-schedule proposal
@@ -94,7 +83,7 @@ export async function runStageAutomation(leadId: string, newStage: string, actor
     // agreement (recurring) or one-off job — base price plus any on-site checklist modifiers
     const { data: quote } = await db.from("quotes").select("id, total, line_items").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle();
     const { data: svc } = await db.from("services").select("id, recurring, base_price").eq("slug", lead.service_interest ?? "weekly-mow").maybeSingle();
-    const basePrice = quote?.total ?? svc?.base_price ?? 45;
+    const basePrice = quote?.total ?? (svc?.base_price ?? 0);
     const modifiers = property ? await pricingModifiers(db, property) : [];
     const modifierTotal = modifiers.filter((m) => !m.blocked).reduce((s, m) => s + m.price, 0);
     const price = basePrice + modifierTotal;

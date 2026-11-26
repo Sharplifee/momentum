@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui";
 import { STAGE_COLOR, SERIES } from "@/lib/theme";
 import { Tile, CompareBars, DayStrip, TrendLine, HBars, BandCard } from "@/components/crm/Charts";
 import { WeekStrip, type WeekDay } from "@/components/crm/WeekStrip";
+import { HealthCard } from "@/components/crm/HealthCard";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,9 @@ export default async function Dashboard() {
           </div>
         </BandCard>
         <div className="min-w-0 lg:col-span-3"><WeekStrip days={week} todayIso={todayIso} /></div>
+      </div>
+      <div className="mt-5">
+        <HealthCard />
       </div>
     </Shell>
   );
