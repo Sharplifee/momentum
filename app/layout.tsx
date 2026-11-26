@@ -15,6 +15,12 @@ export async function generateMetadata(): Promise<Metadata> {
   title: `Momentum Landscaping | Lawn Care in the ${area.short}`,
   description:
     `Weekly and biweekly lawn maintenance, aeration, and cleanups across ${citiesSentence(area, 4)}.`,
+  // iOS (Safari and, above all, the Crew app's WebView) rewrites dates,
+  // numbers and addresses into tappable links before React hydrates. The text
+  // then differs from the server HTML (React #425 → #422) and React throws the
+  // whole page away and redraws it on every open. Phone/email/address links
+  // the app wants are written as real <a href="tel:"> links already.
+  formatDetection: { telephone: false, date: false, address: false, email: false, url: false },
   other: {
     "facebook-domain-verification": process.env.NEXT_PUBLIC_META_DOMAIN_VERIFICATION ?? "",
   },

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import * as bio from "@/lib/biometric";
 import { Avatar, Footnote, Group, Row, RowCard, Tag, type Tone } from "@/components/crm/settings/ui";
+import { requestLocationOnce } from "@/components/crm/LocationReporter";
 
 const ICON = (d: string) => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
@@ -19,7 +20,7 @@ const I = {
   out: "M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9",
 };
 
-type Perm = "granted" | "denied" | "prompt" | "unsupported" | null;
+type Perm = "granted" | "denied" | "prompt" | "unsupported" | "native" | null;
 const OFFLINE_QUEUE_KEY = "momentum_offline_queue"; // same key TodayStops replays
 
 /** Admin ⇄ Crew. Same call Shell makes; full reload because the role is resolved server-side. */
@@ -55,7 +56,8 @@ export function MorePanel({ name, email, role, realRole, previewing, counts }: {
 
   useEffect(() => {
     // Location: ask the permissions API; it says what the browser will do, not what we hope.
-    if (!("geolocation" in navigator)) setLoc("unsupported");
+    if ((window as any).ReactNativeWebView) setLoc("native");
+    else if (!("geolocation" in navigator)) setLoc("unsupported");
     else if (navigator.permissions?.query) {
       navigator.permissions.query({ name: "geolocation" }).then((s) => {
         setLoc(s.state as Perm);
@@ -73,6 +75,7 @@ export function MorePanel({ name, email, role, realRole, previewing, counts }: {
   }, []);
 
   const permTag = (p: Perm, onWord: string): { tone: Tone; text: string } => {
+    if (p === "native") return { tone: "sage", text: "App handles it" };
     if (p === "granted") return { tone: "sage", text: onWord };
     if (p === "denied") return { tone: "coral", text: "Blocked" };
     if (p === "unsupported") return { tone: "faint", text: "Not here" };
@@ -118,7 +121,9 @@ export function MorePanel({ name, email, role, realRole, previewing, counts }: {
 
       <Group label="Device">
         <RowCard>
-          <Row lead={ICON(I.location)} label="Location" trail={<Tag tone={locTag.tone}>{locTag.text}</Tag>} />
+          <Row lead={ICON(I.location)} label="Location" trail={<Tag tone={locTag.tone}>{locTag.text}</Tag>}
+            sub={loc === "denied" ? "Turned off in this browser's settings" : undefined}
+            onClick={loc === "prompt" ? async () => { const r = await requestLocationOnce(); setLoc(r === "granted" ? "granted" : "denied"); } : undefined} />
           <Row href="/crm/notifications" lead={ICON(I.bell)} label="Notifications" trail={<Tag tone={notifTag.tone}>{notifTag.text}</Tag>} />
           <Row href="/crm/account" lead={ICON(I.face)} label="Face ID lock"
             trail={faceId === null ? <Tag>…</Tag> : faceId ? <Tag tone="sage">Enrolled</Tag> : <Tag tone="faint">Off</Tag>} />

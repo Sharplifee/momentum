@@ -288,7 +288,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
           <span className="w-full truncate px-0.5 text-center">More</span>
         </Link>
       </nav>
-      <LocationReporter />
+      <LocationReporter role={role} />
       <LiveRefresh />
     </div>
   );

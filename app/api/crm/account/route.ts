@@ -23,7 +23,13 @@ async function __POST(req: NextRequest) {
     const patch: Record<string, unknown> = {};
     if (typeof body.full_name === "string") patch.full_name = body.full_name.trim();
     if (typeof body.phone === "string") patch.phone = body.phone.trim() || null;
-    if (body.notif_prefs && typeof body.notif_prefs === "object") patch.notif_prefs = body.notif_prefs;
+    if (body.notif_prefs && typeof body.notif_prefs === "object") {
+      // Merge, never replace: the account also keeps its one-time location
+      // decision in this object and a notification toggle must not erase it.
+      const { data: cur } = await admin.from("profiles").select("notif_prefs").eq("id", user.id).maybeSingle();
+      const keep = (cur?.notif_prefs ?? {}) as Record<string, unknown>;
+      patch.notif_prefs = { ...keep, ...body.notif_prefs, location: keep.location, location_at: keep.location_at };
+    }
     const { error } = await admin.from("profiles").update(patch).eq("id", user.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     await logAutomation({ trigger: "account.profile_update", ref_id: user.id });
