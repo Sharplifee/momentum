@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Sheet } from "@/components/crm/Sheet";
 
 type Day = { date: string; slots_remaining: number; crew_id: number };
-const WINDOWS = ["12–2 PM", "2–4 PM", "4–6 PM", "6–8 PM"] as const; // decisions: shared config
 
 export function BookVisitButton({ leadId, zoneId, requestedDays, requestedWindow }: {
   leadId: string; zoneId: number | null; requestedDays?: string[] | null; requestedWindow?: string | null;
@@ -23,6 +22,7 @@ export function BookVisitSheet({ leadId, zoneId, requestedDays, requestedWindow,
   leadId: string; zoneId: number | null; requestedDays?: string[] | null; requestedWindow?: string | null; onClose: () => void;
 }) {
   const [days, setDays] = useState<Day[] | null>(null);
+  const [windows, setWindows] = useState<string[]>(["12–2 PM", "2–4 PM", "4–6 PM", "6–8 PM"]);
   const [err, setErr] = useState<string | null>(null);
   const [selDay, setSelDay] = useState<string | null>(null);
   const [selWin, setSelWin] = useState<string | null>(requestedWindow ?? null);
@@ -36,6 +36,11 @@ export function BookVisitSheet({ leadId, zoneId, requestedDays, requestedWindow,
       setDays((j.days as Day[]) ?? []);
       if (j.days?.[0]?.date) setSelDay(j.days[0].date);
     }).catch(() => setErr("Couldn't load availability."));
+    // load visit windows from config
+    fetch("/api/crm/settings").then((r) => r.json()).then((cfg) => {
+      const w = (cfg?.quote_visit_windows?.windows ?? cfg?.quote_visit_windows ?? null) as string[] | null;
+      if (alive && Array.isArray(w) && w.length) setWindows(w);
+    }).catch(() => null);
     return () => { alive = false; };
   }, [zoneId]);
 
@@ -79,7 +84,7 @@ export function BookVisitSheet({ leadId, zoneId, requestedDays, requestedWindow,
         <div>
           <div className="mo-eyebrow mb-2">2-hour window</div>
           <div className="flex flex-wrap gap-1.5">
-            {WINDOWS.map((w) => (
+            {windows.map((w) => (
               <button key={w} type="button" onClick={() => setSelWin(w)}
                 className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${selWin === w ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)] hover:text-[color:var(--ink)]"}`}>{w}</button>
             ))}

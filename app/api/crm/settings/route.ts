@@ -207,3 +207,15 @@ async function __POST(req: NextRequest) {
 }
 
 export const POST = withEventLog("POST /api/crm/settings", __POST);
+
+async function __GET() {
+  const staff = await staffFromSession(["owner", "manager", "crew"]);
+  if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const db = supabaseAdmin();
+  const { data } = await db.from("system_config").select("key, value").in("key", ["quiet_hours", "business_hours", "season", "lead_response_target_s", "quote_visit_windows"]);
+  const byKey: Record<string, unknown> = {};
+  for (const row of data ?? []) byKey[row.key] = row.value;
+  return NextResponse.json(byKey);
+}
+
+export const GET = withEventLog("GET /api/crm/settings", __GET);
