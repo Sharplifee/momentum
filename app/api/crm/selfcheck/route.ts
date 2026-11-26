@@ -148,6 +148,22 @@ async function __GET(req: NextRequest) {
     }
   }
 
+  // ---- 3b. crew app + location decision ------------------------------------
+  // Device token: minted from the live session, then accepted by the
+  // background ping route (an empty batch answers 400 only AFTER auth passes,
+  // so nothing is written). The location decision endpoint must answer 200.
+  {
+    const t = t0();
+    const dt = await fetch(`${base}/api/crm/device-token`, { method: "POST", headers: { authorization: `Bearer ${session.access_token}` }, cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const ping = dt?.token
+      ? await fetch(`${base}/api/crm/ping`, { method: "POST", headers: { authorization: `Bearer ${dt.token}`, "content-type": "application/json" }, body: JSON.stringify({ pings: [] }), cache: "no-store" }).then((r) => r.status).catch(() => 0)
+      : 0;
+    checks.push({ name: "crew_app.device_token", ok: Boolean(dt?.token) && ping === 400, ms: t0() - t, detail: { minted: Boolean(dt?.token), ping_status: ping } });
+    const loc = await fetch(`${base}/api/crm/location`, { headers: { cookie }, cache: "no-store" }).then(async (r) => ({ s: r.status, j: await r.json().catch(() => null) })).catch(() => ({ s: 0, j: null }));
+    checks.push({ name: "account.location_decision", ok: loc.s === 200 && loc.j && "consent" in loc.j, detail: loc });
+  }
+
   // ---- 4. revoke -----------------------------------------------------------
   const { error: outErr } = await db.auth.admin.signOut(session.access_token, "local");
   checks.push({ name: "session.revoked", ok: !outErr, detail: outErr?.message });
