@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withEventLog } from "@/lib/eventLog";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { staffFromSession } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 
 async function __POST(req: NextRequest) {
   const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!process.env.CRON_SECRET || bearer !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const cronAuth = Boolean(process.env.CRON_SECRET) && bearer === process.env.CRON_SECRET;
+  // Allow owners to run this on-demand from the app if a tight cron is unavailable on the hosting plan.
+  const staff = await staffFromSession(["owner"]).catch(() => null);
+  if (!cronAuth && !staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const db = supabaseAdmin();
   const now = new Date().toISOString();
 
