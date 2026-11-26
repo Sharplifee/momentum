@@ -4,13 +4,14 @@ import { Shell } from "@/components/crm/Shell";
 import { MonthCalendar } from "@/components/crm/MonthCalendar";
 import { BandCard, Tile } from "@/components/crm/Charts";
 import { WeekBoard } from "@/components/crm/WeekBoard";
+import { TrackerPanel } from "@/components/crm/TrackerPanel";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { NewJobButton } from "@/components/crm/NewJobSheet";
 
 export const dynamic = "force-dynamic";
 
-export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ m?: string; d?: string }> }) {
+export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ m?: string; d?: string; tab?: string }> }) {
   // Auth and the URL params do not depend on each other, so waiting for one
   // then the other cost a round trip for nothing.
   const [{ profile, role, realRole, previewing, db }, sp] = await Promise.all([
@@ -21,6 +22,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
   const smsPaused = await smsPausedReason(db);
   const month = /^\d{4}-\d{2}$/.test(sp.m ?? "") ? (sp.m as string) : todayIso.slice(0, 7);
+  const tab = (sp.tab ?? "week") as "week" | "proof" | "month";
   const [y, m] = month.split("-").map(Number);
   const first = new Date(Date.UTC(y, m - 1, 1));
   const gridStart = new Date(first);
@@ -80,10 +82,39 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const svcToday = service.filter((j) => j.scheduled_date === todayIso);
   const qToday = quotes.filter((j) => j.scheduled_date === todayIso);
 
+  if (tab === "proof") {
+    const [{ data: exceptions }] = await Promise.all([
+      db.from("exceptions").select("id, type, severity, detail, occurred_on, created_at, job_id, crew_id, crews(name), customers(full_name), properties(address)").eq("resolved", false).order("created_at", { ascending: false }).limit(50),
+    ]);
+    const mapExc = (exceptions ?? []).map((e: any) => ({
+      id: e.id, type: e.type, severity: e.severity, detail: e.detail,
+      occurred_on: e.occurred_on, created_at: e.created_at, job_id: e.job_id,
+      crew: e.crews?.name ?? null, address: e.properties?.address ?? null,
+      customer: e.customers?.full_name ?? null, customer_phone: null,
+    }));
+    return (
+      <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+        <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+          <PageHeader eyebrow="Operations" title="Schedule · Proof review" />
+          <TrackerPanel exceptions={mapExc as any} crew={[]} devices={[]} health={[]} />
+        </div>
+      </Shell>
+    );
+  }
+
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
         <PageHeader eyebrow="Operations" title="Schedule" />
+        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
+          {[
+            { k: "week", label: "Week" },
+            { k: "month", label: "Month" },
+            { k: "proof", label: "Proof" },
+          ].map((t) => (
+            <Link key={t.k} href={`/crm/schedule?${new URLSearchParams({ ...(sp as any), tab: t.k }).toString()}`} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${tab === t.k ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>{t.label}</Link>
+          ))}
+        </div>
 
         {/* Two tiles, titles short enough never to wrap on a phone; today's
             count sits next to the week's number instead of in its own cell. */}

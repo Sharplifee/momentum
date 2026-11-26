@@ -3,6 +3,7 @@ import { Shell } from "@/components/crm/Shell";
 import Link from "next/link";
 import { Tile } from "@/components/crm/Charts";
 import { PageHeader, LinkButton, EmptyState } from "@/components/ui";
+import { CustomerAddPhone } from "@/components/crm/CustomerAddPhone";
 
 export const dynamic = "force-dynamic";
 
@@ -138,7 +139,11 @@ export default async function Customers({ searchParams }: { searchParams: { q?: 
                       <span className="block truncate text-[15px] font-semibold tracking-[-0.01em] text-[color:var(--ink)]">{c.full_name}</span>
                       <span className="block truncate text-[12px] text-[color:var(--body)]">{subFor(c)}</span>
                     </span>
-                    <span className="shrink-0">{rightFor(c)}</span>
+                    <span className="shrink-0">
+                      {(c.phone ?? "").startsWith("unknown:") || !c.phone
+                        ? <CustomerAddPhone customerId={c.id} />
+                        : rightFor(c)}
+                    </span>
                   </Link>
                 ))}
               </div>

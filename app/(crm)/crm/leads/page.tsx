@@ -5,10 +5,13 @@ import { STAGE_STYLE, STAGE_LABEL, StageKey } from "@/lib/theme";
 import Link from "next/link";
 import { Tile } from "@/components/crm/Charts";
 import { LeadFilterButton, type LeadFilterState } from "@/components/crm/LeadFilters";
+import { ResponseClock } from "@/components/crm/ResponseClock";
+import { LeadRowActions } from "@/components/crm/LeadRowActions";
+import { LeadSplitDetail } from "@/components/crm/LeadSplitDetail";
 
 export const dynamic = "force-dynamic";
-const STAGES: StageKey[] = ["new", "contacted", "quote_sent", "closed_won", "not_qualified", "stale"];
-const CHIP_LABEL: Record<string, string> = { new: "New", contacted: "Contacted", quote_sent: "Quote sent", closed_won: "Won", not_qualified: "Lost", stale: "Stale" };
+const STAGES: StageKey[] = ["new", "contacted", "quote_scheduled", "quote_sent", "closed_won", "not_qualified", "stale"];
+const CHIP_LABEL: Record<string, string> = { new: "New", contacted: "Contacted", quote_scheduled: "Visit booked", quote_sent: "Quote sent", closed_won: "Won", not_qualified: "Lost", stale: "Stale" };
 const SOURCE_LABEL: Record<string, string> = { website: "website", meta_lead_ad: "Meta", phone: "phone", referral: "referral", door: "door", other: "other" };
 
 function ageLabel(iso: string): string {
@@ -24,12 +27,12 @@ const initials = (n: string | null) => (n ?? "?").split(" ").filter(Boolean).sli
  * where, what they asked for, how long ago, and whether Norma has it or a
  * person needs to step in.
  */
-export default async function LeadsPage({ searchParams }: { searchParams: LeadFilterState }) {
+export default async function LeadsPage({ searchParams }: { searchParams: LeadFilterState & { tab?: string; id?: string } }) {
   const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   const real = <T,>(q: any): T => q.neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%");
 
-  let query = real<any>(db.from("leads").select("id, full_name, phone, city, zone_id, stage, source, service_interest, quote_amount, created_at, last_contact_at"));
-  if (searchParams.stage) query = query.eq("stage", searchParams.stage);
+  let query = real<any>(db.from("leads").select("id, full_name, phone, city, zone_id, stage, source, service_interest, quote_amount, created_at, last_contact_at, requested_days, requested_window, first_response_at"));
+  if (searchParams.stage) query = query.eq("stage", searchParams.stage as any);
   if (searchParams.zone) query = query.eq("zone_id", Number(searchParams.zone));
   if (searchParams.source) query = query.eq("source", searchParams.source);
   if (searchParams.q) query = query.or(`full_name.ilike.%${searchParams.q}%,phone.ilike.%${searchParams.q}%,address.ilike.%${searchParams.q}%`);
@@ -41,12 +44,14 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
   let leads = (leadsRaw ?? []) as any[];
 
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [{ data: allStages }, { count: weekCount }, { data: zones }, { data: threads }] = await Promise.all([
+  const [{ data: allStages }, { count: weekCount }, { data: zones }, { data: threads }, { data: respCfg }] = await Promise.all([
     real<any>(db.from("leads").select("stage")),
     real<any>(db.from("leads").select("id", { count: "exact", head: true })).gte("created_at", weekAgo),
     db.from("zones").select("id, name").eq("active", true).order("id"),
     leads.length ? db.from("threads").select("lead_id, escalated, last_message_at").in("lead_id", leads.map((l) => l.id)) : Promise.resolve({ data: [] as any[] }),
+    db.from("system_config").select("value").eq("key", "lead_response_target_s").maybeSingle(),
   ]);
+  const targetSeconds = Math.round((respCfg?.value as any)?.seconds ?? 300);
   const counts: Record<string, number> = {};
   for (const l of allStages ?? []) counts[l.stage] = (counts[l.stage] ?? 0) + 1;
   const threadBy = new Map((threads ?? []).map((t: any) => [t.lead_id, t]));
@@ -62,11 +67,31 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
   };
   if (searchParams.needs === "human") leads = leads.filter((l) => statusFor(l)?.label === "Needs you");
 
+  // Queue tabs per brief
+  const tab = (searchParams.tab ?? "needs") as "needs" | "new" | "visit" | "quoted" | "closed";
+  const filtered = leads.filter((l) => {
+    if (tab === "new") return l.stage === "new";
+    if (tab === "visit") return l.stage === "quote_scheduled";
+    if (tab === "quoted") return l.stage === "quote_sent";
+    if (tab === "closed") return ["closed_won", "not_qualified", "stale"].includes(l.stage);
+    // Needs you: escalated thread or new with no first response
+    const t = threadBy.get(l.id);
+    const ageOk = (Date.now() - new Date(l.created_at).getTime()) / 1000 > targetSeconds;
+    return Boolean(t?.escalated) || (l.stage === "new" && !l.first_response_at && ageOk);
+  });
+
+  const tabLink = (t: string) => {
+    const p = new URLSearchParams({ ...searchParams, tab: t } as any);
+    return `/crm/leads?${p.toString()}`;
+  };
+
   const qs = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries({ ...searchParams, ...over })) if (v) p.set(k, v);
     return `/crm/leads${p.toString() ? `?${p}` : ""}`;
   };
+
+  const selectedId = searchParams.id && filtered.find((l) => l.id === searchParams.id) ? searchParams.id : undefined;
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
@@ -78,23 +103,22 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
           </div>
         } />
 
-      <div className="mb-4 grid grid-cols-4 gap-2">
-        <Tile dense label="New" value={weekCount ?? 0} note="this wk" />
-        <Tile dense label="Waiting" value={<span className="text-teal">{counts["new"] ?? 0}</span>} href={qs({ stage: "new" })} />
-        <Tile dense label="Quoted" value={counts["quote_sent"] ?? 0} href={qs({ stage: "quote_sent" })} />
-        <Tile dense label="Won" value={<span className="text-gold">{counts["closed_won"] ?? 0}</span>} href={qs({ stage: "closed_won" })} />
-      </div>
-
       <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
-        <Link href={qs({ stage: undefined })} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${!searchParams.stage ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>All</Link>
-        {STAGES.map((s) => (
-          <Link key={s} href={qs({ stage: s })} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${searchParams.stage === s ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>
-            {CHIP_LABEL[s]} <span className={searchParams.stage === s ? "text-[#0a0a0a]/60" : "text-[color:var(--faint)]"}>{counts[s] ?? 0}</span>
+        {[
+          { k: "needs", label: "Needs you" },
+          { k: "new", label: "New" },
+          { k: "visit", label: "Visit booked" },
+          { k: "quoted", label: "Quoted" },
+          { k: "closed", label: "Closed" },
+        ].map((t) => (
+          <Link key={t.k} href={tabLink(t.k)} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${tab === t.k ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>
+            {t.label}
           </Link>
         ))}
       </div>
 
-      <div className="mo-card p-0">
+      <div className="grid gap-3 md:grid-cols-[420px,1fr]">
+        <div className="mo-card p-0">
         <form className="border-b border-[color:var(--border)] px-4 py-3">
           {Object.entries(searchParams).filter(([k, v]) => k !== "q" && v).map(([k, v]) => <input key={k} type="hidden" name={k} value={v as string} />)}
           <div className="flex items-center gap-2.5 text-[color:var(--faint)]">
@@ -103,13 +127,13 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
           </div>
         </form>
 
-        {!leads.length ? (
+        {!filtered.length ? (
           <div className="p-4"><EmptyState title="No leads here yet" hint={searchParams.stage || searchParams.q ? "Nothing matches right now." : "New quote requests land here the moment they come in."} action={<LinkButton href="/crm/leads/new">+ New lead</LinkButton>} /></div>
-        ) : leads.map((l) => {
+        ) : filtered.map((l) => {
           const st = statusFor(l);
           const sub = [l.city, l.service_interest?.toLowerCase(), l.source ? `via ${SOURCE_LABEL[l.source] ?? l.source}` : null].filter(Boolean).join(" · ");
           return (
-            <Link key={l.id} href={`/crm/leads/${l.id}`} className="flex items-center gap-3 border-b border-[color:var(--border)] px-4 py-3 transition last:border-b-0 hover:bg-white/[0.03]">
+            <Link key={l.id} href={qs({ id: l.id })} className="flex items-center gap-3 border-b border-[color:var(--border)] px-4 py-3 transition last:border-b-0 hover:bg-white/[0.03]">
               <span className="mo-mono grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[color:var(--border)] text-[12px] text-[color:var(--ink)]">{initials(l.full_name)}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -117,14 +141,18 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
                   <Chip className={STAGE_STYLE[l.stage as StageKey]}>{CHIP_LABEL[l.stage] ?? STAGE_LABEL[l.stage as StageKey] ?? l.stage}</Chip>
                 </div>
                 <div className="truncate text-[13px] text-[color:var(--body)]">{sub || l.phone}</div>
+                 <ResponseClock createdAt={l.created_at} targetSeconds={targetSeconds} />
               </div>
               <div className="shrink-0 text-right">
-                <div className="mo-mono text-[12px] text-[color:var(--body)]">{ageLabel(l.created_at)}</div>
-                {st && <div className={`mo-eyebrow mt-1 ${st.tone}`}>{st.label}</div>}
+                <LeadRowActions lead={l} />
               </div>
             </Link>
           );
         })}
+        </div>
+        <div className="hidden min-h-[480px] md:block">
+          {selectedId ? <LeadSplitDetail leadId={selectedId} /> : <div className="mo-card grid h-full place-items-center p-4 text-sm text-[color:var(--body)]">Pick a lead to see details.</div>}
+        </div>
       </div>
     </Shell>
   );

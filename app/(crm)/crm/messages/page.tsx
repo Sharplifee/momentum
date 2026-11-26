@@ -4,6 +4,7 @@ import { MessagesPanel, type ThreadRow, type ActiveThread, type Msg, type Draft 
 import { BandCard, AreaChart } from "@/components/crm/Charts";
 import { getServiceArea } from "@/lib/serviceArea";
 import { STAGE_NAME, fmtPhone, todayDenver, denverDay } from "@/lib/leadTimeline";
+import { ASSISTANT_NAME } from "@/lib/assistant";
 
 export const dynamic = "force-dynamic";
 
@@ -153,7 +154,7 @@ export default async function NoraPage({ searchParams }: { searchParams: { threa
           </div>
           <div className="min-w-0 flex-1">
             <div className="mo-eyebrow">Assistant</div>
-            <h1 className="mt-1 font-display text-[22px] font-semibold tracking-[-0.03em] text-[color:var(--ink)]">Norma</h1>
+            <h1 className="mt-1 font-display text-[22px] font-semibold tracking-[-0.03em] text-[color:var(--ink)]">{ASSISTANT_NAME}</h1>
             <p className={`mt-0.5 text-[12.5px] ${toneText}`}>{status.line}</p>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { Shell } from "@/components/crm/Shell";
 import { NotQualifiedButton, LeadPills, StageRow } from "@/components/crm/LeadActions";
 import { QuoteChecklist } from "@/components/crm/QuoteChecklist";
 import { SOURCE_NAME, STAGE_NAME, fmtPhone, fmtStamp, ago, humanizeLeadEvent, humanizeMessage, deliveryState } from "@/lib/leadTimeline";
+import { BookVisitButton } from "@/components/crm/BookVisitSheet";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +126,18 @@ export default async function LeadDetail({ params }: { params: { id: string } })
       </section>
 
       <div className="mb-3">
-        <LeadPills lead={{ id: lead.id, stage: lead.stage, full_name: lead.full_name }} threadHref={threadHref} />
+        <div className="flex flex-col gap-2">
+          <LeadPills lead={{ id: lead.id, stage: lead.stage, full_name: lead.full_name }} threadHref={threadHref} />
+          {(lead.stage === "new" || lead.stage === "contacted") && (
+            <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[color:var(--border)] px-3.5 py-2.5">
+              <div>
+                <div className="font-medium text-[color:var(--ink)]">Book a 2‑hour quote visit</div>
+                <div className="text-[12.5px] text-[color:var(--body)]">Reply within 5 min (suggested target), then pick a day.</div>
+              </div>
+              <BookVisitButton leadId={lead.id} zoneId={lead.zone_id ?? null} requestedDays={lead.requested_days as string[] | null} requestedWindow={lead.requested_window as string | null} />
+            </div>
+          )}
+        </div>
       </div>
 
       <section className="mo-card mb-3 px-4 pb-1 pt-3.5">

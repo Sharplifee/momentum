@@ -12,7 +12,7 @@ const ZONE_FIELDS = ["name", "cities", "notes", "active"] as const;
 const CREW_FIELDS = ["name", "lead_profile", "home_zone", "max_daily_jobs", "max_weekly_clients", "phone", "notes", "active"] as const;
 const TEMPLATE_FIELDS = ["body", "delay_minutes", "active"] as const;
 /** system_config keys the Norma / alerts screens may edit. Everything else stays read-only here. */
-const CONFIG_KEYS = ["quiet_hours", "business_hours", "season"] as const;
+const CONFIG_KEYS = ["quiet_hours", "business_hours", "season", "lead_response_target_s", "quote_visit_windows"] as const;
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
@@ -99,6 +99,16 @@ function configClean(key: string, value: unknown): Record<string, unknown> | str
     const a = String(v.start ?? ""), b = String(v.end ?? "");
     if (!MMDD.test(a) || !MMDD.test(b)) return "season needs MM-DD dates";
     return { start: a, end: b };
+  }
+  if (key === "lead_response_target_s") {
+    const n = Number(v.seconds ?? v.s ?? v);
+    if (!Number.isFinite(n) || n <= 0) return "seconds must be a positive number";
+    return { seconds: Math.round(n) };
+  }
+  if (key === "quote_visit_windows") {
+    const arr = Array.isArray(v) ? v : Array.isArray((v as any).windows) ? (v as any).windows : String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (!arr.length) return "enter at least one window label";
+    return { windows: arr };
   }
   return "that setting is not editable here";
 }
@@ -197,3 +207,15 @@ async function __POST(req: NextRequest) {
 }
 
 export const POST = withEventLog("POST /api/crm/settings", __POST);
+
+async function __GET() {
+  const staff = await staffFromSession(["owner", "manager", "crew"]);
+  if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const db = supabaseAdmin();
+  const { data } = await db.from("system_config").select("key, value").in("key", ["quiet_hours", "business_hours", "season", "lead_response_target_s", "quote_visit_windows"]);
+  const byKey: Record<string, unknown> = {};
+  for (const row of data ?? []) byKey[row.key] = row.value;
+  return NextResponse.json(byKey);
+}
+
+export const GET = withEventLog("GET /api/crm/settings", __GET);

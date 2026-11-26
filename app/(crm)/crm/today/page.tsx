@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/crm";
 import { Shell } from "@/components/crm/Shell";
 import { TodayStops } from "@/components/crm/TodayStops";
 import Link from "next/link";
+import { RouteMap, type RouteStop } from "@/components/crm/RouteMap";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
  * doing to the lawns, how much work today is, and where they are going first.
  * The header answers all three without scrolling.
  */
-export default async function Today() {
+export default async function Today({ searchParams }: { searchParams?: { view?: string } }) {
   const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager", "crew"]);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Denver" });
 
@@ -106,6 +107,38 @@ export default async function Today() {
   // Both weather sources report a 0–1 fraction; the copy below reads percent.
   const rainRaw = day?.precipitationChance ?? null;
   const rain = rainRaw == null ? null : Math.round(rainRaw <= 1 ? rainRaw * 100 : rainRaw);
+
+  // -------- Map view (absorbs old /crm/routes) --------
+  if ((searchParams?.view ?? "") === "map") {
+    const activeIdx = Math.max(
+      0,
+      list.findIndex((j: any) => !j.departure_at && j.arrival_at),
+      list.findIndex((j: any) => !j.departure_at)
+    );
+    const stops: RouteStop[] = (list as any[]).map((j: any, i: number) => ({
+      id: j.id,
+      n: i + 1,
+      name: j.customers?.full_name ?? "Customer",
+      address: j.properties?.address ?? "",
+      city: j.properties?.city ?? null,
+      lat: j.properties?.lat ?? null,
+      lng: j.properties?.lng ?? null,
+      done: Boolean(j.departure_at),
+      active: i === activeIdx && !j.departure_at,
+      weather_flag: Boolean(j.weather_flag),
+      window_start: j.window_start,
+    }));
+    return (
+      <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
+        <nav className="mo-eyebrow mb-4 flex items-center gap-1.5">
+          <Link href="/crm/today" className="transition hover:text-[color:var(--ink)]">‹ Today</Link>
+          <span className="text-[color:var(--faint)]">/</span>
+          <span>Map</span>
+        </nav>
+        <RouteMap token={process.env.MAPKIT_TOKEN ?? null} stops={stops} />
+      </Shell>
+    );
+  }
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing}
