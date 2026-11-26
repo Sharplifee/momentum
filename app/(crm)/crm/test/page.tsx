@@ -1,15 +1,11 @@
 import { requireStaff } from "@/lib/crm";
-import { Shell } from "@/components/crm/Shell";
-import { FlowTester } from "@/components/crm/FlowTester";
+import { redirect, notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function TestPage() {
-  const { profile, role, realRole, previewing } = await requireStaff(["owner"]);
-  return (
-    <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <h1 className="mb-4 text-2xl font-bold">Flow Tester</h1>
-      <FlowTester />
-    </Shell>
-  );
+  await requireStaff(["owner"]);
+  const allowed = process.env.NEXT_PUBLIC_DEV_TOOLS === "1" || process.env.VERCEL_ENV !== "production";
+  if (!allowed) notFound();
+  redirect("/crm/settings/developer");
 }

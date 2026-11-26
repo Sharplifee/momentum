@@ -235,7 +235,7 @@ export default function LoginPage() {
       <section className="flex flex-col items-center justify-center px-5 py-8 lg:py-10">
         <div className="w-full max-w-[380px]">
           <div className="mo-eyebrow mb-2">Sign in</div>
-          <h1 className="mo-h1 text-[28px] lg:text-[30px]">Crew workspace</h1>
+          <h1 className="mo-h1 text-[28px] lg:text-[30px]">Momentum workspace</h1>
           <div className="mo-hairline-soft my-5" />
 
           {mode === "checking" && (

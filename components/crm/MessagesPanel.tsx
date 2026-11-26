@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { deliveryState, fmtClock, fmtDayLabel, fmtStamp, denverDay, fmtPhone, type MsgMeta } from "@/lib/leadTimeline";
+import { ASSISTANT_NAME } from "@/lib/assistant";
 
 export type ThreadRow = {
   id: string; phone: string; escalated: boolean; last_message_at: string | null;
@@ -111,7 +112,7 @@ export function MessagesPanel({ threads, active, messages, templates, draft, fir
               <div className="min-w-0 flex-1 pl-1 lg:pl-1">
                 <div className="truncate font-display text-[17px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]">{active?.name ?? draft?.name}</div>
                 <div className={`mo-mono text-[10.5px] uppercase tracking-[0.08em] ${active?.escalated ? "text-gold" : "text-teal"}`}>
-                  {!active ? "New thread · first text" : active.escalated ? `Handed to you${active.handedAt ? ` · ${fmtStamp(active.handedAt)}` : ""}` : messages.length ? `Norma on it · ${fmtStamp(messages[messages.length - 1].created_at)}` : "Norma on it"}
+                  {!active ? "New thread · first text" : active.escalated ? `Handed to you${active.handedAt ? ` · ${fmtStamp(active.handedAt)}` : ""}` : messages.length ? `${ASSISTANT_NAME} on it · ${fmtStamp(messages[messages.length - 1].created_at)}` : `${ASSISTANT_NAME} on it`}
                 </div>
               </div>
               {active?.personHref && (
@@ -149,7 +150,7 @@ export function MessagesPanel({ threads, active, messages, templates, draft, fir
                         : "self-end rounded-br-[4px] bg-[color:var(--ink)] text-[#0a0a0a]"}`}>
                       <div className="whitespace-pre-wrap break-words">{m.body}</div>
                       <div className={`mo-mono mt-1 text-[10px] ${inbound ? "text-[color:var(--body)]" : staff ? "text-right text-teal" : "text-right text-[#0a0a0a]/55"}`}>
-                        {inbound ? fmtClock(m.created_at) : `${m.sender === "nora" ? "Norma" : staff ? "Team" : "System"} · ${fmtClock(m.created_at)}`}
+                        {inbound ? fmtClock(m.created_at) : `${m.sender === "nora" ? ASSISTANT_NAME : staff ? "Team" : "System"} · ${fmtClock(m.created_at)}`}
                         {st && <span className={st.tone === "bad" ? " text-coral" : ""}> · {st.label}</span>}
                       </div>
                     </div>
@@ -160,7 +161,7 @@ export function MessagesPanel({ threads, active, messages, templates, draft, fir
                 <div className="flex items-start gap-2.5 rounded-[10px] border border-gold/50 px-3 py-2.5">
                   <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
                   <div className="text-[12.5px] leading-[1.45] text-[color:var(--body)]">
-                    <span className="font-semibold text-[color:var(--ink)]">Norma handed this to you.</span> She has paused replies on this thread until a person answers.
+                    <span className="font-semibold text-[color:var(--ink)]">{ASSISTANT_NAME} handed this to you.</span> She has paused replies on this thread until a person answers.
                   </div>
                 </div>
               )}
@@ -204,7 +205,7 @@ export function MessagesPanel({ threads, active, messages, templates, draft, fir
             {active?.escalated && (
               <div className="flex items-center gap-2.5 py-1.5 lg:px-3.5">
                 <div className="mo-hairline-soft flex-1" />
-                <span className="mo-eyebrow text-[9px] text-gold">Norma stepped back · you&apos;re replying as {firstName}</span>
+                <span className="mo-eyebrow text-[9px] text-gold">{ASSISTANT_NAME} stepped back · you&apos;re replying as {firstName}</span>
                 <div className="mo-hairline-soft flex-1" />
               </div>
             )}

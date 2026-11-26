@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.32.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
+    "lucide-react": "^0.474.0",
     "next": "14.2.18",
     "polylabel": "^2.1.0",
     "react": "^18.3.1",

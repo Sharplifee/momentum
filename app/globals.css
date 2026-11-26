@@ -4,47 +4,52 @@
 
 /* ------------------------------------------------------------------ tokens
    Momentum — matte black, bone ink, one gradient hairline.
-   The app is a single dark theme; the .dark block exists only so any
-   `dark:` variant resolves to the same values instead of a stale light set. */
-:root {
-  --bg: #0a0a0a;
-  --bg-alt: #0e0e0e;
-  --card: 18 18 18;            /* rgb triplet for rgba(var(--card) / a) */
-  --card-alpha: 1;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --ink: #f2efe8;
-  --body: #9b9790;
-  --faint: #66635c;
-  --accent: #7ac1c9;
-  --accent-rgb: 122 193 201;
-  --amber: #e3a35f;
-  --coral: #d9775c;
-  --sage: #86b67a;
-  --pine: #0b1f4d;
-  --bone: #efe7d6;
-  /* the signature: navy → glacier → bone → amber → coral (the badge's blues) */
-  --grad: linear-gradient(90deg, #0b1f4d 0%, #7ac1c9 30%, #efe7d6 52%, #e3a35f 74%, #d9775c 100%);
-  --grad-soft: linear-gradient(90deg, rgba(11,31,77,0.9), rgba(122,193,201,0.9) 30%, rgba(239,231,214,0.9) 52%, rgba(227,163,95,0.9) 74%, rgba(217,119,92,0.9));
+   The system now supports two themes via CSS variables:
+   - [data-theme="evening"] — dark, admin default
+   - [data-theme="field"]   — light, crew default (sunlight legible)
+   Density is controlled by [data-density], not Tailwind breakpoints.
+*/
+:root,
+[data-theme="evening"] {
+  color-scheme: dark;
+  --bg:#0a0a0a; --surface:#121212; --surface-2:#1a1a19; --surface-3:#222220;
+  --text:#f2efe8; --text-muted:#9b9790; --text-faint:#85817a; /* raised for AA */
+  --border:rgba(255,255,255,.08); --border-strong:rgba(255,255,255,.22);
+  --accent:#7ac1c9; --accent-hover:#93ced5; --on-accent:#0a0a0a;
+  --primary-bg:#f2efe8; --primary-fg:#0a0a0a; --primary-hover:#ffffff;
+  --success:#86b67a; --win:#e3a35f; --danger:#d9775c; --info:#9fb4e6; --pine:#0b1f4d;
+  --tint:14%;
+  --focus-ring:0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --shadow-1:none; --shadow-pop:0 16px 40px rgba(0,0,0,.6);
+  --grad:linear-gradient(90deg,#0b1f4d 0%,#7ac1c9 30%,#efe7d6 52%,#e3a35f 74%,#d9775c 100%);
+  /* legacy aliases to keep existing classes functional */
+  --ink:var(--text); --body:var(--text-muted); --faint:var(--text-faint); --card:18 18 18;
 }
-.dark {
-  --bg: #0a0a0a;
-  --bg-alt: #0e0e0e;
-  --card: 18 18 18;
-  --card-alpha: 1;
-  --border: rgba(255, 255, 255, 0.08);
-  --ink: #f2efe8;
-  --body: #9b9790;
+[data-theme="field"] {
+  color-scheme: light;
+  --bg:#f7f4ee; --surface:#ffffff; --surface-2:#efebe3; --surface-3:#e6e1d6;
+  --text:#14130f; --text-muted:#45423b; --text-faint:#6b675e;
+  --border:#dcd6ca; --border-strong:#8f897d;
+  --accent:#0e5b64; --accent-hover:#0b4a52; --on-accent:#ffffff;
+  --primary-bg:#14130f; --primary-fg:#f7f4ee; --primary-hover:#000000;
+  --success:#2f6a2a; --win:#8a4b0b; --danger:#a33b22; --info:#0b1f4d; --pine:#0b1f4d;
+  --tint:10%;
+  --focus-ring:0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --shadow-1:0 1px 2px rgba(20,19,15,.06), 0 6px 16px -6px rgba(20,19,15,.12);
+  --shadow-pop:0 2px 6px rgba(20,19,15,.08), 0 18px 40px -10px rgba(20,19,15,.25);
+  --ink:var(--text); --body:var(--text-muted); --faint:var(--text-faint); --card:255 255 255;
 }
+:root { --tap:44px; --tap-min:40px; --fs-body:15px; --fs-label:11px; }
+[data-density="field"] { --tap:56px; --tap-min:48px; --fs-body:17px; --fs-label:12px; }
 
 html { background: var(--bg); }
 body {
   background: var(--bg);
-  color: var(--body);
+  color: var(--text-muted);
   font-feature-settings: "cv11", "ss01", "tnum";
   -webkit-font-smoothing: antialiased;
 }
-::selection { background: rgba(58,169,154,0.35); color: var(--ink); }
+::selection { background: rgba(58,169,154,0.35); color: var(--text); }
 
 /* ------------------------------------------------------------------ cards
    Matte, hairline-bordered, flat. The only ornament is the gradient hairline
@@ -52,7 +57,7 @@ body {
    violet glow now carry the signature line instead). */
 .mo-card {
   position: relative;
-  background: rgb(var(--card));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
@@ -96,11 +101,11 @@ body {
 /* ------------------------------------------------------------------ type */
 .mo-h1 {
   font-family: var(--font-display), "Inter Tight", "Inter", system-ui, sans-serif;
-  color: var(--ink); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05;
+  color: var(--text); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05;
 }
 .mo-eyebrow {
   font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--body);
+  font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted);
 }
 .mo-mono { font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 .mo-num { font-family: var(--font-display), "Inter Tight", system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
@@ -108,36 +113,36 @@ body {
 /* ------------------------------------------------------------------ controls
    Primary action is a bone pill with black text — the "Cadastre-se" button. */
 .mo-primary {
-  background: var(--ink); color: #0a0a0a; border-radius: 999px;
+  background: var(--primary-bg); color: var(--primary-fg); border-radius: 999px;
   font-weight: 600; letter-spacing: -0.01em;
 }
-.mo-primary:hover { background: #ffffff; }
+.mo-primary:hover { background: var(--primary-hover); }
 .mo-primary:active { transform: translateY(0.5px); }
 
 .mo-surface {
-  background: #0e0e0e;
-  border: 1px solid var(--border);
-  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
 }
-.mo-surface::placeholder { color: var(--faint); opacity: 1; }
-.mo-surface:focus { border-color: var(--border-strong); outline: none; box-shadow: 0 0 0 1px rgba(58,169,154,0.45); }
+.mo-surface::placeholder { color: var(--text-faint); opacity: 1; }
+.mo-surface:focus { border-color: var(--border-strong); outline: none; box-shadow: var(--focus-ring); }
 
 .mo-chip {
   background: transparent;
   border: 1px solid var(--border);
-  color: var(--body);
+  color: var(--text-muted);
   border-radius: 999px;
 }
-.mo-chip:hover { color: var(--ink); border-color: var(--border-strong); }
+.mo-chip:hover { color: var(--text); border-color: var(--border-strong); }
 .mo-chip[data-active="true"] {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #0a0a0a;
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
 }
 
-.mo-segment { background: #0e0e0e; border: 1px solid var(--border); border-radius: 999px; }
-.mo-segment-item { color: var(--body); border-radius: 999px; }
-.mo-segment-item[data-active="true"] { background: var(--ink); color: #0a0a0a; }
+.mo-segment { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; }
+.mo-segment-item { color: var(--text-muted); border-radius: 999px; }
+.mo-segment-item[data-active="true"] { background: var(--primary-bg); color: var(--primary-fg); }
 
 /* loading skeleton shimmer */
 @keyframes mo-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
@@ -156,10 +161,10 @@ input:-webkit-autofill:focus,
 input:-webkit-autofill:active,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
-  -webkit-text-fill-color: #f2efe8 !important;
-  -webkit-box-shadow: inset 0 0 0 1000px #0e0e0e !important;
-  box-shadow: inset 0 0 0 1000px #0e0e0e !important;
-  caret-color: #f2efe8 !important;
+  -webkit-text-fill-color: var(--text) !important;
+  -webkit-box-shadow: inset 0 0 0 1000px var(--surface-2) !important;
+  box-shadow: inset 0 0 0 1000px var(--surface-2) !important;
+  caret-color: var(--text) !important;
   border-radius: 8px;
   transition: background-color 600000s 0s, color 600000s 0s;
 }
@@ -179,14 +184,14 @@ select:-webkit-autofill {
 .bg-white\/80  { background-color: rgba(255,255,255,0.09) !important; }
 
 /* navy was the light-theme ink. */
-.text-navy { color: var(--ink); }
+.text-navy { color: var(--text); }
 
 /* Calendar gridlines were pure white borders — far too loud on a dark surface. */
 .mo-calendar td, .mo-calendar th,
 table.mo-grid td, table.mo-grid th { border-color: var(--border) !important; }
 
 /* Tables: hairline rows, mono numerics, no zebra. */
-.mo-table th { font-family: var(--font-mono), ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--body); font-weight: 500; }
+.mo-table th { font-family: var(--font-mono), ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); font-weight: 500; }
 .mo-table tr + tr td { border-top: 1px solid var(--border); }
 
 /* scrollbars: thin, quiet */

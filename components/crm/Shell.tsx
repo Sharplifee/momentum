@@ -9,61 +9,67 @@ import { AccountMenu } from "@/components/crm/AccountMenu";
 import { LocationReporter } from "@/components/crm/LocationReporter";
 import { OfflineBanner } from "./OfflineBanner";
 import { LiveRefresh } from "@/components/crm/LiveRefresh";
+import {
+  House,
+  Sprout,
+  MessagesSquare,
+  CalendarDays,
+  Users,
+  Wallet,
+  Settings as SettingsIcon,
+  Sun,
+  Map as MapIcon,
+  CalendarRange,
+  Ellipsis,
+} from "lucide-react";
 
-type NavItem = { href: string; label: string; icon: string; roles: string[] };
+type NavItem = { href: string; label: string; icon: "home"|"leads"|"inbox"|"schedule"|"customers"|"money"|"settings"|"today"|"map"|"week"|"more"; roles: string[] };
 type NavGroup = { group: string; items: NavItem[] };
 
 const NAV: NavGroup[] = [
   { group: "", items: [
-    { href: "/crm", label: "Dashboard", icon: "📊", roles: ["owner", "manager"] },
-    { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
-    { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
-    { href: "/crm/tracker", label: "Tracker", icon: "🧭", roles: ["owner", "manager"] },
-    { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
-    { href: "/crm/messages", label: "Norma", icon: "💬", roles: ["owner", "manager", "crew"] },
-    { href: "/crm/customers", label: "Customers", icon: "👥", roles: ["owner", "manager"] },
-    { href: "/crm/accounting", label: "Accounting", icon: "💵", roles: ["owner"] },
+    { href: "/crm", label: "Home", icon: "home", roles: ["owner", "manager"] },
+    { href: "/crm/leads", label: "Leads", icon: "leads", roles: ["owner", "manager"] },
+    { href: "/crm/inbox", label: "Inbox", icon: "inbox", roles: ["owner", "manager"] },
+    { href: "/crm/schedule", label: "Schedule", icon: "schedule", roles: ["owner", "manager"] },
+    { href: "/crm/customers", label: "Customers", icon: "customers", roles: ["owner", "manager"] },
+    { href: "/crm/accounting", label: "Money", icon: "money", roles: ["owner"] },
   ]},
   { group: "More", items: [
-    { href: "/crm/settings", label: "Settings", icon: "🛠️", roles: ["owner"] },
+    { href: "/crm/settings", label: "Settings", icon: "settings", roles: ["owner"] },
   ]},
 ];
 
 // mobile bottom tabs — the four crews reach for outdoors
 const MOBILE_TABS: NavItem[] = [
-  { href: "/crm", label: "Home", icon: "📊", roles: ["owner", "manager"] },
-  { href: "/crm/today", label: "Today", icon: "☀️", roles: ["crew"] },
-  { href: "/crm/schedule", label: "Schedule", icon: "🗓️", roles: ["owner", "manager", "crew"] },
-  { href: "/crm/tracker", label: "Tracker", icon: "🧭", roles: ["owner", "manager"] },
-  { href: "/crm/leads", label: "Leads", icon: "🌱", roles: ["owner", "manager"] },
-  { href: "/crm/messages", label: "Norma", icon: "💬", roles: ["owner", "manager", "crew"] },
+  // owner/manager
+  { href: "/crm", label: "Home", icon: "home", roles: ["owner", "manager"] },
+  { href: "/crm/leads", label: "Leads", icon: "leads", roles: ["owner", "manager"] },
+  { href: "/crm/schedule", label: "Schedule", icon: "schedule", roles: ["owner", "manager"] },
+  { href: "/crm/inbox", label: "Inbox", icon: "inbox", roles: ["owner", "manager"] },
+  // crew
+  { href: "/crm/today", label: "Today", icon: "today", roles: ["crew"] },
+  { href: "/crm/today?view=map", label: "Map", icon: "map", roles: ["crew"] },
+  { href: "/crm/schedule", label: "Week", icon: "week", roles: ["crew"] },
 ];
 
 
-const ICON_PATHS: Record<string, string> = {
-  "🏠": "M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10",
-  "☀️": "M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4L7 17M17 7l1.4-1.4M12 8a4 4 0 100 8 4 4 0 000-8z",
-  "🗓️": "M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z",
-  "🧭": "M12 3a9 9 0 100 18 9 9 0 000-18zM15 9l-2 5-4 2 2-5 4-2z",
-  "📊": "M5 20V10M12 20V4M19 20v-7",
-  "🌱": "M12 20v-6M12 14c0-4 3-7 8-7 0 5-3 8-8 7zM12 14c0-3-2.5-5.5-6.5-5.5C5.5 12 8 14.5 12 14z",
-  "💬": "M21 12a8 8 0 01-8 8H4l2.3-2.9A8 8 0 1121 12z",
-  "🤖": "M12 3v3M8 6h8a3 3 0 013 3v6a3 3 0 01-3 3H8a3 3 0 01-3-3V9a3 3 0 013-3zM9 12h.01M15 12h.01M9 15.5h6",
-  "👥": "M16 19v-1a4 4 0 00-8 0v1M12 11a3 3 0 100-6 3 3 0 000 6zM19 19v-1a3 3 0 00-2-2.8M15.5 5.3a3 3 0 010 5.4",
-  "💵": "M3 7h18v10H3zM12 10a2 2 0 100 4 2 2 0 000-4zM6 10h.01M18 14h.01",
-  "📈": "M4 19h16M4 15l4-4 3 3 5-6 4 4",
-  "⚙️": "M12 9a3 3 0 100 6 3 3 0 000-6zM4.5 12a7.5 7.5 0 01.2-1.7l-2-1.5 2-3.4 2.3 1a7.6 7.6 0 013-1.7L10.5 2h3l.5 2.7a7.6 7.6 0 013 1.7l2.3-1 2 3.4-2 1.5a7.5 7.5 0 010 3.4l2 1.5-2 3.4-2.3-1a7.6 7.6 0 01-3 1.7l-.5 2.7h-3l-.5-2.7a7.6 7.6 0 01-3-1.7l-2.3 1-2-3.4 2-1.5A7.5 7.5 0 014.5 12z",
-  "🧪": "M9 3h6M10 3v5l-5.2 9A2 2 0 006.6 20h10.8a2 2 0 001.8-3L14 8V3M8 15h8",
-  "🛠️": "M14.7 6.3a4 4 0 00-5.4 5.1L3 17.6V21h3.4l6.2-6.3a4 4 0 005.1-5.4l-2.6 2.6-2.3-2.3 2.6-2.6z",
-};
-function NavIcon({ name }: { name: string }) {
-  const d = ICON_PATHS[name];
-  if (!d) return <span className="text-base">{name}</span>;
-  return (
-    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} />
-    </svg>
-  );
+function NavIcon({ name }: { name: NavItem["icon"] }) {
+  const cls = "h-[18px] w-[18px] shrink-0";
+  switch (name) {
+    case "home": return <House className={cls} strokeWidth={1.75} />;
+    case "leads": return <Sprout className={cls} strokeWidth={1.75} />;
+    case "inbox": return <MessagesSquare className={cls} strokeWidth={1.75} />;
+    case "schedule": return <CalendarDays className={cls} strokeWidth={1.75} />;
+    case "customers": return <Users className={cls} strokeWidth={1.75} />;
+    case "money": return <Wallet className={cls} strokeWidth={1.75} />;
+    case "settings": return <SettingsIcon className={cls} strokeWidth={1.75} />;
+    case "today": return <Sun className={cls} strokeWidth={1.75} />;
+    case "map": return <MapIcon className={cls} strokeWidth={1.75} />;
+    case "week": return <CalendarRange className={cls} strokeWidth={1.75} />;
+    case "more": return <Ellipsis className={cls} strokeWidth={1.75} />;
+    default: return null;
+  }
 }
 
 /* Settings badge count for the desktop sidebar. Owners only, and remembered
@@ -93,49 +99,22 @@ function useBlockers(enabled: boolean) {
 
 
 /**
- * Admin ⇄ Crew, always on screen.
- *
- * This was a line inside the account dropdown, which meant it was effectively
- * invisible — you had to already know it existed to find it. It is a segmented
- * control in the header now, so an owner can see which side they are on without
- * opening anything, and switch in one tap.
- *
- * Only owners and managers see it. A crew account has nothing to switch to.
+ * Preview banner (crew view)
  */
-function ModeSwitch({ previewing }: { previewing?: boolean }) {
+function PreviewBanner() {
   const [busy, setBusy] = useState(false);
-  const go = async (view: "crew" | null) => {
+  const exit = async () => {
     if (busy) return;
     setBusy(true);
-    await fetch("/api/crm/view-as", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ view }),
-    }).catch(() => null);
-    // Full reload: the role is resolved server-side, so a client route change
-    // would leave the old navigation on screen.
-    window.location.href = view === "crew" ? "/crm/today" : "/crm";
+    await fetch("/api/crm/view-as", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ view: null }) }).catch(() => null);
+    window.location.href = "/crm";
   };
-
-  const base =
-    "min-h-[32px] rounded-full px-3.5 text-[12px] font-semibold tracking-[-0.01em] transition disabled:opacity-60";
-  const on = "bg-[color:var(--ink)] text-[#0a0a0a]";
-  const off = "text-[color:var(--body)] hover:text-[color:var(--ink)]";
-
   return (
-    <div
-      className="mo-segment flex shrink-0 items-center gap-0.5 p-0.5"
-      role="group"
-      aria-label="Switch between admin and crew"
-    >
-      <button disabled={busy} onClick={() => go(null)}
-        className={`${base} ${previewing ? off : on}`}>
-        Admin
-      </button>
-      <button disabled={busy} onClick={() => go("crew")}
-        className={`${base} ${previewing ? on : off}`}>
-        Crew
-      </button>
+    <div className="sticky top-[56px] z-header border-b border-[color:var(--border)] bg-[color:var(--bg)] px-4 py-2 text-[13px] text-[color:var(--body)] md:px-6" role="status" aria-live="polite">
+      <div className="flex items-center justify-between gap-2">
+        <div><span className="mo-eyebrow text-[color:var(--faint)]">Preview</span> Previewing crew view</div>
+        <button onClick={exit} disabled={busy} className="rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-[12px] font-semibold text-[color:var(--text)] hover:bg-[color:var(--surface-2)]">Exit</button>
+      </div>
     </div>
   );
 }
@@ -171,10 +150,10 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
             <span className="hidden font-display text-[19px] font-semibold tracking-[-0.04em] text-[color:var(--ink)] sm:block">Momentum<span className="ml-0.5 align-super text-[8px] font-medium tracking-normal text-[color:var(--body)]">©</span></span>
           </Link>
           <div className="mx-auto w-full max-w-md"><GlobalSearch /></div>
-          {(realRole === "owner" || realRole === "manager") && <div className="hidden sm:block"><ModeSwitch previewing={previewing} /></div>}
           <AccountMenu name={name} email={email} role={realRole ?? role} previewing={previewing} />
         </div>
       </header>
+      {previewing && <PreviewBanner />}
       <OfflineBanner />
 
       <div className="flex">
@@ -223,7 +202,10 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
               {(realRole === "owner" || realRole === "manager") && (
                 <div className="mb-5 px-1">
                   <div className="mo-eyebrow px-2 pb-2 text-[color:var(--faint)]">View</div>
-                  <ModeSwitch previewing={previewing} />
+                  {/* The view switch now lives in Account menu and /crm/more; keep a quick link here */}
+                  <Link href={previewing ? "/crm" : "/crm/today"} className="mo-segment-item block rounded-full px-3 py-2 text-center text-[13px] font-semibold text-[color:var(--ink)]">
+                    {previewing ? "Back to admin" : "View as crew"}
+                  </Link>
                 </div>
               )}
               {NAV.map((g) => {
@@ -270,7 +252,7 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
         ))}
         <Link href="/crm/more" prefetch className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium leading-none transition ${moreActive ? "text-[color:var(--ink)]" : "text-[color:var(--body)]"}`}>
           {moreActive && <span className="absolute -top-px h-[2px] w-8 rounded-full bg-ribbon" />}
-          <span className="grid h-8 w-full max-w-[46px] place-items-center"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+          <span className="grid h-8 w-full max-w-[46px] place-items-center"><Ellipsis className="h-[18px] w-[18px]" strokeWidth={1.75} /></span>
           <span className="w-full truncate px-0.5 text-center">More</span>
         </Link>
       </nav>
