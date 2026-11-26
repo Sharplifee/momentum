@@ -57,7 +57,13 @@ async function __GET(req: NextRequest) {
   checks.push({ name: "db.customers", ok: (customers ?? 0) > 0, detail: customers });
   checks.push({ name: "db.properties", ok: (properties ?? 0) > 0, detail: properties });
   checks.push({ name: "db.agreements_active", ok: (agreements ?? 0) > 0, detail: agreements });
-  checks.push({ name: "db.jobs_next_7d", ok: (jobs ?? []).length > 0, detail: (jobs ?? []).map((j: any) => `${j.scheduled_date} ${j.customers?.full_name ?? ""}`) });
+  // No visits is only a problem inside the mowing season; from mid-November
+  // to April an empty week is the correct answer.
+  const { data: seasonRow } = await db.from("system_config").select("value").eq("key", "season").maybeSingle();
+  const season = (seasonRow?.value ?? {}) as { start?: string; end?: string };
+  const mmdd = todayIso.slice(5);
+  const inSeason = !season.start || !season.end ? true : season.start <= season.end ? mmdd >= season.start && mmdd <= season.end : mmdd >= season.start || mmdd <= season.end;
+  checks.push({ name: "db.jobs_next_7d", ok: (jobs ?? []).length > 0 || !inSeason, detail: inSeason ? (jobs ?? []).map((j: any) => `${j.scheduled_date} ${j.customers?.full_name ?? ""}`) : `off-season (${season.start} → ${season.end}); ${(jobs ?? []).length} visits` });
   const mat = lastCron.get("cron.materialize");
   checks.push({ name: "cron.materialize_ran_24h", ok: /ok/.test(mat?.status ?? "") && Date.now() - new Date(mat?.ts ?? 0).getTime() < 26 * 3600_000, detail: cronView });
   if (!owner?.email) {
