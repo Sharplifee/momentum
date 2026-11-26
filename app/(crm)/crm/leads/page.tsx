@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Tile } from "@/components/crm/Charts";
 import { LeadFilterButton, type LeadFilterState } from "@/components/crm/LeadFilters";
 import { ResponseClock } from "@/components/crm/ResponseClock";
+import { LeadRowActions } from "@/components/crm/LeadRowActions";
 
 export const dynamic = "force-dynamic";
 const STAGES: StageKey[] = ["new", "contacted", "quote_scheduled", "quote_sent", "closed_won", "not_qualified", "stale"];
@@ -25,12 +26,12 @@ const initials = (n: string | null) => (n ?? "?").split(" ").filter(Boolean).sli
  * where, what they asked for, how long ago, and whether Norma has it or a
  * person needs to step in.
  */
-export default async function LeadsPage({ searchParams }: { searchParams: LeadFilterState }) {
+export default async function LeadsPage({ searchParams }: { searchParams: LeadFilterState & { tab?: string; id?: string } }) {
   const { profile, role, realRole, previewing, db } = await requireStaff(["owner", "manager"]);
   const real = <T,>(q: any): T => q.neq("source", "test").not("full_name", "ilike", "zz %").not("phone", "like", "+1555%");
 
-  let query = real<any>(db.from("leads").select("id, full_name, phone, city, zone_id, stage, source, service_interest, quote_amount, created_at, last_contact_at"));
-  if (searchParams.stage) query = query.eq("stage", searchParams.stage);
+  let query = real<any>(db.from("leads").select("id, full_name, phone, city, zone_id, stage, source, service_interest, quote_amount, created_at, last_contact_at, requested_days, requested_window, first_response_at"));
+  if (searchParams.stage) query = query.eq("stage", searchParams.stage as any);
   if (searchParams.zone) query = query.eq("zone_id", Number(searchParams.zone));
   if (searchParams.source) query = query.eq("source", searchParams.source);
   if (searchParams.q) query = query.or(`full_name.ilike.%${searchParams.q}%,phone.ilike.%${searchParams.q}%,address.ilike.%${searchParams.q}%`);
@@ -63,6 +64,23 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
   };
   if (searchParams.needs === "human") leads = leads.filter((l) => statusFor(l)?.label === "Needs you");
 
+  // Queue tabs per brief
+  const tab = (searchParams.tab ?? "needs") as "needs" | "new" | "visit" | "quoted" | "closed";
+  const filtered = leads.filter((l) => {
+    if (tab === "new") return l.stage === "new";
+    if (tab === "visit") return l.stage === "quote_scheduled";
+    if (tab === "quoted") return l.stage === "quote_sent";
+    if (tab === "closed") return ["closed_won", "not_qualified", "stale"].includes(l.stage);
+    // Needs you: escalated thread or new with no first response
+    const t = threadBy.get(l.id);
+    return Boolean(t?.escalated) || (l.stage === "new" && !l.first_response_at);
+  });
+
+  const tabLink = (t: string) => {
+    const p = new URLSearchParams({ ...searchParams, tab: t } as any);
+    return `/crm/leads?${p.toString()}`;
+  };
+
   const qs = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries({ ...searchParams, ...over })) if (v) p.set(k, v);
@@ -79,18 +97,16 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
           </div>
         } />
 
-      <div className="mb-4 grid grid-cols-4 gap-2">
-        <Tile dense label="New" value={weekCount ?? 0} note="this wk" />
-        <Tile dense label="Waiting" value={<span className="text-teal">{counts["new"] ?? 0}</span>} href={qs({ stage: "new" })} />
-        <Tile dense label="Quoted" value={counts["quote_sent"] ?? 0} href={qs({ stage: "quote_sent" })} />
-        <Tile dense label="Won" value={<span className="text-gold">{counts["closed_won"] ?? 0}</span>} href={qs({ stage: "closed_won" })} />
-      </div>
-
       <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
-        <Link href={qs({ stage: undefined })} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${!searchParams.stage ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>All</Link>
-        {STAGES.map((s) => (
-          <Link key={s} href={qs({ stage: s })} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${searchParams.stage === s ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>
-            {CHIP_LABEL[s]} <span className={searchParams.stage === s ? "text-[#0a0a0a]/60" : "text-[color:var(--faint)]"}>{counts[s] ?? 0}</span>
+        {[
+          { k: "needs", label: "Needs you" },
+          { k: "new", label: "New" },
+          { k: "visit", label: "Visit booked" },
+          { k: "quoted", label: "Quoted" },
+          { k: "closed", label: "Closed" },
+        ].map((t) => (
+          <Link key={t.k} href={tabLink(t.k)} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${tab === t.k ? "border-transparent bg-[color:var(--ink)] text-[#0a0a0a]" : "border-[color:var(--border)] text-[color:var(--body)]"}`}>
+            {t.label}
           </Link>
         ))}
       </div>
@@ -104,9 +120,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
           </div>
         </form>
 
-        {!leads.length ? (
+        {!filtered.length ? (
           <div className="p-4"><EmptyState title="No leads here yet" hint={searchParams.stage || searchParams.q ? "Nothing matches right now." : "New quote requests land here the moment they come in."} action={<LinkButton href="/crm/leads/new">+ New lead</LinkButton>} /></div>
-        ) : leads.map((l) => {
+        ) : filtered.map((l) => {
           const st = statusFor(l);
           const sub = [l.city, l.service_interest?.toLowerCase(), l.source ? `via ${SOURCE_LABEL[l.source] ?? l.source}` : null].filter(Boolean).join(" · ");
           return (
@@ -121,8 +137,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
                 <ResponseClock createdAt={l.created_at} />
               </div>
               <div className="shrink-0 text-right">
-                <div className="mo-mono text-[12px] text-[color:var(--body)]">{ageLabel(l.created_at)}</div>
-                {st && <div className={`mo-eyebrow mt-1 ${st.tone}`}>{st.label}</div>}
+                <LeadRowActions lead={l} />
               </div>
             </Link>
           );
