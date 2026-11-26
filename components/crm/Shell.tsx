@@ -102,7 +102,7 @@ function useBlockers(enabled: boolean) {
  *
  * Only owners and managers see it. A crew account has nothing to switch to.
  */
-function ModeSwitch({ previewing }: { previewing?: boolean }) {
+function ModeSwitch({ previewing, full = false }: { previewing?: boolean; full?: boolean }) {
   const [busy, setBusy] = useState(false);
   const go = async (view: "crew" | null) => {
     if (busy) return;
@@ -124,16 +124,16 @@ function ModeSwitch({ previewing }: { previewing?: boolean }) {
 
   return (
     <div
-      className="mo-segment flex shrink-0 items-center gap-0.5 p-0.5"
+      className={`mo-segment flex shrink-0 items-center gap-0.5 p-0.5 ${full ? "w-full" : ""}`}
       role="group"
       aria-label="Switch between admin and crew"
     >
       <button disabled={busy} onClick={() => go(null)}
-        className={`${base} ${previewing ? off : on}`}>
+        className={`${base} ${full ? "flex-1 py-2" : ""} ${previewing ? off : on}`}>
         Admin
       </button>
       <button disabled={busy} onClick={() => go("crew")}
-        className={`${base} ${previewing ? on : off}`}>
+        className={`${base} ${full ? "flex-1 py-2" : ""} ${previewing ? on : off}`}>
         Crew
       </button>
     </div>
@@ -215,15 +215,29 @@ export function Shell({ role, name, email, realRole, previewing, children }: {
 
         {/* mobile drawer */}
         {drawer && (
-          <div className="fixed inset-0 z-40 md:hidden" onClick={() => setDrawer(false)}>
+          <div className="fixed inset-0 z-50 md:hidden" onClick={() => setDrawer(false)}>
             <div className="absolute inset-0 bg-black/70" />
-            <aside className="absolute inset-y-0 left-0 w-64 overflow-y-auto border-r border-[color:var(--border)] bg-[color:var(--bg)] px-3 py-4" onClick={(e) => e.stopPropagation()}>
+            {/* The drawer respects the phone's status bar and home indicator:
+                its padding starts below the notch and ends above the bottom
+                inset, so the View switch never sits under the clock. */}
+            <aside className="absolute inset-y-0 left-0 w-[min(288px,84vw)] overflow-y-auto border-r border-[color:var(--border)] bg-[color:var(--bg)] px-3 shadow-pop" onClick={(e) => e.stopPropagation()}
+              style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
+              <div className="mb-5 flex items-center justify-between px-1">
+                <span className="flex items-center gap-2.5">
+                  <img src="/logo-mark.png" alt="" className="h-7 w-7 object-contain" />
+                  <span className="font-display text-[17px] font-semibold tracking-[-0.03em] text-[color:var(--ink)]">Momentum</span>
+                </span>
+                <button type="button" onClick={() => setDrawer(false)} aria-label="Close menu"
+                  className="grid h-9 w-9 place-items-center rounded-full border border-[color:var(--border)] text-[color:var(--body)]">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </div>
               {/* The header is cramped on a phone, so the switch lives here too —
                   the drawer is where a phone user looks for anything not a tab. */}
               {(realRole === "owner" || realRole === "manager") && (
                 <div className="mb-5 px-1">
                   <div className="mo-eyebrow px-2 pb-2 text-[color:var(--faint)]">View</div>
-                  <ModeSwitch previewing={previewing} />
+                  <ModeSwitch previewing={previewing} full />
                 </div>
               )}
               {NAV.map((g) => {

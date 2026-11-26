@@ -82,7 +82,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
 
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
-      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
+      <div className="mx-auto max-w-6xl">
         <PageHeader eyebrow="Operations" title="Schedule" />
 
         {/* Two tiles, titles short enough never to wrap on a phone; today's
