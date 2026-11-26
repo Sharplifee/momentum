@@ -7,6 +7,7 @@ import { Tile } from "@/components/crm/Charts";
 import { LeadFilterButton, type LeadFilterState } from "@/components/crm/LeadFilters";
 import { ResponseClock } from "@/components/crm/ResponseClock";
 import { LeadRowActions } from "@/components/crm/LeadRowActions";
+import { LeadSplitDetail } from "@/components/crm/LeadSplitDetail";
 
 export const dynamic = "force-dynamic";
 const STAGES: StageKey[] = ["new", "contacted", "quote_scheduled", "quote_sent", "closed_won", "not_qualified", "stale"];
@@ -87,6 +88,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
     return `/crm/leads${p.toString() ? `?${p}` : ""}`;
   };
 
+  const selectedId = searchParams.id && filtered.find((l) => l.id === searchParams.id) ? searchParams.id : undefined;
+
   return (
     <Shell role={role} realRole={realRole} previewing={previewing} name={profile.full_name ?? ""} email={profile.email ?? undefined}>
       <PageHeader eyebrow="Pipeline" title="Leads"
@@ -111,7 +114,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
         ))}
       </div>
 
-      <div className="mo-card p-0">
+      <div className="grid gap-3 md:grid-cols-[420px,1fr]">
+        <div className="mo-card p-0">
         <form className="border-b border-[color:var(--border)] px-4 py-3">
           {Object.entries(searchParams).filter(([k, v]) => k !== "q" && v).map(([k, v]) => <input key={k} type="hidden" name={k} value={v as string} />)}
           <div className="flex items-center gap-2.5 text-[color:var(--faint)]">
@@ -126,7 +130,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
           const st = statusFor(l);
           const sub = [l.city, l.service_interest?.toLowerCase(), l.source ? `via ${SOURCE_LABEL[l.source] ?? l.source}` : null].filter(Boolean).join(" · ");
           return (
-            <Link key={l.id} href={`/crm/leads/${l.id}`} className="flex items-center gap-3 border-b border-[color:var(--border)] px-4 py-3 transition last:border-b-0 hover:bg-white/[0.03]">
+            <Link key={l.id} href={qs({ id: l.id })} className="flex items-center gap-3 border-b border-[color:var(--border)] px-4 py-3 transition last:border-b-0 hover:bg-white/[0.03]">
               <span className="mo-mono grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[color:var(--border)] text-[12px] text-[color:var(--ink)]">{initials(l.full_name)}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -142,6 +146,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: LeadFi
             </Link>
           );
         })}
+        </div>
+        <div className="hidden min-h-[480px] md:block">
+          {selectedId ? <LeadSplitDetail leadId={selectedId} /> : <div className="mo-card grid h-full place-items-center p-4 text-sm text-[color:var(--body)]">Pick a lead to see details.</div>}
+        </div>
       </div>
     </Shell>
   );
