@@ -39,8 +39,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${display.variable} ${body.variable} ${mono.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen font-sans antialiased">
+    // The background is set inline as well as in globals.css so the very first
+    // paint is already #0a0a0a — before the stylesheet arrives — and the Crew
+    // app's launch screen fades into the CRM with no white frame in between.
+    <html lang="en" className={`dark ${display.variable} ${body.variable} ${mono.variable}`} style={{ background: "#0a0a0a", colorScheme: "dark" }} suppressHydrationWarning>
+      <body className="min-h-screen font-sans antialiased" style={{ background: "#0a0a0a" }}>
         <EventLogClient />
         {children}
       </body>
